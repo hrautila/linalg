@@ -1,0 +1,15 @@
+
+Linalg package provides thin interface for BLAS/LAPACK libraries. 
+It is modelled after CVXOPT python package. 
+
+It provides real and complex column-major matrix implementation and some basic matrix
+operations.
+
+Requirements: 
+	libblas package
+	liblapack package
+	libatlas package
+
+(See the cgo_ files in blas/lapack subdirectories).
+
+
