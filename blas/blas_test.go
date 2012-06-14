@@ -10,8 +10,8 @@ package blas
 import (
 	"fmt"
 	"testing"
-	"linalg"
-	"matrix"
+	"github.com/hrautila/go.opt/linalg"
+	"github.com/hrautila/go.opt/matrix"
 )
 
 
