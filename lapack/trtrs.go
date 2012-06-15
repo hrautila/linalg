@@ -46,7 +46,6 @@ import (
   offsetB   nonnegative integer;
 
 */
-
 func Trtrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {

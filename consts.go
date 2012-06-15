@@ -32,9 +32,9 @@ const (
 	// These for LAPACK only
 	PJobNo = ParamValue(151)			// 'N'
 	PJobValue = ParamValue(152)			// 'V'
-	PRangeAll = ParamValue(155)			// 'A'
-	PRangeValue = ParamValue(156)		// 'V'
-	PRangeInt = ParamValue(157)			// 'I'
+	PRangeAll = ParamValue(161)			// 'A'
+	PRangeValue = ParamValue(162)		// 'V'
+	PRangeInt = ParamValue(163)			// 'I'
 )
 
 // Structure for BLAS/LAPACK function parameters.
@@ -45,6 +45,17 @@ type Parameters struct {
 	Side ParamValue
 	Jobz ParamValue
 	Range ParamValue
+}
+
+func GetParam(params ...Opt, name string) (val int) {
+	val = -1
+	for _, o := range params {
+		if strings.EqualFold(o.name, name) {
+			val = o.Val
+			return
+		}
+	}
+	return 
 }
 
 // Parse options and return parameter structure with option fields
