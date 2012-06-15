@@ -65,6 +65,81 @@ func max(a, b int) int {
 }
 
 
+// index structure holds fields for various BLAS indexing variables.
+type index struct {
+	// these for BLAS and LAPACK
+	N, Nx, Ny int
+	M, Ma, Mb int
+	LDa, LDb, LDc int
+	IncX, IncY int
+	OffsetX, OffsetY, OffsetA, OffsetB, OffsetC int
+	K int
+	Ku int
+	Kl int
+}
+
+var indexNames map[string]int = {
+	"inc": 1, "incx": 1, "incy": 1,
+	"lda":0, "ldb":0, "ldc":0,
+	"offsetx":0, "offsety":0, "offseta":0, "offsetb":0, "offsetc":0,
+	"n":-1, "nx":-1, "ny":-1,
+	"m":-1, "k":-1, "ku":-1, "kl":0}
+
+func getIndexOpts(opts ...linalg.Option) *index {
+	is := &index{
+		-1, -1, -1,				// n, nX, nY
+		-1, -1, -1,				// m, mA, mB
+		 0,  0,  0,				// ldA, ldB, ldC
+		 1,  1,					// incX, incY
+		 0,  0,  0,  0,	 0,		// offsetX, ... offsetC
+		-1, -1,  0,				// k, ku, kl
+		-1,						// nrhs
+	}
+	for _, o := range opts {
+		name := strings.ToLower(o.Name())
+		if val, e := indexNames[name]; e == nil {
+			oval := o.Int()
+			switch name {
+			case "inc":
+				is.Inc = o.Int()
+				is.Incx = is.Inc; is.Incy = is.Inc
+			case "incy":
+				is.IncY = o.Int()
+			case "incx":
+				is.IncX = o.Int()
+			case "lda":
+				is.LDa = o.Int()
+			case "ldb":
+				is.LDb = o.Int()
+			case "ldc":
+				is.LDc = o.Int()
+			case "n":
+				is.N = o.Int()
+				is.Nx = is.N; is.Ny = is.N
+			case "m":
+				is.M = o.Int()
+				is.Ma = is.M; is.Mb = is.M
+			case "offset", "offsetx":
+				is.OffsetX = o.Int()
+			case "offsety":
+				is.OffsetY = o.Int()
+			case "offseta":
+				is.OffsetA = o.Int()
+			case "offsetb":
+				is.OffsetB = o.Int()
+			case "offsetc":
+				is.OffsetC = o.Int()
+			case "k":
+				is.K = o.Int()
+			case "kl":
+				is.Kl = o.Int()
+			case "ku":
+				is.Ku = o.Int()
+			}
+		}
+	}
+}
+	
 
 
 func check_level1_func(ind *linalg.LinalgIndex, fn funcNum, X, Y matrix.Matrix) error {
