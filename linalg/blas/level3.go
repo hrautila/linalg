@@ -61,7 +61,7 @@ import (
   offsetB   nonnegative integer
   offsetC   nonnegative integer;
 */
-func Gemm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Gemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -84,14 +84,8 @@ func Gemm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.FloatArray()
 		Ba := B.FloatArray()
 		Ca := C.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -105,23 +99,13 @@ func Gemm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.ComplexArray()
 		Ba := B.ComplexArray()
 		Ca := C.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
-		bval := complex(0.0, 0.0)
-		if beta != nil {
-			bval = beta.ComplexValue()
-			if cmplx.IsNaN(bval) {
-				aval = complex(beta.FloatValue(), 0.0)
-			} else {
-				return errors.New("beta not a number")
-			}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return errors.New("beta not a number")
 		}
 		transB := linalg.ParamString(params.TransB)
 		transA := linalg.ParamString(params.TransA)
@@ -171,7 +155,7 @@ func Gemm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetC   nonnegative integer
 
 */
-func Symm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Symm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -194,14 +178,8 @@ func Symm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.FloatArray()
 		Ba := B.FloatArray()
 		Ca := C.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -213,23 +191,13 @@ func Symm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.ComplexArray()
 		Ba := B.ComplexArray()
 		Ca := C.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
-		bval := complex(0.0, 0.0)
-		if beta != nil {
-			bval = beta.ComplexValue()
-			if cmplx.IsNaN(bval) {
-				bval = complex(beta.FloatValue(), 0.0)
-			} else {
-				return errors.New("beta not a number")
-			}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return errors.New("beta not a number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		side := linalg.ParamString(params.Side)
@@ -242,7 +210,7 @@ func Symm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 	return
 }
 
-func Hemm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Hemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 	err = Symm(A, B, C, alpha, beta, opts...)
 	return 
 }
@@ -250,7 +218,7 @@ func Hemm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 /*
  Rank-k update of symmetric matrix. (L3)
 
- Syrk(A, C, uplo=PLower, trans=PNoTrans, alpha=1.0, beta=0.0, n=-1,
+ Syrk(A, C, alpha, beta, uplo=PLower, trans=PNoTrans, n=-1,
  k=-1, ldA=max(1,A.Rows), ldC=max(1,C.Rows), offsetA=0, offsetB=0)
 
  PURPOSE   
@@ -283,7 +251,7 @@ func Hemm(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer
   offsetC   nonnegative integer;
 */
-func Syrk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Syrk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -302,14 +270,8 @@ func Syrk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.FloatMatrix:
 		Aa := A.FloatArray()
 		Ca := C.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -320,23 +282,13 @@ func Syrk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.ComplexMatrix:
 		Aa := A.ComplexArray()
 		Ca := C.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
-		bval := complex(0.0, 0.0)
-		if beta != nil {
-			bval = beta.ComplexValue()
-			if cmplx.IsNaN(bval) {
-				bval = complex(beta.FloatValue(), 0.0)
-			} else {
-				return errors.New("beta not a number")
-			}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return errors.New("beta not a number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
@@ -352,7 +304,7 @@ func Syrk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 /*
  Rank-k update of symmetric matrix. (L3)
 
- Herk(A, C, alpha=1.0, beta=0.0, uplo=PLower, trans=PNoTrans,  n=-1, 
+ Herk(A, C, alpha, beta, uplo=PLower, trans=PNoTrans,  n=-1, 
  k=-1, ldA=max(1,A.Rows), ldC=max(1,C.Rows), offsetA=0, offsetB=0)
 
  Computes
@@ -385,7 +337,7 @@ func Syrk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer
   offsetC   nonnegative integer;
 */
-func Herk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Herk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -404,14 +356,8 @@ func Herk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.FloatMatrix:
 		Aa := A.FloatArray()
 		Ca := C.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -422,21 +368,13 @@ func Herk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.ComplexMatrix:
 		Aa := A.ComplexArray()
 		Ca := C.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha not a real or complex number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a real or complex number")
 		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-			if math.IsNaN(bval) {
-				return errors.New("beta not a real number")
-			}
+		bval := beta.Float()
+		if math.IsNaN(bval) {
+			return errors.New("beta not a real number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
@@ -452,7 +390,7 @@ func Herk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 /*
  Rank-2k update of symmetric matrix. (L3)
 
- syr2k(A, B, C, uplo=PLower, trans=PNoTrnas, alpha=1.0, beta=0.0, n=-1,
+ syr2k(A, B, C, alpha, beta, uplo=PLower, trans=PNoTrnas, n=-1,
  k=-1, ldA=max(1,A.Rows), ldB=max(1,B.Rows), 
  ldC=max(1,C.Rows), offsetA=0, offsetB=0, offsetC=0)
  
@@ -497,7 +435,7 @@ func Herk(A, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetC   nonnegative integer
  
  */
-func Syr2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Syr2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -517,14 +455,8 @@ func Syr2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.FloatArray()
 		Ba := B.FloatArray()
 		Ca := C.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -537,27 +469,13 @@ func Syr2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.ComplexArray()
 		Ba := B.ComplexArray()
 		Ca := C.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				if ! math.IsNaN(alpha.FloatValue()) {
-					aval = complex(alpha.FloatValue(), 0.0)
-				} else {
-					return errors.New("alpha not a real or complex number")
-				}
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a real or complex number")
 		}
-		bval := complex(0.0, 0.0)
-		if beta != nil {
-			bval = beta.ComplexValue()
-			if cmplx.IsNaN(bval) {
-				if ! math.IsNaN(beta.FloatValue()) {
-					bval = complex(beta.FloatValue(), 0.0)
-				} else {
-					return errors.New("beta not a real or complex number")
-				}
-			}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return errors.New("beta not a real or complex number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
@@ -572,7 +490,7 @@ func Syr2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 /*
  Rank-2k update of symmetric matrix. (L3)
 
- Her2k(A, B, C,  alpha=1.0, beta=0.0, uplo=PLower, trans=PNoTrans, n=-1,
+ Her2k(A, B, C,  alpha, beta, uplo=PLower, trans=PNoTrans, n=-1,
  k=-1, ldA=max(1,A.Rows), ldB=max(1,B.Rows), 
  ldC=max(1,C.Rows), offsetA=0, offsetB=0, offsetC=0)
 
@@ -587,9 +505,9 @@ func Syr2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   A         float or complex matrix
   B         float or complex matrix.  Must have the same type as A.
   C         float or complex matrix.  Must have the same type as A.
-  alpha     number (int, float or complex).  Complex alpha is only
+  alpha     number (float or complex).  Complex alpha is only
             allowed if A is complex.
-  beta      number (int, float or complex).  Complex beta is only
+  beta      number (float or complex).  Complex beta is only
             allowed if A is complex.
 
  OPTIONS
@@ -615,7 +533,7 @@ func Syr2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetB   nonnegative integer
   offsetC   nonnegative integer
  */
-func Her2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Her2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -635,14 +553,8 @@ func Her2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.FloatArray()
 		Ba := B.FloatArray()
 		Ca := C.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -655,21 +567,13 @@ func Her2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Aa := A.ComplexArray()
 		Ba := B.ComplexArray()
 		Ca := C.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-			if math.IsNaN(bval) {
-				return errors.New("beta not a real number")
-			}
+		bval := beta.Float()
+		if math.IsNaN(bval) {
+			return errors.New("beta not a real number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
@@ -684,7 +588,7 @@ func Her2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 /*
  Matrix-matrix product where one matrix is triangular. (L3)
 
- Trmm(A, B, alpha=1.0,side=PLeft, uplo=PLower, transA=PNoTrans, diag=PNonUnit, 
+ Trmm(A, B, alpha, side=PLeft, uplo=PLower, transA=PNoTrans, diag=PNonUnit, 
  m=-1, n=-1, ldA=max(1,A.Rows), ldB=max(1,B.Rows), offsetA=0, offsetB=0)
 
  Computes
@@ -700,7 +604,7 @@ func Her2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
  ARGUMENTS
   A         float or complex matrix
   B         float or complex matrix.  Must have the same type as A.
-  alpha     number (float or complex singleton matrix).  Complex alpha is only
+  alpha     number (float or complex).  Complex alpha is only
             allowed if A is complex.
 
  OPTIONS
@@ -722,7 +626,7 @@ func Her2k(A, B, C, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer
   offsetB   nonnegative integer
  */
-func Trmm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Trmm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -741,10 +645,7 @@ func Trmm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.FloatMatrix:
 		Aa := A.FloatArray()
 		Ba := B.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
+		aval := alpha.Float()
 		if math.IsNaN(aval)  {
 			return errors.New("alpha  not a number")
 		}
@@ -757,14 +658,9 @@ func Trmm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.ComplexMatrix:
 		Aa := A.ComplexArray()
 		Ba := B.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha  not a number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha  not a number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		transA := linalg.ParamString(params.TransA)
@@ -781,7 +677,7 @@ func Trmm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 /*
  Solution of a triangular system of equations with multiple righthand sides. (L3)
 
- Trsm(A, B, alpha=1.0, side=PLeft, uplo=PLower, transA=PNoTrans, diag=PNonUnit, 
+ Trsm(A, B, alpha, side=PLeft, uplo=PLower, transA=PNoTrans, diag=PNonUnit, 
  m=-1, n=-1, ldA=max(1,A.Rows), ldB=max(1,B.Rows), offsetA=0, offsetB=0)
 
  Computes
@@ -797,7 +693,7 @@ func Trmm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
  ARGUMENTS
   A         float or complex matrix.
   B         float or complex matrix.  Must have the same type as A.
-  alpha     number (float or complex singleton matrix).  Complex alpha is only
+  alpha     number (float or complex).  Complex alpha is only
             allowed if A is complex.
 
  OPTIONS
@@ -819,7 +715,7 @@ func Trmm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer
   offsetB   nonnegative integer
  */
-func Trsm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Trsm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -838,7 +734,7 @@ func Trsm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.FloatMatrix:
 		Aa := A.FloatArray()
 		Ba := B.FloatArray()
-		aval := alpha.FloatValue()
+		aval := alpha.Float()
 		if math.IsNaN(aval)  {
 			return errors.New("alpha or beta not a number")
 		}
@@ -851,14 +747,9 @@ func Trsm(A, B, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.ComplexMatrix:
 		Aa := A.ComplexArray()
 		Ba := B.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha  not a number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha  not a number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		transA := linalg.ParamString(params.TransA)

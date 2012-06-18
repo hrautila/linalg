@@ -16,7 +16,7 @@ import (
 // Calculate norm2(X) for ComplexMatrix. Valid options are: offset, inc, N.
 
 // See function Nrm2.
-func Nrm2Complex(X *matrix.ComplexMatrix, opts ...linalg.Opt) (v float64, err error) {
+func Nrm2Complex(X *matrix.ComplexMatrix, opts ...linalg.Option) (v float64, err error) {
 	v = 0.0
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fnrm2, X, nil)
@@ -34,7 +34,7 @@ func Nrm2Complex(X *matrix.ComplexMatrix, opts ...linalg.Opt) (v float64, err er
 // Calculate sum(X) for complex matrix. Valid options are: offset, inc, N.
 
 // See function Asum.
-func AsumComplex(X *matrix.ComplexMatrix, opts ...linalg.Opt) (v float64, err error) {
+func AsumComplex(X *matrix.ComplexMatrix, opts ...linalg.Option) (v float64, err error) {
 	v = 0.0
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fasum, X, nil)
@@ -53,7 +53,7 @@ func AsumComplex(X *matrix.ComplexMatrix, opts ...linalg.Opt) (v float64, err er
 // Calculate X.T * Y for complex matrix. 
 
 // See function Dot.
-func DotuComplex(X, Y *matrix.ComplexMatrix, opts ...linalg.Opt) (v complex128, err error) {
+func DotuComplex(X, Y *matrix.ComplexMatrix, opts ...linalg.Option) (v complex128, err error) {
 	v = 0.0
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fdot, X, Y)
@@ -76,7 +76,7 @@ func DotuComplex(X, Y *matrix.ComplexMatrix, opts ...linalg.Opt) (v complex128, 
 // Calculate conjugate X.T * Y for complex matrix. 
 
 // See function Dotc.
-func DotcComplex(X, Y *matrix.ComplexMatrix, opts ...linalg.Opt) (v complex128, err error) {
+func DotcComplex(X, Y *matrix.ComplexMatrix, opts ...linalg.Option) (v complex128, err error) {
 	v = 0.0
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fdot, X, Y)

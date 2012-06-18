@@ -112,6 +112,23 @@ func (A *ComplexMatrix) Apply2(fn func(complex128,complex128)complex128, x compl
 	return C
 }
 
+// Compute C = fn(A) by applying function fn to all elements in indexes.
+// For all i in indexes: C[i] = fn(A[i]).
+// If C is nil then computes inplace A = fn(A). If C is not nil then sizes of A and C must match.
+// Returns pointer to the result matrix.
+func (A *ComplexMatrix) ApplyToIndexes(C *ComplexMatrix, indexes []int, fn func(complex128)complex128) *ComplexMatrix {
+	if C != nil && ! A.SizeMatch(C.Size()) {
+		return nil
+	}
+	B := C
+	if C == nil {
+		B = A
+	}
+	for _,v := range indexes {
+		B.elements[v] = fn(A.elements[v])
+	}
+	return B
+}
 
 
 // Local Variables:

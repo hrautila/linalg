@@ -27,10 +27,10 @@ import (
 //  inc       positive integer
 //  offset    nonnegative integer
 //
-func Nrm2(X matrix.Matrix, opts ...linalg.Opt) (v float64, err error) {
-	v = math.NaN()
+func Nrm2(X matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
+	v = matrix.FScalar(math.NaN())
 	ind := linalg.GetIndexOpts(opts...)
-	err = check_level1_func(ind, fnrm2, X, nil)
+	err := check_level1_func(ind, fnrm2, X, nil)
 	if err != nil {
 		return
 	}
@@ -40,12 +40,12 @@ func Nrm2(X matrix.Matrix, opts ...linalg.Opt) (v float64, err error) {
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
 		Xa := X.ComplexArray()
-		v = dznrm2(ind.Nx, Xa[ind.OffsetX:], ind.IncX)
+		v = matrix.FScalar(dznrm2(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
 	case *matrix.FloatMatrix:
 		Xa := X.FloatArray()
-		v = dnrm2(ind.Nx, Xa[ind.OffsetX:], ind.IncX)
+		v = matrix.FScalar(dnrm2(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
 	default:
-		err = errors.New("not implemented for parameter types", )
+		//err = errors.New("not implemented for parameter types", )
 	}
 	return
 }
@@ -62,10 +62,10 @@ func Nrm2(X matrix.Matrix, opts ...linalg.Opt) (v float64, err error) {
 //  inc     positive integer
 //  offset  nonnegative integer
 //
-func Asum(X matrix.Matrix, opts ...linalg.Opt) (v float64, err error) {
-	v = math.NaN()
+func Asum(X matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
+	v = matrix.FScalar(math.NaN())
 	ind := linalg.GetIndexOpts(opts...)
-	err = check_level1_func(ind, fasum, X, nil)
+	err := check_level1_func(ind, fasum, X, nil)
 	if err != nil {
 		return
 	}
@@ -75,12 +75,12 @@ func Asum(X matrix.Matrix, opts ...linalg.Opt) (v float64, err error) {
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
 		Xa := X.ComplexArray()
-		v = dzasum(ind.Nx, Xa[ind.OffsetX:], ind.IncX)
+		v = matrix.FScalar(dzasum(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
 	case *matrix.FloatMatrix:
 		Xa := X.FloatArray()
-		v = dasum(ind.Nx, Xa[ind.OffsetX:], ind.IncX)
-	default:
-		err = errors.New("not implemented for parameter types", )
+		v =  matrix.FScalar(dasum(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
+	//default:
+	//	err = errors.New("not implemented for parameter types", )
 	}
 	return
 }
@@ -101,11 +101,11 @@ func Asum(X matrix.Matrix, opts ...linalg.Opt) (v float64, err error) {
 //  offsetx   nonnegative integer, [default=0]
 //  offsety   nonnegative integer, [default=0]
 //
-func Dotu(X, Y matrix.Matrix, opts ...linalg.Opt) (v float64, cv complex128, err error) {
-	v = math.NaN()
-	cv = cmplx.NaN()
+func Dotu(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
+	v = matrix.FScalar(math.NaN())
+	//cv = cmplx.NaN()
 	ind := linalg.GetIndexOpts(opts...)
-	err = check_level1_func(ind, fdot, X, Y)
+	err := check_level1_func(ind, fdot, X, Y)
 	if err != nil {
 		return
 	}
@@ -125,13 +125,13 @@ func Dotu(X, Y matrix.Matrix, opts ...linalg.Opt) (v float64, cv complex128, err
 	case *matrix.ComplexMatrix:
 		Xa := X.ComplexArray()
 		Ya := Y.ComplexArray()
-		cv = zdotu(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
+		v = matrix.CScalar(zdotu(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
 	case *matrix.FloatMatrix:
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
-		v = ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
-	default:
-		err = errors.New("not implemented for parameter types", )
+		v = matrix.FScalar(ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
+	//default:
+	//	err = errors.New("not implemented for parameter types", )
 	}
 	return
 }
@@ -153,11 +153,11 @@ func Dotu(X, Y matrix.Matrix, opts ...linalg.Opt) (v float64, cv complex128, err
 //  offsetx   nonnegative integer [default=0]
 //  offsety   nonnegative integer [default=0]
 //
-func Dot(X, Y matrix.Matrix, opts ...linalg.Opt) (v float64, cv complex128, err error) {
-	v = math.NaN()
-	cv = cmplx.NaN()
+func Dot(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
+	v = matrix.FScalar(math.NaN())
+	//cv = cmplx.NaN()
 	ind := linalg.GetIndexOpts(opts...)
-	err = check_level1_func(ind, fdot, X, Y)
+	err := check_level1_func(ind, fdot, X, Y)
 	if err != nil {
 		return
 	}
@@ -177,13 +177,13 @@ func Dot(X, Y matrix.Matrix, opts ...linalg.Opt) (v float64, cv complex128, err 
 	case *matrix.ComplexMatrix:
 		Xa := X.ComplexArray()
 		Ya := Y.ComplexArray()
-		cv = zdotc(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
+		v = matrix.CScalar(zdotc(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
 	case *matrix.FloatMatrix:
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
-		v = ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
-	default:
-		err = errors.New("not implemented for parameter types", )
+		v = matrix.FScalar(ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
+	//default:
+	//	err = errors.New("not implemented for parameter types", )
 	}
 	return
 }
@@ -205,7 +205,7 @@ func Dot(X, Y matrix.Matrix, opts ...linalg.Opt) (v float64, cv complex128, err 
 //  offsetx   nonnegative integer
 //  offsety   nonnegative integer;
 //
-func Swap(X, Y matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Swap(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fswap, X, Y)
 	if err != nil {
@@ -250,7 +250,7 @@ func Swap(X, Y matrix.Matrix, opts ...linalg.Opt) (err error) {
 //  offsetx   nonnegative integer
 //  offsety   nonnegative integer;
 //
-func Copy(X, Y matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Copy(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fcopy, X, Y)
 	if err != nil {
@@ -296,7 +296,7 @@ func Copy(X, Y matrix.Matrix, opts ...linalg.Opt) (err error) {
 //  inc       positive integer, default = 1
 //  offset    nonnegative integer, default = 0
 //
-func Scal(X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Scal(X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fscal, X, nil)
 	if err != nil {
@@ -305,26 +305,25 @@ func Scal(X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	if ind.Nx == 0 {
 		return
 	}
+	/*
 	sameType := matrix.EqualTypes(X, alpha)
 	if ! sameType {
 		err = errors.New("arrays not same type")
 		return
 	}
+	 */
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
 		Xa := X.ComplexArray()
-		aval := alpha.ComplexValue()
-		if cmplx.IsNaN(aval) {
-			return errors.New("alpha not complex value")
-		}
-		zscal(ind.Nx, aval, Xa[ind.OffsetX:], ind.IncX)
+		cval := alpha.Complex()
+		zscal(ind.Nx, cval, Xa[ind.OffsetX:], ind.IncX)
 	case *matrix.FloatMatrix:
 		Xa := X.FloatArray()
-		aval := alpha.FloatValue()
-		if math.IsNaN(aval) {
+		rval := alpha.Float()
+		if math.IsNaN(rval) {
 			return errors.New("alpha not float value")
 		}
-		dscal(ind.Nx, aval, Xa[ind.OffsetX:], ind.IncX)
+		dscal(ind.Nx, rval, Xa[ind.OffsetX:], ind.IncX)
 	default:
 		err = errors.New("not implemented for parameter types", )
 	}
@@ -351,7 +350,7 @@ func Scal(X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 //   offsetx   nonnegative integer
 //   offsety   nonnegative integer;
 //
-func Axpy(X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, faxpy, X, Y)
 	if err != nil {
@@ -370,7 +369,7 @@ func Axpy(X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.ComplexMatrix:
 		Xa := X.ComplexArray()
 		Ya := Y.ComplexArray()
-		aval := alpha.ComplexValue()
+		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not complex value")
 		}
@@ -379,7 +378,7 @@ func Axpy(X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	case *matrix.FloatMatrix:
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
-		aval := alpha.FloatValue()
+		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not float value")
 		}

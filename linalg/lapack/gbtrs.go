@@ -48,7 +48,7 @@ import (
   offsetA   nonnegative integer
   offsetB   nonnegative integer;
  */
-func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Opt) error {
+func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

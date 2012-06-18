@@ -89,11 +89,21 @@ func Log2(A Matrix) Matrix {
 	return B
 }
 
-// Return copy of A with each element as Abs(A[i,j]). Returns nil for
+// Return copy of A with each element as Abs(A[i,j]). Returns a float matrix for
 // complex valued matrix.
 func Abs(A Matrix) Matrix {
-	B := A.MakeCopy()
-	applyFunc(B, math.Abs, cmplx.Abs)
+	if ! A.IsComplex() {
+		B := A.MakeCopy()
+		applyFunc(B, math.Abs, nil)
+		return B
+	} 
+	// Complex matrix here
+	B := FloatZeros(A.Size())
+	Ba := B.FloatArray()
+	Aa := A.ComplexArray()
+	for k, v := range Aa {
+		Ba[k] = cmplx.Abs(v)
+	}
 	return B
 }
 

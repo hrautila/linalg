@@ -34,7 +34,7 @@ import (
             value is used.
   offsetA   nonnegative integer;
  */
-func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	if ind.N < 0 {
 		ind.N = A.Cols()

@@ -120,6 +120,24 @@ func (A *FloatMatrix) Apply(C *FloatMatrix, fn func(float64)float64) *FloatMatri
 	return B
 }
 
+// Compute C = fn(A) by applying function fn to all elements in indexes.
+// For all i in indexes: C[i] = fn(A[i]).
+// If C is nil then computes inplace A = fn(A). If C is not nil then sizes of A and C must match.
+// Returns pointer to the result matrix.
+func (A *FloatMatrix) ApplyToIndexes(C *FloatMatrix, indexes []int, fn func(float64)float64) *FloatMatrix {
+	if C != nil && ! A.SizeMatch(C.Size()) {
+		return nil
+	}
+	B := C
+	if C == nil {
+		B = A
+	}
+	for _,v := range indexes {
+		B.elements[v] = fn(A.elements[v])
+	}
+	return B
+}
+
 // Compute A = fn(A, x) by applying function fn element wise to A.
 // For all i, j: A[i,j] = fn(A[i,j], x). 
 func (A *FloatMatrix) Apply2(C *FloatMatrix, fn func(float64,float64)float64, x float64) *FloatMatrix {

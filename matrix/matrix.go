@@ -43,10 +43,35 @@ type Matrix interface {
 	EqualTypes(...Matrix) bool
 }
 
-//type Index struct {
-//	Row int
-//	Col int
-//}
+// Interface for real and complex scalars.
+type Scalar interface {
+	Float() float64
+	Complex() complex128
+}
+
+// Float constant
+type FScalar float64
+
+// Return self
+func (self FScalar) Float() float64 {
+	return float64(self)
+}
+
+// Return complex(f, 0)
+func (self FScalar) Complex() complex128 {
+	return complex(float64(self), 0)
+}
+
+// Return real(self).
+type CScalar complex128
+func (self CScalar) Float() float64 {
+	return float64(real(self))
+}
+
+// Return self.
+func (self CScalar) Complex() complex128 {
+	return complex128(self)
+}
 
 // Matrix dimensions, rows, cols and leading index. For column major matrices 
 // leading index is equal to row count.
@@ -93,6 +118,28 @@ func (A *dimensions) NumElements() int {
 // Return true if size of A is equal to size of B.
 func (A *dimensions) SizeMatch(rows, cols int) bool {
 	return A != nil && A.rows == rows && A.cols == cols
+}
+
+// Create a set of indexes from start to end-1 with interval step.
+func MakeIndexSet(start, end, step int) []int {
+	if start < 0 {
+		start = 0
+	}
+	if end < 0 {
+		end = 0
+	}
+	if end-start == 0 {
+		return make([]int, 0, 1)
+	}
+	if step < 0 {
+		step = 1
+	}
+	sz := (end-start)/step
+	inds := make([]int, sz)
+	for i, _ := range inds {
+		inds[i] = start + i*step
+	}
+	return inds
 }
 
 

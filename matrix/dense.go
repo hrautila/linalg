@@ -203,7 +203,7 @@ func (A *FloatMatrix) GetRow(i int, vals []float64) []float64 {
 
 // Get copy of i'th row. Return parameter matrix. If vec is too small 
 // reallocate new vector and return it.
-func (A *FloatMatrix) GetRowMatrix(i int, vec Matrix) Matrix {
+func (A *FloatMatrix) GetRowMatrix(i int, vec *FloatMatrix) *FloatMatrix {
 	if vec == nil || vec.NumElements() < A.Cols() {
 		vec = FloatZeros(A.Cols(), 1)
 	}
@@ -216,7 +216,7 @@ func (A *FloatMatrix) GetRowMatrix(i int, vec Matrix) Matrix {
 }
 
 // Get copy of i'th column. See GetRow.
-func (A *FloatMatrix) GetColumnMatrix(i int, vec Matrix) Matrix {
+func (A *FloatMatrix) GetColumnMatrix(i int, vec *FloatMatrix) *FloatMatrix {
 	if vec == nil || vec.NumElements() < A.Rows() {
 		vec = FloatZeros(A.Rows(), 1)
 	}
@@ -238,6 +238,18 @@ func (A *FloatMatrix) GetColumn(i int, vec []float64) []float64 {
 		vec[j] = A.elements[i*step+j]
 	}
 	return vec
+}
+
+// Get a slice from the underlying storage array. Changing entries
+// in the returned slices changes the matrix. Be carefull with this.
+func (A *FloatMatrix) GetSlice(start, end int) []float64 {
+	if start < 0 {
+		start = 0
+	}
+	if end > A.NumElements() {
+		end = A.NumElements()
+	}
+	return A.elements[start:end]
 }
 
 // Set the element in the i'th row and j'th column to val.
@@ -269,11 +281,43 @@ func (A *FloatMatrix) SetRow(i int, vals []float64) {
 	}
 }
 
+// Set values of i'th row. Matrix vals is either (A.Cols(), 1) or (1, A.Cols()) matrix.
+func (A *FloatMatrix) SetRowMatrix(i int, vals *FloatMatrix) {
+	step := A.LeadingIndex()
+	for j := 0; j < A.Cols(); j++ {
+		A.elements[j*step+i] = vals.elements[j]
+	}
+}
+
+
 // Set values of i'th column.
 func (A *FloatMatrix) SetColumn(i int, vals []float64) {
 	step := A.LeadingIndex()
 	for j := 0; j < A.Rows(); j++ {
 		A.elements[i*step+j] = vals[j]
+	}
+}
+
+// Set values of i'th column. Matrix vals is either (A.Rows(), 1) or (1, A.Rows()) matrix.
+func (A *FloatMatrix) SetColumnMatrix(i int, vals *FloatMatrix) {
+	step := A.LeadingIndex()
+	for j := 0; j < A.Rows(); j++ {
+		A.elements[i*step+j] = vals.elements[j]
+	}
+}
+
+
+// Set values for sub-matrix starting at (row, col). If row+mat.Rows() greater than
+// A.Rows() or col+mat.Cols() greater than A.Cols() matrix A is not changed.
+func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) {
+	r, c := mat.Size()
+	if r + row >= A.Rows() || c + col >= A.Cols() {
+		return
+	}
+	for i := 0; i < r; i++  {
+		for j := 0; j < c; j++ {
+			A.Set(row+i, col+j, mat.Get(i, j))
+		}
 	}
 }
 

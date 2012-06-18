@@ -46,7 +46,7 @@ import (
   offsetB   nonnegative integer;
 
  */
-func Potrs(A, B matrix.Matrix, opts ...linalg.Opt) error {
+func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

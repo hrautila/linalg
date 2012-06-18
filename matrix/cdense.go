@@ -217,7 +217,7 @@ func (A *ComplexMatrix) GetColumn(i int, vals []complex128) []complex128 {
 
 // Get copy of i'th row. Return parameter matrix. If vec is too small 
 // reallocate new vector and return it.
-func (A *ComplexMatrix) GetRowMatrix(i int, vec Matrix) Matrix {
+func (A *ComplexMatrix) GetRowMatrix(i int, vec *ComplexMatrix) *ComplexMatrix {
 	if vec == nil || vec.NumElements() < A.Cols() {
 		vec = ComplexZeros(A.Cols(), 1)
 	}
@@ -230,7 +230,7 @@ func (A *ComplexMatrix) GetRowMatrix(i int, vec Matrix) Matrix {
 }
 
 // Get copy of i'th column. See GetRow.
-func (A *ComplexMatrix) GetColumnMatrix(i int, vec Matrix) Matrix {
+func (A *ComplexMatrix) GetColumnMatrix(i int, vec *ComplexMatrix) *ComplexMatrix {
 	if vec == nil || vec.NumElements() < A.Rows() {
 		vec = ComplexZeros(A.Rows(), 1)
 	}
@@ -240,6 +240,18 @@ func (A *ComplexMatrix) GetColumnMatrix(i int, vec Matrix) Matrix {
 		ar[j] = A.elements[i*step+j]
 	}
 	return vec
+}
+
+// Get a slice from the underlying storage array. Changing entries
+// in the returned slices changes the matrix. Be carefull with this.
+func (A *ComplexMatrix) GetSlice(start, end int) []complex128 {
+	if start < 0 {
+		start = 0
+	}
+	if end > A.NumElements() {
+		end = A.NumElements()
+	}
+	return A.elements[start:end]
 }
 
 // Set the element in the i'th row and j'th column to val.

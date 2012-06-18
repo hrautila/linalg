@@ -56,7 +56,7 @@ import (
   offsetB   nonnegative integer;
 
  */
-func Gbsv(A, B matrix.Matrix, ipiv []int32, kl int, opts ...linalg.Opt) error {
+func Gbsv(A, B matrix.Matrix, ipiv []int32, kl int, opts ...linalg.Option) error {
 	var info int
 	ind := linalg.GetIndexOpts(opts...)
 	ind.Kl = kl
