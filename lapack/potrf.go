@@ -39,7 +39,7 @@ import (
   offsetA   nonnegative integer
 
  */
-func Potrf(A matrix.Matrix, opts ...linalg.Opt) error {
+func Potrf(A matrix.Matrix, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

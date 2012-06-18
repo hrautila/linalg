@@ -43,7 +43,7 @@ import (
   offsetA   nonnegative integer
 
  */
-func Geqrf(A, tau matrix.Matrix, opts ...linalg.Opt) error {
+func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	if ind.N < 0 {
 		ind.N = A.Rows()

@@ -46,7 +46,7 @@ import (
   offsetA   nonnegative integer
   offsetB   nonnegative integer;
 */
-func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {

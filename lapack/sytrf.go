@@ -35,7 +35,7 @@ import (
   offsetA   nonnegative integer;
 
 */
-func Sytrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Sytrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

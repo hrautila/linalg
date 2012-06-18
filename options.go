@@ -9,7 +9,8 @@ package linalg
 
 import (
 	"math"
-	"fmt"
+	"math/cmplx"
+	"strings"
 )
 
 // Interface for named options.
@@ -19,7 +20,9 @@ type Option interface {
 	// Integer value of option.
 	Int() int
 	// Float value of option or NaN.
-	Float() float
+	Float() float64
+	// Float value of option or NaN.
+	Complex() complex128
 	// Bool value of option.
 	Bool() bool
 	// Option value as string.
@@ -28,8 +31,7 @@ type Option interface {
 
 
 // Find named option from a list of options. Returns nil of not found.
-func GetOption(opts ...Option, name string) Option {
-	val = -1
+func GetOption(name string, opts ...Option) Option {
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
 			return o
@@ -38,12 +40,12 @@ func GetOption(opts ...Option, name string) Option {
 	return nil
 }
 
-// Get float option value. If option not present returns defval.
-func GetOptionInt(opts ...Option, name string, defval int) (val int) {
+// Get integer option value. If option not present returns defval.
+func GetIntOpt(name string, defval int, opts ...Option) (val int) {
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = O.Int()
+			val = o.Int()
 			return
 		}
 	}
@@ -51,11 +53,11 @@ func GetOptionInt(opts ...Option, name string, defval int) (val int) {
 }
 
 // Get float option value. If option not present returns defval.
-func GetOptionFloat(opts ...Option, name string, defval float) (val float) {
+func GetFloatOpt(name string, defval float64, opts ...Option) (val float64) {
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = O.Float()
+			val = o.Float()
 			return
 		}
 	}
@@ -63,11 +65,17 @@ func GetOptionFloat(opts ...Option, name string, defval float) (val float) {
 }
 
 // Get boolean option value. If option not present returns defval.
-func GetOptionBool(opts ...Option, name string, defval bool) (val bool) {
+func GetBoolOpt(name string, defval bool, opts ...Option) (val bool) {
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = O.Bool()
+			switch o.(type) {
+			case *BOpt:
+				val = o.Bool()
+			case *SOpt:
+				v := o.String()
+				val = v[0] == 't' || v[0] == 'T' || v[0] == 'y' || v[0] == 'Y'
+			}
 			return
 		}
 	}
@@ -75,34 +83,52 @@ func GetOptionBool(opts ...Option, name string, defval bool) (val bool) {
 }
 
 // Get string option value. If option not present returns defval.
-func GetOptionString(opts ...Option, name string, defval string) (val string) {
+func GetStringOpt(name string, defval string, opts ...Option) (val string) {
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = O.String()
+			val = o.String()
 			return
 		}
 	}
 	return 
 }
 
+// Get string option value. If option not present returns defval.
+func GetComplexOpt(name string, defval complex128, opts ...Option) (val complex128) {
+	val = defval
+	for _, o := range opts {
+		if strings.EqualFold(o.Name(), name) {
+			val = o.Complex()
+			return
+		}
+	}
+	return 
+}
+
+
 // Integer valued option.
 type IOpt struct {
-	name string
-	val int
+	OptName string
+	Val int
 }
 
 func (O *IOpt) Name() string {
-	return O.name
+	return O.OptName
 }
 
 func (O *IOpt) Int() int {
-	return O.val
+	return O.Val
 }
 
 // Return NaN.
-func (O *Iopt) Float() float {
+func (O *IOpt) Float() float64 {
 	return math.NaN()
+}
+
+// Return NaN.
+func (O *IOpt) Complex() complex128 {
+	return cmplx.NaN()
 }
 
 // Return false.
@@ -111,17 +137,17 @@ func (O *IOpt) Bool() bool {
 }
 
 func (O *IOpt) String() string {
-	return string(O.val)
+	return string(O.Val)
 }
 
 // Float valued option.
 type FOpt struct {
-	name string
-	val float
+	OptName string
+	Val float64
 }
 
 func (O *FOpt) Name() string {
-	return O.name
+	return O.OptName
 }
 
 // Return zero.
@@ -129,27 +155,31 @@ func (O *FOpt) Int() int {
 	return 0
 }
 
-func (O *Fopt) Float() float {
-	return O.val
+func (O *FOpt) Float() float64 {
+	return O.Val
 }
 
+// Return NaN.
+func (O *FOpt) Complex() complex128 {
+	return cmplx.NaN()
+}
 // Return false.
 func (O *FOpt) Bool() bool {
 	return false
 }
 
 func (O *FOpt) String() string {
-	return string(O.val)
+	return "" //string(O.val)
 }
 
 // String valued option.
 type SOpt struct {
-	name string
-	val string
+	OptName string
+	Val string
 }
 
 func (O *SOpt) Name() string {
-	return O.name
+	return O.OptName
 }
 
 // Return zero.
@@ -157,8 +187,13 @@ func (O *SOpt) Int() int {
 	return 0
 }
 
-func (O *Sopt) Float() float {
+func (O *SOpt) Float() float64 {
 	return math.NaN()
+}
+
+// Return NaN.
+func (O *SOpt) Complex() complex128 {
+	return cmplx.NaN()
 }
 
 // Return false.
@@ -167,17 +202,17 @@ func (O *SOpt) Bool() bool {
 }
 
 func (O *SOpt) String() string {
-	return O.val
+	return O.Val
 }
 
 // Boolean valued option.
 type BOpt struct {
-	name string
-	val bool
+	OptName string
+	Val bool
 }
 
 func (O *BOpt) Name() string {
-	return O.name
+	return O.OptName
 }
 
 // Return zero.
@@ -186,16 +221,54 @@ func (O *BOpt) Int() int {
 }
 
 // Return NaN.
-func (O *Bopt) Float() float {
+func (O *BOpt) Float() float64 {
 	return math.NaN()
 }
 
-func (O *FOpt) Bool() bool {
-	return O.val
+// Return NaN.
+func (O *BOpt) Complex() complex128 {
+	return cmplx.NaN()
 }
 
-func (O *FOpt) String() string {
-	return string(O.val)
+func (O *BOpt) Bool() bool {
+	return O.Val
+}
+
+func (O *BOpt) String() string {
+	return "" //string(O.val)
+}
+
+// Complex valued option.
+type COpt struct {
+	OptName string
+	Val complex128
+}
+
+func (O *COpt) Name() string {
+	return O.OptName
+}
+
+// Return zero.
+func (O *COpt) Int() int {
+	return 0
+}
+
+// Return NaN.
+func (O *COpt) Float() float64 {
+	return math.NaN()
+}
+
+// Return NaN.
+func (O *COpt) Complex() complex128 {
+	return O.Val
+}
+
+func (O *COpt) Bool() bool {
+	return false
+}
+
+func (O *COpt) String() string {
+	return "" //string(O.val)
 }
 
 

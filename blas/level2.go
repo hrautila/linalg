@@ -46,7 +46,7 @@ import (
   offsetx   nonnegative integer
   offsety   nonnegative integer
 */
-func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -66,14 +66,8 @@ func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -114,9 +108,9 @@ func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
    A         float m*n matrix.
    alpha     number (float). 
    beta      number (float).
-   trans     NoTrans or Trans
 
  OPTIONS
+   trans     NoTrans or Trans
    m         nonnegative integer, default A.Rows()
    kl        nonnegative integer
    n         nonnegative integer.  If negative, the default value is used.
@@ -129,7 +123,7 @@ func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
    offsety   nonnegative integer, default =0
 
 */
-func Gbmv(A, X, Y, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Gbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -144,7 +138,7 @@ func Gbmv(A, X, Y, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 	if ind.M == 0 && ind.N == 0 {
 		return
 	}
-	if ! matrix.EqualTypes(A, X, Y, alpha, beta) {
+	if ! matrix.EqualTypes(A, X, Y) {
 		return errors.New("Parameters not of same type")
 	}
 	switch X.(type) {
@@ -152,14 +146,8 @@ func Gbmv(A, X, Y, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -205,7 +193,7 @@ func Gbmv(A, X, Y, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetx   nonnegative integer
   offsety   nonnegative integer
 */
-func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -220,7 +208,7 @@ func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 	if ind.N == 0 {
 		return
 	}
-	if ! matrix.EqualTypes(A, X, Y, alpha, beta) {
+	if ! matrix.EqualTypes(A, X, Y) {
 		return errors.New("Parameters not of same type")
 	}
 	switch X.(type) {
@@ -228,14 +216,8 @@ func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -278,7 +260,7 @@ func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
   offsetx   nonnegative integer
   offsety   nonnegative integer
 */
-func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -301,14 +283,8 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -321,7 +297,8 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 		Xa := X.ComplexArray()
 		Ya := Y.ComplexArray()
 		Aa := A.ComplexArray()
-		aval := complex(1.0, 0.0)
+		aval := alpha.Complex()
+		/*
 		if alpha != nil {
 			aval = alpha.ComplexValue()
 			if cmplx.IsNaN(aval) {
@@ -332,7 +309,9 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 				}
 			}
 		}
-		bval := complex(0.0, 0.0)
+		 */
+		bval := beta.Complex()
+		/*
 		if beta != nil {
 			bval := beta.ComplexValue()
 			if cmplx.IsNaN(bval) {
@@ -343,6 +322,7 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 				}
 			}
 		}
+		 */
 		uplo := linalg.ParamString(params.Uplo)
 		zhemv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
 			Xa[ind.OffsetX:], ind.IncX,
@@ -382,7 +362,7 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
    offsety   nonnegative integer
 
 */
-func Sbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Sbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -405,14 +385,8 @@ func Sbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -455,7 +429,7 @@ func Sbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
   offsety   nonnegative integer
 
 */
-func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -478,14 +452,8 @@ func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-		}
-		bval := 0.0
-		if beta != nil {
-			bval = beta.FloatValue()
-		}
+		aval := alpha.Float()
+		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
 			return errors.New("alpha or beta not a number")
 		}
@@ -497,28 +465,8 @@ func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
 		Xa := X.ComplexArray()
 		Ya := Y.ComplexArray()
 		Aa := A.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				if ! math.IsNaN(alpha.FloatValue()) {
-					aval = complex(alpha.FloatValue(), 0)
-				} else {
-					return errors.New("alpha not a number")
-				}
-			}
-		}
-		bval := complex(0.0, 0.0)
-		if beta != nil {
-			bval = beta.ComplexValue()
-			if cmplx.IsNaN(bval) {
-				if ! math.IsNaN(beta.FloatValue()) {
-					bval = complex(beta.FloatValue(), 0)
-				} else {
-					return errors.New("beta not a number")
-				}
-			}
-		}
+		aval := alpha.Complex()
+		bval := beta.Complex()
 		uplo := linalg.ParamString(params.Uplo)
 		zhbmv(uplo, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
 			Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
@@ -561,7 +509,7 @@ func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Matrix, opts ...linalg.Opt) 
   offsetx   nonnegative integer, default=0
 
 */
-func Trmv(A, X matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Trmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -623,7 +571,7 @@ func Trmv(A, X matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetx   nonnegative integer
 
 */
-func Tbmv(A, X matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Tbmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -683,7 +631,7 @@ func Tbmv(A, X matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer
   offsetx   nonnegative integer
 */
-func Trsv(A, X matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Trsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -744,7 +692,7 @@ PURPOSE
   offsetA   nonnegative integer
   offsetx   nonnegative integer;
 */
-func Tbsv(A, X matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -803,7 +751,7 @@ func Tbsv(A, X matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer;
 
 */
-func Ger(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Ger(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -823,12 +771,9 @@ func Ger(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval := alpha.FloatValue()
-			if math.IsNaN(aval) {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		dger(ind.M, ind.N,	aval, Xa[ind.OffsetX:], ind.IncX,
 			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
@@ -837,16 +782,9 @@ func Ger(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.ComplexArray()
 		Ya := Y.ComplexArray()
 		Aa := A.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				if ! math.IsNaN(alpha.FloatValue()) {
-					aval = complex(alpha.FloatValue(), 0)
-				} else {
-					return errors.New("alpha not a number")
-				}
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		zgerc(ind.M, ind.N,	aval, Xa[ind.OffsetX:], ind.IncX,
 			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
@@ -884,7 +822,7 @@ func Ger(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer;
 
 */
-func Geru(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Geru(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -904,12 +842,9 @@ func Geru(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.FloatArray()
 		Ya := Y.FloatArray()
 		Aa := A.FloatArray()
-		aval := 1.0
-		if alpha != nil {
-			aval := alpha.FloatValue()
-			if math.IsNaN(aval) {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		dger(ind.M, ind.N,	aval, Xa[ind.OffsetX:], ind.IncX,
 			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
@@ -918,16 +853,9 @@ func Geru(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.ComplexArray()
 		Ya := Y.ComplexArray()
 		Aa := A.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				if ! math.IsNaN(alpha.FloatValue()) {
-					aval = complex(alpha.FloatValue(), 0)
-				} else {
-					return errors.New("alpha not a number")
-				}
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		zgeru(ind.M, ind.N,	aval, Xa[ind.OffsetX:], ind.IncX,
 			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
@@ -963,7 +891,7 @@ func Geru(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetx   nonnegative integer
   offsetA   nonnegative integer;
 */
-func Syr(A, X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Syr(A, X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -983,12 +911,9 @@ func Syr(A, X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.FloatArray()
 		Aa := A.FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
-		aval := 1.0
-		if alpha != nil {
-			aval := alpha.FloatValue()
-			if math.IsNaN(aval) {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		dsyr(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
 			Aa[ind.OffsetA:], ind.LDa)
@@ -1026,7 +951,7 @@ func Syr(A, X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
   offsetA   nonnegative integer;
 
 */
-func Her(A, X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Her(A, X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -1046,12 +971,9 @@ func Her(A, X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.FloatArray()
 		Aa := A.FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-			if math.IsNaN(aval) {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		dsyr(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
 			Aa[ind.OffsetA:], ind.LDa)
@@ -1059,12 +981,9 @@ func Her(A, X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.ComplexArray()
 		Aa := A.ComplexArray()
 		uplo := linalg.ParamString(params.Uplo)
-		aval := 1.0
-		if alpha != nil {
-			aval = alpha.FloatValue()
-			if math.IsNaN(aval) {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		zher(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
 			Aa[ind.OffsetA:], ind.LDa)
@@ -1097,7 +1016,7 @@ func Her(A, X, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
  offsety   nonnegative integer
  offsetA   nonnegative integer;
 */
-func Syr2(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Syr2(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -1109,7 +1028,7 @@ func Syr2(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 	if err != nil {
 		return
 	}
-	if ! matrix.EqualTypes(A, X, Y, alpha) {
+	if ! matrix.EqualTypes(A, X, Y) {
 		return errors.New("Parameters not of same type")
 	}
 	switch X.(type) {
@@ -1117,7 +1036,7 @@ func Syr2(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.FloatArray()
 		Ya := X.FloatArray()
 		Aa := A.FloatArray()
-		aval := alpha.FloatValue()
+		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not a number")
 		}
@@ -1159,7 +1078,7 @@ func Syr2(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
  offsety   nonnegative integer
  offsetA   nonnegative integer;
 */
-func Her2(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
+func Her2(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -1179,7 +1098,7 @@ func Her2(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.FloatArray()
 		Ya := X.FloatArray()
 		Aa := A.FloatArray()
-		aval := alpha.FloatValue()
+		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not a number")
 		}
@@ -1191,14 +1110,9 @@ func Her2(A, X, Y, alpha matrix.Matrix, opts ...linalg.Opt) (err error) {
 		Xa := X.ComplexArray()
 		Ya := X.ComplexArray()
 		Aa := A.ComplexArray()
-		aval := complex(1.0, 0.0)
-		if alpha != nil {
-			aval = alpha.ComplexValue()
-			if cmplx.IsNaN(aval) {
-				aval = complex(alpha.FloatValue(), 0.0)
-			} else {
-				return errors.New("alpha not a number")
-			}
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return errors.New("alpha not a number")
 		}
 		uplo := linalg.ParamString(params.Uplo)
 		zher2(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,

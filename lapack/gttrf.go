@@ -40,7 +40,7 @@ import (
   offsetd   nonnegative integer
   offsetdu  nonnegative integer
 */
-func Gtrrf(DL, D, DU, DU2 matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Gtrrf(DL, D, DU, DU2 matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	if ind.OffsetD < 0 {
 		return errors.New("offset D")

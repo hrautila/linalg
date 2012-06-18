@@ -13,7 +13,8 @@ import (
 	"fmt"
 )
 
-
+	
+// BLAS/LAPACK matrix parameter constants.
 type ParamValue uint32
 const (
 	// BLAS/LAPACK parameters. Chosen values match corresponding
@@ -47,11 +48,11 @@ type Parameters struct {
 	Range ParamValue
 }
 
-func GetParam(params ...Opt, name string) (val int) {
+func GetParam(name string, params ...Option) (val int) {
 	val = -1
 	for _, o := range params {
-		if strings.EqualFold(o.name, name) {
-			val = o.Val
+		if strings.EqualFold(o.Name(), name) {
+			val = o.Int()
 			return
 		}
 	}
@@ -60,7 +61,7 @@ func GetParam(params ...Opt, name string) (val int) {
 
 // Parse options and return parameter structure with option fields
 // set to given or sensible defaults.
-func GetParameters(params ...Opt) (p *Parameters, err error) {
+func GetParameters(params ...Option) (p *Parameters, err error) {
 	err = nil
 	p = &Parameters{
 		PNoTrans,		// Trans
@@ -74,9 +75,12 @@ func GetParameters(params ...Opt) (p *Parameters, err error) {
 
 Loop:
 	for _, o := range params {
-		pval := ParamValue(o.Val)
+		if _, ok := o.(*IOpt); ! ok {
+			continue Loop
+		}
+		pval := ParamValue(o.Int())
 		switch {
-		case strings.EqualFold(o.Name, "trans"):
+		case strings.EqualFold(o.Name(), "trans"):
 			if pval == PNoTrans || pval == PTrans || pval == PConjTrans {
 				p.Trans = pval
 				p.TransA = p.Trans;	p.TransB = p.Trans
@@ -84,35 +88,35 @@ Loop:
 				err = errors.New("Illegal value for Transpose parameter")
 				break Loop
 			}
-		case strings.EqualFold(o.Name, "transa"):
+		case strings.EqualFold(o.Name(), "transa"):
 			if pval == PNoTrans || pval == PTrans || pval == PConjTrans {
 				p.TransA = pval
 			} else {
 				err = errors.New("Illegal value for Transpose parameter")
 				break Loop
 			}
-		case strings.EqualFold(o.Name, "transb"):
+		case strings.EqualFold(o.Name(), "transb"):
 			if pval == PNoTrans || pval == PTrans || pval == PConjTrans {
 				p.TransB = pval
 			} else {
 				err = errors.New("Illegal value for Transpose parameter")
 				break Loop
 			}
-		case strings.EqualFold(o.Name, "uplo"):
+		case strings.EqualFold(o.Name(), "uplo"):
 			if pval == PUpper || pval == PLower {
 				p.Uplo = pval
 			} else {
 				err = errors.New("Illegal value for UpLo parameter")
 				break Loop
 			}
-		case strings.EqualFold(o.Name, "diag"):
+		case strings.EqualFold(o.Name(), "diag"):
 			if pval == PNonUnit || pval == PUnit {
 				p.Diag = pval
 			} else {
 				err = errors.New("Illegal value for Diag parameter")
 				break Loop
 			}
-		case strings.EqualFold(o.Name, "side"):
+		case strings.EqualFold(o.Name(), "side"):
 			if pval ==  PLeft || pval == PRight {
 				p.Side = pval
 			} else {
@@ -120,14 +124,14 @@ Loop:
 				break Loop
 			}
 		// Lapack parameters
-		case strings.EqualFold(o.Name, "jobz"):
+		case strings.EqualFold(o.Name(), "jobz"):
 			if pval == PJobNo || pval == PJobValue {
 				p.Side = pval
 			} else {
 				err = errors.New("Illegal value for Jobz parameter")
 				break Loop
 			}
-		case strings.EqualFold(o.Name, "range"):
+		case strings.EqualFold(o.Name(), "range"):
 			if pval == PRangeAll || pval == PRangeValue || pval == PRangeInt {
 				p.Side = pval
 			} else {
@@ -139,28 +143,37 @@ Loop:
 	return
 }
 
-// Parameter option variables.
+// Matrix parameter option variables.
 var (
-	OptNoTrans = Opt{"trans", int(PNoTrans)}
-	OptTrans = Opt{"trans", int(PTrans)}
-	OptConjTrans = Opt{"trans", int(PConjTrans)}
-	OptNoTransA = Opt{"transA", int(PNoTrans)}
-	OptTransA = Opt{"transA", int(PTrans)}
-	OptConjTransA = Opt{"transA", int(PConjTrans)}
-	OptNoTransB = Opt{"transB", int(PNoTrans)}
-	OptTransB = Opt{"transB", int(PTrans)}
-	OptConjTransB = Opt{"transB", int(PConjTrans)}
-	OptUpper = Opt{"uplo", int(PUpper)}
-	OptLower = Opt{"uplo", int(PLower)}
-	OptLeft = Opt{"side", int(PLeft)}
-	OptRight = Opt{"side", int(PRight)}
-	OptUnit =  Opt{"diag", int(PUnit)}
-	OptNonUnit =  Opt{"diag", int(PNonUnit)}
-	OptJobNo =  Opt{"jobz", int(PJobNo)}
-	OptJobValue =  Opt{"jobz", int(PJobValue)}
-	OptRangeAll =  Opt{"range", int(PRangeAll)}
-	OptRangeValue =  Opt{"range", int(PRangeValue)}
-	OptRangeInt =  Opt{"range", int(PRangeInt)}
+	// trans: No Transpose
+	OptNoTrans = &IOpt{"trans", int(PNoTrans)}
+	OptNoTransA = &IOpt{"transA", int(PNoTrans)}
+	OptNoTransB = &IOpt{"transB", int(PNoTrans)}
+	// trans: Transpose
+	OptTrans = &IOpt{"trans", int(PTrans)}
+	OptTransA = &IOpt{"transA", int(PTrans)}
+	OptTransB = &IOpt{"transB", int(PTrans)}
+	// trans: Conjugate Transpose
+	OptConjTrans = &IOpt{"trans", int(PConjTrans)}
+	OptConjTransA = &IOpt{"transA", int(PConjTrans)}
+	OptConjTransB = &IOpt{"transB", int(PConjTrans)}
+	// uplo: Upper Triangular
+	OptUpper = &IOpt{"uplo", int(PUpper)}
+	// uplo: Lower Triangular
+	OptLower = &IOpt{"uplo", int(PLower)}
+	// side parameter
+	OptLeft = &IOpt{"side", int(PLeft)}
+	OptRight = &IOpt{"side", int(PRight)}
+	// diag parameter
+	OptUnit =  &IOpt{"diag", int(PUnit)}
+	OptNonUnit =  &IOpt{"diag", int(PNonUnit)}
+	// Lapack jobz 
+	OptJobZNo =  &IOpt{"jobz", int(PJobNo)}
+	OptJobZValue =  &IOpt{"jobz", int(PJobValue)}
+	// Lapack range
+	OptRangeAll =  &IOpt{"range", int(PRangeAll)}
+	OptRangeValue =  &IOpt{"range", int(PRangeValue)}
+	OptRangeInt =  &IOpt{"range", int(PRangeInt)}
 )
 
 var paramString map[ParamValue]string = map[ParamValue]string{

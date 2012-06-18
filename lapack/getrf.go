@@ -38,7 +38,7 @@ import (
   offsetA   nonnegative integer
 
  */
-func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	if ind.M < 0 {
 		ind.M = A.Rows()

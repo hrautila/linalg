@@ -46,7 +46,7 @@ import (
   offsetB   nonnegative integer;
 
 */
-func Sytrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Sytrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

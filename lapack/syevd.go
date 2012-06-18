@@ -42,7 +42,7 @@ import (
   offsetA   nonnegative integer
   offsetB   nonnegative integer;
  */
-func Syevd(A, W matrix.Matrix, opts ...linalg.Opt) error {
+func Syevd(A, W matrix.Matrix, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

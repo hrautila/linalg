@@ -50,7 +50,7 @@ import (
 
  */
 
-func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ import (
 )
 
 // See function Nrm2.
-func Nrm2Float(X *matrix.FloatMatrix, opts ...linalg.Opt) (v float64, err error) {
+func Nrm2Float(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err error) {
 	v = 0.0
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fnrm2, X, nil)
@@ -30,7 +30,7 @@ func Nrm2Float(X *matrix.FloatMatrix, opts ...linalg.Opt) (v float64, err error)
 }
 
 // See function Asum.
-func AsumFloat(X *matrix.FloatMatrix, opts ...linalg.Opt) (v float64, err error) {
+func AsumFloat(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err error) {
 	v = 0.0
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fasum, X, nil)
@@ -47,7 +47,7 @@ func AsumFloat(X *matrix.FloatMatrix, opts ...linalg.Opt) (v float64, err error)
 
 
 // See functin Dot.
-func DotFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Opt) (v float64, err error) {
+func DotFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err error) {
 	v = 0.0
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fdot, X, Y)
@@ -68,7 +68,7 @@ func DotFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Opt) (v float64, err erro
 }
 
 // See function Swap.
-func SwapFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
+func SwapFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fswap, X, Y)
 	if err != nil {
@@ -85,7 +85,7 @@ func SwapFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
 }
 
 // See function Copy.
-func CopyFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
+func CopyFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fcopy, X, Y)
 	if err != nil {
@@ -105,7 +105,7 @@ func CopyFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
 // Valid options: offset, inc, N.
 
 // See function Scal.
-func ScalFloat(X *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err error) {
+func ScalFloat(X *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fscal, X, nil)
 	if err != nil {
@@ -120,7 +120,7 @@ func ScalFloat(X *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err er
 }
 
 // See function Axpy.
-func AxpyFloat(X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err error) {
+func AxpyFloat(X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, faxpy, X, Y)
 	if err != nil {
@@ -142,7 +142,7 @@ func AxpyFloat(X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err
 // ---------------------------------------------------------------------------------
 
 // See function Gemv.
-func GemvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func GemvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -203,7 +203,7 @@ func GemvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 */
 
 // See function Gbmv.
-func GbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func GbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -263,7 +263,7 @@ func GbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 */
 
 // See function Symv.
-func SymvFLoat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func SymvFLoat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -317,7 +317,7 @@ func SymvFLoat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 */
 
 // See function Sbmv.
-func SbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func SbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -369,7 +369,7 @@ func SbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 */
 
 // See function Trmv.
-func TrmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
+func TrmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -418,7 +418,7 @@ func TrmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
 */
 
 // See function Tbmv.
-func TbmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
+func TbmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -466,7 +466,7 @@ func TbmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
 */
 
 // See function Trsv.
-func TrsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
+func TrsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -516,7 +516,7 @@ func TrsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
 */
 
 // See function Tbsv.
-func TbsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
+func TbsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -566,7 +566,7 @@ func TbsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Opt) (err error) {
 */
 
 // See function Ger.
-func GerFloat(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err error) {
+func GerFloat(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -608,7 +608,7 @@ func GerFloat(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (e
 */
 
 // See function Syr.
-func SyrFloat(A, X *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err error) {
+func SyrFloat(A, X *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -650,7 +650,7 @@ func SyrFloat(A, X *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err 
 */
 
 // See function Syr2.
-func Syr2Float(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err error) {
+func Syr2Float(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -721,7 +721,7 @@ func Syr2Float(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (
 */
 
 // See function Gemm.
-func GemmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func GemmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -787,7 +787,7 @@ func GemmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 */
 
 // See function Symm.
-func SymmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func SymmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -849,7 +849,7 @@ func SymmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 */
 
 // See function Syrk.
-func SyrkFloat(A, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func SyrkFloat(A, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -919,7 +919,7 @@ n           case and means the same as 'T')
  */
 
 // See function Syrk2.
-func Syr2kFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt) (err error) {
+func Syr2kFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -985,7 +985,7 @@ func Syr2kFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg
  */
 
 // See function Trmm.
-func TrmmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err error) {
+func TrmmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {
@@ -1053,7 +1053,7 @@ func TrmmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err
  */
 
 // See function Trsm.
-func TrsmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Opt) (err error) {
+func TrsmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	params, e := linalg.GetParameters(opts...)
 	if e != nil {

@@ -35,7 +35,7 @@ import (
             value is used.
   offsetA   nonnegative integer;
 */
-func Potri(A matrix.Matrix, opts ...linalg.Opt) error {
+func Potri(A matrix.Matrix, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err

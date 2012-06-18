@@ -92,7 +92,7 @@ import (
   offsetVt  nonnegative integer
 
  */
-func Gesvd(A, S, U, Vt matrix.Matrix, opts ...linalg.Opt) error {
+func Gesvd(A, S, U, Vt matrix.Matrix, opts ...linalg.Option) error {
 	return errors.New("not implemented yet")
 }
 

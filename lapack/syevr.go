@@ -70,7 +70,7 @@ import (
   m         the number of eigenvalues computed
 
 */
-func Syevr(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int, opts ...linalg.Opt) error {
+func Syevr(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int, opts ...linalg.Option) error {
 	var vl, vu float64
 	var il, iu int
 

@@ -38,7 +38,7 @@ import (
   ldA       positive integer, ldA >= 2*kl+ku+1. default = min(1, A.Rows())
   offsetA   nonnegative integer
  */
-func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Opt) error {
+func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	ind.M = M
 	ind.Kl = KL

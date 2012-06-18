@@ -44,7 +44,7 @@ import (
   offsetA   nonnegative integer
   offsetA   nonnegative integer;
  */
-func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Opt) error {
+func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	//pars, err := linalg.GetParameters(opts...)
 	ind := linalg.GetIndexOpts(opts...)
 	if ind.N < 0 {
