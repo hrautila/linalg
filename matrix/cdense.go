@@ -179,6 +179,10 @@ func (A *ComplexMatrix) Get(i int, j int) (val complex128) {
 
 // Get i'th element in column-major ordering
 func (A *ComplexMatrix) GetIndex(i int) complex128 {
+	if i < 0 {
+		i = A.NumElements() + i
+	}
+	i %= A.NumElements()
 	return A.elements[i]
 }
 
@@ -186,6 +190,10 @@ func (A *ComplexMatrix) GetIndex(i int) complex128 {
 func (A *ComplexMatrix) GetIndexes(indexes []int) []complex128 {
 	vals := make([]complex128, len(indexes))
 	for i, k := range indexes {
+		if k < 0 {
+			k = A.NumElements() + k
+		}
+		k %= A.NumElements()
 		vals[i] = A.elements[k]
 	}
 	return vals
@@ -257,6 +265,10 @@ func (A *ComplexMatrix) GetSlice(start, end int) []complex128 {
 // Set the element in the i'th row and j'th column to val.
 func (A *ComplexMatrix) Set(i int, j int, val complex128) {
 	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.NumElements() + i
+	}
+	i %= A.NumElements()
 	A.elements[j*step:j*step+A.Cols()][i] = val
 }
 
@@ -271,6 +283,10 @@ func (A *ComplexMatrix) SetIndexes(indexes []int, values []complex128) {
 		if i >= len(values) {
 			break
 		}
+		if k < 0 {
+			k = A.NumElements() + i
+		}
+		k %= A.NumElements()
 		A.elements[k] = values[i]
 	}
 }

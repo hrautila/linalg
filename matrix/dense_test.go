@@ -102,6 +102,15 @@ func TestFuncs2(t *testing.T) {
 	B := Exp(A)
 	fmt.Printf("B = Exp(A):\n%v\n", B)
 }
+
+func TestIndexing(t *testing.T) {
+	A := FloatVector([]float64{0, 1, 2, 3, 4, 5})
+	fmt.Printf(" 0: %v\n", A.GetIndex(0))
+	fmt.Printf("-1: %v\n", A.GetIndex(-1))
+	fmt.Printf(" 6: %v\n", A.GetIndex(6))
+	fmt.Printf(" every 2nd: %v\n", A.GetIndexes(MakeIndexSet(0, A.NumElements(), 2)))
+}
+
 // Local Variables:
 // tab-width: 4
 // End:

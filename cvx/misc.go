@@ -304,6 +304,25 @@ func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Op
 	}
 }
 
+// The product x := y o y.   The 's' components of y are diagonal and
+// only the diagonals of x and y are stored.     
+func Ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) {
+
+	blas.Copy(y, x)
+	ind := mnl+dims.At("l")[0]
+	blas.Tbmv(y, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+	for _, m := range dims.At("q") {
+		v := blas.Nrm2(y, &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind}).Float()
+		x.SetIndex(ind, v*v)
+		blas.Scal(x, matrix.FScalar(2.0*y.GetIndex(ind)),
+			&la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+		ind += m
+	}
+	blas.Tbmv(y, x, &la_.IOpt{"n", dims.Sum("s")}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
+		&la_.IOpt{"offseta", ind}, &la_.IOpt{"offsetx", ind})
+	
+}
+
 // Returns min {t | x + t*e >= 0}, where e is defined as follows
 //    
 //  - For the nonlinear and 'l' blocks: e is the vector of ones.
@@ -412,6 +431,17 @@ func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) {
 	nu := dims.SumSquared("s")
 	blas.Scal(y, matrix.FScalar(1.0/math.Sqrt(2.0)), &la_.IOpt{"n", nu}, &la_.IOpt{"offset", offsety+nlq})
 
+}
+
+/*
+    Returns the Nesterov-Todd scaling W at points s and z, and stores the 
+    scaled variable in lmbda. 
+    
+        W * z = W^{-T} * s = lmbda. 
+ */
+func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl int) *FloatMatrixSet {
+	W := FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
+	return W
 }
 
 // Local Variables:

@@ -92,7 +92,7 @@ func (A *dimensions) Cols() int {
 	return A.cols
 }
 
-// Return number of size of the matrix as rows, cols pair.
+// Return size of the matrix as rows, cols pair.
 func (A *dimensions) Size() (int, int) {
 	return A.rows, A.cols
 }
@@ -115,7 +115,7 @@ func (A *dimensions) NumElements() int {
 }
 
 
-// Return true if size of A is equal to size of B.
+// Return true if size of A is equal to parameter size (rows, cols).
 func (A *dimensions) SizeMatch(rows, cols int) bool {
 	return A != nil && A.rows == rows && A.cols == cols
 }
@@ -142,6 +142,18 @@ func MakeIndexSet(start, end, step int) []int {
 	return inds
 }
 
+// Create index set to access diagonal entries of matrix.
+//  indexes := MakeDiagonalSet(A.Size())
+func MakeDiagonalSet(rows, cols int) []int {
+	if rows != cols {
+		return []int{}
+	}
+	inds := make([]int, rows)
+	for i :=0; i < rows; i++  {
+		inds[i] = i*rows + i
+	}
+	return inds
+}
 
 // Local Variables:
 // tab-width: 4

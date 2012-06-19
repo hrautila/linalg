@@ -39,7 +39,7 @@ func Min(A Matrix) float64 {
 	return m
 }
 
-// Return copy of A with each element as Log10(A[i,j]).
+// Return copy of A with each element as Sqrt(A[i,j]).
 func Sqrt(A Matrix) Matrix {
 	B := A.MakeCopy()
 	applyFunc(B, math.Sqrt, cmplx.Sqrt)
@@ -173,7 +173,7 @@ func applyFloat(A Matrix, cFunc func(float64,float64)float64, cval float64) {
 	}
 }
 
-// Helper function random float64 number in range [0.0, 1.0) if nonNegative is true.
+// Helper function for genearing random float64 numbers in range [0.0, 1.0) if nonNegative is true.
 // If nonNegative is false returns numbers in range (-1.0, 1.0).
 func uniformFloat64(nonNegative bool) float64 {
 	val := rand.Float64()

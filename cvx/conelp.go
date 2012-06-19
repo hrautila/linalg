@@ -275,10 +275,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			W.Append("v", vm)
 		}
 		for _, n := range dims.At("s") {
-			mi, _ := matrix.FloatIdentity(n, n)
-			W.Append("r", mi)
-			mi, _ = matrix.FloatIdentity(n, n)
-			W.Append("rti", mi)
+			W.Append("r", matrix.FloatIdentity(n, n))
+			W.Append("rti", matrix.FloatIdentity(n, n))
 		}
 		f = kktsolver(W, nil, nil)
 	}
@@ -657,8 +655,65 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			sol.Iterations = iter
 			return
 		}
-	}
+		
+        // Compute initial scaling W:
+        // 
+        //     W * z = W^{-T} * s = lambda
+        //     dg * tau = 1/dg * kappa = lambdag.
+		var dg, dgi matrix.FScalar
+		if iter == 0 {
+			W = ComputeScaling(s, z, lmbda, dims, 0)
+			
+            //     dg = sqrt( kappa / tau )
+            //     dgi = sqrt( tau / kappa )
+            //     lambda_g = sqrt( tau * kappa )  
+            // 
+            // lambda_g is stored in the last position of lmbda.
 
+			dg = matrix.FScalar(math.Sqrt(kappa.Float()/tau.Float()))
+			dgi = matrix.FScalar(math.Sqrt(tau.Float()/kappa.Float()))
+			lmbda.SetIndex(-1, math.Sqrt(tau.Float()*kappa.Float()))
+		}
+        // lmbdasq := lmbda o lmbda 
+		Ssqr(lmbdasq, lmbda, dims, 0)
+		lmbdasq.SetIndex(-1, lmbda.GetIndex(-1))
+
+        // f3(x, y, z) solves    
+        //
+        //     [ 0  A'  G'   ] [ ux        ]   [ bx ]
+        //     [ A  0   0    ] [ uy        ] = [ by ].
+        //     [ G  0  -W'*W ] [ W^{-1}*uz ]   [ bz ]
+        //
+        // On entry, x, y, z contain bx, by, bz.
+        // On exit, they contain ux, uy, uz.
+        //
+        // Also solve
+        //
+        //     [ 0   A'  G'    ] [ x1        ]          [ c ]
+        //     [-A   0   0     ]*[ y1        ] = -dgi * [ b ].
+        //     [-G   0   W'*W  ] [ W^{-1}*z1 ]          [ h ]
+
+		f3 := kktsolver(W, nil, nil)
+		var x1, y1, z1 *matrix.FloatMatrix
+		if iter == 0 {
+			x1 = c.Copy()
+			y1 = b.Copy()
+			z1 = matrix.FloatZeros(cdim, 1)
+		}
+		blas.Copy(c, x1)
+		blas.Scal(x1, matrix.FScalar(-1.0))
+		blas.Copy(b, y1)
+		blas.Copy(h, z1)
+		f3(x1, y1, z1)
+		blas.Scal(x1, dgi)
+		blas.Scal(y1, dgi)
+		blas.Scal(z1, dgi)
+
+		// !! EMPTY REF !!
+		if dg.Float() > 0.0 {
+		}
+	}
+	// NEVER exits here.
 	// this to satisfy the compiler
 	fmt.Printf("cdim=%d, cdim_pckd=%d, cdim_diag=%d\n", cdim, cdim_pckd, cdim_diag)
 	if Gf == nil || Af == nil || kktsolver == nil {
@@ -668,7 +723,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		fmt.Printf("res || ds || dzis nil\n")
 	}
 	if lmbda == nil || lmbdasq == nil {
-		fmt.Printf("lmbda || lmbdasq  nil\n")
+		fmt.Printf("lmbda || lmbdasq  nil\n", )
 	}
 
 	return 

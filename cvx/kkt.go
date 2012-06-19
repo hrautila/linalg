@@ -46,15 +46,20 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 	
 	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) KKTFunc {
 
+		// Zero K for each call.
 		blas.Scal(K, matrix.FScalar(0.0))
 		if H != nil {
 			K.SetSubMatrix(0, 0, H)
 		}
 		K.SetSubMatrix(n, 0, A)
 		for k := 0; k < n; k++ {
+			// g is (mnl + G.Rows(), 1) matrix, Df is (mnl, n), G is (N, n)
 			if mnl > 0 {
-				g.SetColumnMatrix(0, Df.GetColumnMatrix(k, nil))
+				// set values g[0:mnl] = Df[,k]
+				g.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), Df.GetColumn(k, nil))
 			}
+			// set values g[mnl:] = G[,k]
+			g.SetIndexes(matrix.MakeIndexSet(mnl, g.Rows(), 1), G.GetColumn(k, nil))
 			Scale(g, W, true, true)
 			Pack(g, K, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", k*ldK+n+p})
 		}

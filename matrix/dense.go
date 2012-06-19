@@ -115,10 +115,9 @@ func FloatNumbers(rows, cols int, value float64) *FloatMatrix {
 }
 
 // Create new identity matrix. Row count must equal column count.
-func FloatIdentity(rows, cols int) (A *FloatMatrix, err error) {
+func FloatIdentity(rows, cols int) (A *FloatMatrix) {
 	A = nil
 	if rows != cols {
-		err = ErrorDimensionMismatch
 		return 
 	}
 	A = FloatZeros(rows, cols)
@@ -175,6 +174,10 @@ func (A *FloatMatrix) Get(i int, j int) (val float64) {
 
 // Get i'th element in column-major ordering
 func (A *FloatMatrix) GetIndex(i int) float64 {
+	if i < 0 {
+		i = A.NumElements() + i
+	}
+	i %= A.NumElements()
 	return A.elements[i]
 }
 
@@ -182,6 +185,10 @@ func (A *FloatMatrix) GetIndex(i int) float64 {
 func (A *FloatMatrix) GetIndexes(indexes []int) []float64 {
 	vals := make([]float64, len(indexes))
 	for i, k := range indexes {
+		if k < 0 {
+			k = A.NumElements() + k
+		}
+		k %= A.NumElements()
 		vals[i] = A.elements[k]
 	}
 	return vals
@@ -258,8 +265,13 @@ func (A *FloatMatrix) Set(i int, j int, val float64) {
 	A.elements[j*step:j*step+A.Cols()][i] = val
 }
 
-// Set i'th element in column-major ordering
+// Set i'th element in column-major ordering. If i < 0 then i = A.NumElements() + i.
+// Last element of 
 func (A *FloatMatrix) SetIndex(i int, v float64) {
+	if i < 0 {
+		i = A.NumElements() + i
+	}
+	i %= A.NumElements()
 	A.elements[i] = v
 }
 
@@ -269,6 +281,10 @@ func (A *FloatMatrix) SetIndexes(indexes []int, values []float64) {
 		if i >= len(values) {
 			break
 		}
+		if k < 0 {
+			k = A.NumElements() + k
+		}
+		k %= A.NumElements()
 		A.elements[k] = values[i]
 	}
 }
