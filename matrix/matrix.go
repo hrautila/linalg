@@ -53,25 +53,20 @@ type Scalar interface {
 type FScalar float64
 
 // Return self
-func (self FScalar) Float() float64 {
-	return float64(self)
-}
-
-// Return complex(f, 0)
-func (self FScalar) Complex() complex128 {
-	return complex(float64(self), 0)
-}
+func (self FScalar) Float() float64        { return float64(self) }
+// Return complex(self, 0)
+func (self FScalar) Complex() complex128   { return complex(float64(self), 0) }
+func (self FScalar) Add(a float64) FScalar { return FScalar(float64(self)+a) }
+func (self FScalar) Sub(a float64) FScalar { return FScalar(float64(self)-a) }
+func (self FScalar) Div(a float64) FScalar { return FScalar(float64(self)/a) }
+func (self FScalar) Mult(a float64) FScalar{ return FScalar(float64(self)*a) }
+func (self FScalar) Inv() FScalar          { return FScalar(1.0/float64(self)) }
 
 // Return real(self).
 type CScalar complex128
-func (self CScalar) Float() float64 {
-	return float64(real(self))
-}
-
+func (self CScalar) Float() float64 { return float64(real(self)) }
 // Return self.
-func (self CScalar) Complex() complex128 {
-	return complex128(self)
-}
+func (self CScalar) Complex() complex128  { return complex128(self) }
 
 // Matrix dimensions, rows, cols and leading index. For column major matrices 
 // leading index is equal to row count.

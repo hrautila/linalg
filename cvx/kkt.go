@@ -66,7 +66,7 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 		setDiagonal(K, n+p, n+n, ldK, ldK, -1.0)
 		lapack.Sytrf(K, ipiv)
 
-		solve := func(x, y, z *matrix.FloatMatrix) error {
+		solve := func(x, y, z *matrix.FloatMatrix) (err error) {
             // Solve
             //
             //     [ H          A'   GG'*W^{-1} ]   [ ux   ]   [ bx        ]
@@ -77,15 +77,22 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
             //
             // On entry, x, y, z contain bx, by, bz.  On exit, they contain
             // the solution ux, uy, W*uz.
+			err = nil
 			blas.Copy(x, u)
 			blas.Copy(y, u, &la_.IOpt{"offsety", n})
-			Scale(z, W, true, true)
-			Pack(z, u, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", n+p})
-			lapack.Sytrs(K, u, ipiv)
+			err = Scale(z, W, true, true)
+			if err != nil { return }
+
+			err = Pack(z, u, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", n+p})
+			if err != nil { return }
+
+			err = lapack.Sytrs(K, u, ipiv)
+			if err != nil { return }
+
 			blas.Copy(u, x, &la_.IOpt{"n", n})
 			blas.Copy(u, y, &la_.IOpt{"n", p}, &la_.IOpt{"offsetx", n})
-			UnPack(u, z, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsetx", n+p})
-			return nil
+			err = UnPack(u, z, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsetx", n+p})
+			return 
 		}
 		return solve
 	}

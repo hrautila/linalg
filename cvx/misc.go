@@ -36,10 +36,11 @@ import (
     The 'dnl' and 'dnli' entries are optional, and only present when the 
     function is called from the nonlinear solver.
 */
-func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) {
+func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err error) {
 
 	var w []*matrix.FloatMatrix
 	ind := 0
+	err = nil
 
     // Scaling for nonlinear component xk is xk := dnl .* xk; inverse 
     // scaling is xk ./ dnl = dnli .* xk, where dnl = W['dnl'], 
@@ -50,8 +51,9 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) {
 			w = W.At("dnli")
 		}
 		for k := 0; k < x.Cols(); k++ {
-			blas.Tbmv(w[0], x, &la_.IOpt{"n", w[0].Rows()}, &la_.IOpt{"k", 0},
+			err = blas.Tbmv(w[0], x, &la_.IOpt{"n", w[0].Rows()}, &la_.IOpt{"k", 0},
 				&la_.IOpt{"lda", 1}, &la_.IOpt{"offsetx", k*x.Rows()})
+			if err != nil { return }
 		}
 		ind += w[0].Rows()
 	}
@@ -61,8 +63,9 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) {
 
 	if inverse { w = W.At("d") } else { w = W.At("di")	}
 	for k := 0; k < x.Cols(); k++ {
-		blas.Tbmv(w[0], x, &la_.IOpt{"n", w[0].Rows()}, &la_.IOpt{"k", 0},
+		err = blas.Tbmv(w[0], x, &la_.IOpt{"n", w[0].Rows()}, &la_.IOpt{"k", 0},
 			&la_.IOpt{"lda", 1}, &la_.IOpt{"offsetx", k*x.Rows()+ind})
+		if err != nil { return }
 	}
 	ind += w[0].Rows()
 		
@@ -84,14 +87,19 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) {
 			blas.Scal(x, matrix.FScalar(-1.0),
 				&la_.IOpt{"offset", ind}, &la_.IOpt{"inc", x.Rows()})
 		}
-		blas.Gemv(x, v, w[0], la_.OptTrans, &la_.IOpt{"m", m},
+		err = blas.Gemv(x, v, w[0], la_.OptTrans, &la_.IOpt{"m", m},
 			&la_.IOpt{"n", x.Cols()}, &la_.IOpt{"offsetA", ind},
 			&la_.IOpt{"lda", x.Rows()})
-		blas.Scal(x, matrix.FScalar(-1.0),
+		if err != nil { return }
+
+		err = blas.Scal(x, matrix.FScalar(-1.0),
 			&la_.IOpt{"offset", ind}, &la_.IOpt{"inc", x.Rows()})
-		blas.Ger(v, w[0], x, matrix.FScalar(2.0), &la_.IOpt{"m", m},
+		if err != nil { return }
+
+		err = blas.Ger(v, w[0], x, matrix.FScalar(2.0), &la_.IOpt{"m", m},
 			&la_.IOpt{"n", x.Cols()}, &la_.IOpt{"lda", x.Rows()},
 			&la_.IOpt{"offsetA", ind})
+		if err != nil { return }
 
 		var a float64
 		if inverse {
@@ -148,25 +156,33 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) {
             // a = r*tril(x) (t is 'N') or a = tril(x)*r  (t is 'T')
 			blas.Copy(r, a)
 			if ! t {
-				blas.Trmm(x, a, la_.OptRight, &la_.IOpt{"m", n},
+				err = blas.Trmm(x, a, la_.OptRight, &la_.IOpt{"m", n},
 					&la_.IOpt{"n", n}, &la_.IOpt{"lda", n}, &la_.IOpt{"ldb", n},
 					&la_.IOpt{"offsetA", ind+i*x.Rows()})
+				if err != nil { return }
+
 				// x := (r*a' + a*r')  if t is 'N'
-				blas.Syr2k(r, a, x, la_.OptNoTrans, &la_.IOpt{"n", n},
+				err = blas.Syr2k(r, a, x, la_.OptNoTrans, &la_.IOpt{"n", n},
 					&la_.IOpt{"k", n}, &la_.IOpt{"ldb", n}, &la_.IOpt{"ldc", n},
 					&la_.IOpt{"offsetC", ind+i*x.Rows()})
+				if err != nil { return }
+
 			} else {
-				blas.Trmm(x, a, la_.OptLeft, &la_.IOpt{"m", n},
+				err = blas.Trmm(x, a, la_.OptLeft, &la_.IOpt{"m", n},
 					&la_.IOpt{"n", n}, &la_.IOpt{"lda", n}, &la_.IOpt{"ldb", n},
 					&la_.IOpt{"offsetA", ind+i*x.Rows()})
+				if err != nil { return }
+
 				// x := (r'*a + a'*r)  if t is 'T'
-				blas.Syr2k(r, a, x, la_.OptTrans, &la_.IOpt{"n", n},
+				err = blas.Syr2k(r, a, x, la_.OptTrans, &la_.IOpt{"n", n},
 					&la_.IOpt{"k", n}, &la_.IOpt{"ldb", n}, &la_.IOpt{"ldc", n},
 					&la_.IOpt{"offsetC", ind+i*x.Rows()})
+				if err != nil { return }
 			}
 		}
 		ind += n*n
 	}
+	return 
 }
 
 // Inner product of two vectors in S.
@@ -195,15 +211,18 @@ func Snrm2(x *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
 // Converts lower triangular matrix to symmetric.  
 // Fills in the upper triangular part of the symmetric matrix stored in 
 // x[offset : offset+n*n] using 'L' storage.
-func Symm(x *matrix.FloatMatrix, n, offset int) {
+func Symm(x *matrix.FloatMatrix, n, offset int) (err error) {
+	err = nil
 	if n <= 1 {
 		return
 	}
 	for i := 0; i < n-1; i++ {
-		blas.Copy(x, x, &la_.IOpt{"offsetx", offset+i*(n-1)+1},
+		err = blas.Copy(x, x, &la_.IOpt{"offsetx", offset+i*(n-1)+1},
 			&la_.IOpt{"offsety", offset+(i+1)*(n-1)-1}, &la_.IOpt{"incy", n},
 			&la_.IOpt{"n", n-i-1})
+		if err != nil { return }
 	}
+	return
 }
 
 func maxdim(vec []int) int {
@@ -239,14 +258,16 @@ func minvec(vec []float64) float64 {
 
 // The product x := (y o x).  If diag is 'D', the 's' part of y is 
 // diagonal and only the diagonal is stored.
-func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Option) {
+func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Option) (err error){
 
+	err = nil
 	diag := la_.GetStringOpt("diag", "N", opts...)
     // For the nonlinear and 'l' blocks:  
     //
     //     yk o xk = yk .* xk.
 	ind := mnl + dims.At("l")[0]
-	blas.Tbmv(y, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+	err = blas.Tbmv(y, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+	if err != nil { return }
 
     // For 'q' blocks: 
     //
@@ -279,12 +300,16 @@ func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Op
 		for _, m := range dims.At("s") {
 			blas.Copy(x, A, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"n", m*m})
 			for i := 0; i < m-1; i++ {
-				Symm(A, m, 0)
-				Symm(y, m, ind)
+				err = Symm(A, m, 0)
+				if err != nil { return }
+
+				err = Symm(y, m, ind)
+				if err != nil { return }
 			}
-			blas.Syr2k(A, y, x, matrix.FScalar(0.5), &la_.IOpt{"n", m}, &la_.IOpt{"k", m},
+			err = blas.Syr2k(A, y, x, matrix.FScalar(0.5), &la_.IOpt{"n", m}, &la_.IOpt{"k", m},
 				&la_.IOpt{"lda", m}, &la_.IOpt{"ldb", m}, &la_.IOpt{"ldc", m},
 				&la_.IOpt{"offsetb", ind}, &la_.IOpt{"offsetc", ind})
+			if err != nil { return }
 			ind += m*m
 		}
 	} else {
@@ -295,22 +320,26 @@ func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Op
 				u := matrix.FloatVector(y.FloatArray()[ind2+i:ind2+m])
 				u.Add(y.GetIndex(ind2+i))
 				u.Mult(0.5)
-				blas.Tbmv(u, x, &la_.IOpt{"n", m-i}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
+				err = blas.Tbmv(u, x, &la_.IOpt{"n", m-i}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
 					&la_.IOpt{"offsetx", ind+i*(m+1)})
+				if err != nil { return }
 			}
 			ind += m*m
 			ind2 += m
 		}
 	}
+	return
 }
 
 // The product x := y o y.   The 's' components of y are diagonal and
 // only the diagonals of x and y are stored.     
-func Ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) {
+func Ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
 
 	blas.Copy(y, x)
 	ind := mnl+dims.At("l")[0]
-	blas.Tbmv(y, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+	err = blas.Tbmv(y, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+	if err != nil { return }
+
 	for _, m := range dims.At("q") {
 		v := blas.Nrm2(y, &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind}).Float()
 		x.SetIndex(ind, v*v)
@@ -318,9 +347,9 @@ func Ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) {
 			&la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
 		ind += m
 	}
-	blas.Tbmv(y, x, &la_.IOpt{"n", dims.Sum("s")}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
+	err = blas.Tbmv(y, x, &la_.IOpt{"n", dims.Sum("s")}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
 		&la_.IOpt{"offseta", ind}, &la_.IOpt{"offsetx", ind})
-	
+	return
 }
 
 // Returns min {t | x + t*e >= 0}, where e is defined as follows
@@ -383,7 +412,8 @@ func MaxStep(x *matrix.FloatMatrix, dims *DimensionSet, mnl int, sigma *matrix.F
      stored in packed storage and the off-diagonal entries scaled by 
      sqrt(2).
  */
-func Pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) {
+func Pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err error) {
+	err = nil
 	mnl := la_.GetIntOpt("mnl", 0, opts...)
 	offsetx := la_.GetIntOpt("offsetx", 0, opts...)
 	offsety := la_.GetIntOpt("offsety", 0, opts...)
@@ -402,6 +432,7 @@ func Pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) {
 	}
 	np := dims.SumPacked("s")
 	blas.Scal(y, matrix.FScalar(math.Sqrt(2.0)), &la_.IOpt{"n", np}, &la_.IOpt{"offset", offsety+nlq})
+	return
 }
 
 /*
@@ -411,26 +442,32 @@ func Pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) {
      unpacked storage.
 
  */
-func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) {
+func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err error) {
+	err = nil
 	mnl := la_.GetIntOpt("mnl", 0, opts...)
 	offsetx := la_.GetIntOpt("offsetx", 0, opts...)
 	offsety := la_.GetIntOpt("offsety", 0, opts...)
 
 	nlq := mnl + dims.At("l")[0] + dims.Sum("q")
-	blas.Copy(x, y, &la_.IOpt{"n", nlq}, &la_.IOpt{"offsetx", offsetx},
+	err = blas.Copy(x, y, &la_.IOpt{"n", nlq}, &la_.IOpt{"offsetx", offsetx},
 		&la_.IOpt{"offsety", offsety})
+	if err != nil { return }
+
 	iu, ip := offsetx + nlq, offsety + nlq
 	for _, n := range dims.At("s") {
 		for k := 0; k < n; k++ {
-			blas.Copy(x, y, &la_.IOpt{"n", n-k}, &la_.IOpt{"offsetx", ip},
+			err = blas.Copy(x, y, &la_.IOpt{"n", n-k}, &la_.IOpt{"offsetx", ip},
 				&la_.IOpt{"offsety",  iu+k*(n+1)})
+			if err != nil { return }
+
 			y.SetIndex(ip, (y.GetIndex(ip) * math.Sqrt(2.0)))
 		}
 		iu += n*n
 	}
 	nu := dims.SumSquared("s")
-	blas.Scal(y, matrix.FScalar(1.0/math.Sqrt(2.0)), &la_.IOpt{"n", nu}, &la_.IOpt{"offset", offsety+nlq})
-
+	err = blas.Scal(y, matrix.FScalar(1.0/math.Sqrt(2.0)),
+		&la_.IOpt{"n", nu}, &la_.IOpt{"offset", offsety+nlq})
+	return
 }
 
 /*
@@ -439,9 +476,10 @@ func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) {
     
         W * z = W^{-T} * s = lmbda. 
  */
-func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl int) *FloatMatrixSet {
-	W := FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
-	return W
+func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl int) (W *FloatMatrixSet, err error) {
+	err = nil
+	W = FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
+	return 
 }
 
 // Local Variables:

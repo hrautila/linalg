@@ -662,7 +662,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
         //     dg * tau = 1/dg * kappa = lambdag.
 		var dg, dgi matrix.FScalar
 		if iter == 0 {
-			W = ComputeScaling(s, z, lmbda, dims, 0)
+			W, err = ComputeScaling(s, z, lmbda, dims, 0)
 			
             //     dg = sqrt( kappa / tau )
             //     dgi = sqrt( tau / kappa )
@@ -704,11 +704,54 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		blas.Scal(x1, matrix.FScalar(-1.0))
 		blas.Copy(b, y1)
 		blas.Copy(h, z1)
-		f3(x1, y1, z1)
+		err = f3(x1, y1, z1)
 		blas.Scal(x1, dgi)
 		blas.Scal(y1, dgi)
 		blas.Scal(z1, dgi)
 
+		if err != nil {
+			if iter == 0 && primalstart != nil && dualstart != nil {
+				err = errors.New("Rank(A) < p or Rank([G; A]) < n")
+				return
+			} else {
+				blas.Scal(x, tau.Inv())
+				blas.Scal(y, tau.Inv())
+				blas.Scal(s, tau.Inv())
+				blas.Scal(z, tau.Inv())
+				ind := dims.Sum("l", "q")
+				for _, m := range dims.At("s") {
+					Symm(s, m, ind)
+					Symm(z, m, ind)
+					ind += m*m
+				}
+				ts = MaxStep(s, dims, 0, nil)
+				tz = MaxStep(z, dims, 0, nil)
+				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Status = Unknown
+				sol.RelativeGap = relgap
+				sol.PrimalObjective = pcost
+				sol.DualObjective = dcost
+				sol.PrimalInfeasibility = pres
+				sol.DualInfeasibility = dres
+				sol.PrimalSlack = -ts
+				sol.DualSlack = -tz
+				sol.Iterations = iter
+				return
+			}
+
+			// f6_no_ir(x, y, z, tau, s, kappa) solves
+			//
+			//    [ 0         ]   [  0   A'  G'  c ] [ ux        ]    [ bx   ]
+			//    [ 0         ]   [ -A   0   0   b ] [ uy        ]    [ by   ]
+			//    [ W'*us     ] - [ -G   0   0   h ] [ W^{-1}*uz ] = -[ bz   ]
+			//    [ dg*ukappa ]   [ -c' -b' -h'  0 ] [ utau/dg   ]    [ btau ]
+			//
+			//    lmbda o (uz + us) = -bs
+			//    lmbdag * (utau + ukappa) = -bkappa.
+			//
+			// On entry, x, y, z, tau, s, kappa contain bx, by, bz, btau, 
+			// bkappa.  On exit, they contain ux, uy, uz, utau, ukappa.
+		}
 		// !! EMPTY REF !!
 		if dg.Float() > 0.0 {
 		}
