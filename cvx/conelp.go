@@ -489,6 +489,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	hry := b.Copy()
 	rz  := matrix.FloatZeros(cdim, 1)
 	hrz := matrix.FloatZeros(cdim, 1)
+	sigs := matrix.FloatZeros(dims.Sum("s"), 1)
+	sigz := matrix.FloatZeros(dims.Sum("s"), 1)
 	lmbda := matrix.FloatZeros(cdim_diag+1, 1)
 	lmbdasq := matrix.FloatZeros(cdim_diag+1, 1)
 	
@@ -739,19 +741,298 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				return
 			}
 
-			// f6_no_ir(x, y, z, tau, s, kappa) solves
-			//
-			//    [ 0         ]   [  0   A'  G'  c ] [ ux        ]    [ bx   ]
-			//    [ 0         ]   [ -A   0   0   b ] [ uy        ]    [ by   ]
-			//    [ W'*us     ] - [ -G   0   0   h ] [ W^{-1}*uz ] = -[ bz   ]
-			//    [ dg*ukappa ]   [ -c' -b' -h'  0 ] [ utau/dg   ]    [ btau ]
-			//
-			//    lmbda o (uz + us) = -bs
-			//    lmbdag * (utau + ukappa) = -bkappa.
-			//
-			// On entry, x, y, z, tau, s, kappa contain bx, by, bz, btau, 
-			// bkappa.  On exit, they contain ux, uy, uz, utau, ukappa.
 		}
+
+		// f6_no_ir(x, y, z, tau, s, kappa) solves
+		//
+		//    [ 0         ]   [  0   A'  G'  c ] [ ux        ]    [ bx   ]
+		//    [ 0         ]   [ -A   0   0   b ] [ uy        ]    [ by   ]
+		//    [ W'*us     ] - [ -G   0   0   h ] [ W^{-1}*uz ] = -[ bz   ]
+		//    [ dg*ukappa ]   [ -c' -b' -h'  0 ] [ utau/dg   ]    [ btau ]
+		//
+		//    lmbda o (uz + us) = -bs
+		//    lmbdag * (utau + ukappa) = -bkappa.
+		//
+		// On entry, x, y, z, tau, s, kappa contain bx, by, bz, btau, 
+		// bkappa.  On exit, they contain ux, uy, uz, utau, ukappa.
+		f6_no_ir := func(x, y, z *matrix.FloatMatrix, tau, s, kappa *matrix.FloatMatrix) (err error) {
+            /* Solve 
+            
+                 [  0   A'  G'    0   ] [ ux        ]   
+                 [ -A   0   0     b   ] [ uy        ]  
+                 [ -G   0   W'*W  h   ] [ W^{-1}*uz ] 
+                 [ -c' -b' -h'    k/t ] [ utau/dg   ]
+            
+                       [ bx                    ]
+                       [ by                    ]
+                     = [ bz - W'*(lmbda o\ bs) ]
+                       [ btau - bkappa/tau     ]
+            
+                 us = -lmbda o\ bs - uz
+                 ukappa = -bkappa/lmbdag - utau.
+
+             First solve 
+            
+                 [ 0  A' G'   ] [ ux        ]   [  bx                    ]
+                 [ A  0  0    ] [ uy        ] = [ -by                    ]
+                 [ G  0 -W'*W ] [ W^{-1}*uz ]   [ -bz + W'*(lmbda o\ bs) ]
+			 */
+			err = nil
+			minusOne := matrix.Fscalar(-1.0)
+			one := matrix.Fscalar(1.0)
+            // y := -y = -by
+			blas.Scal(y, minusOne)
+
+            // s := -lmbda o\ s = -lmbda o\ bs
+			err = Sinv(s, lmbda, dims)
+			blas.Scal(s, minusOne)
+
+            // z := -(z + W'*s) = -bz + W'*(lambda o\ bs)
+			blas.Copy(s, ws3)
+			err = Scale(ws3, W, true, false)
+			blas.Axpy(ws3, z, one)
+			blas.Scal(z, minusOne)
+
+			err = f3(x, y, z)
+			/*
+             Combine with solution of 
+            
+                 [ 0   A'  G'    ] [ x1         ]          [ c ]
+                 [-A   0   0     ] [ y1         ] = -dgi * [ b ]
+                 [-G   0   W'*W  ] [ W^{-1}*dzl ]          [ h ]
+             
+             to satisfy
+            
+                 -c'*x - b'*y - h'*W^{-1}*z + dg*tau = btau - bkappa/tau.
+			 */
+
+            // kappa[0] := -kappa[0] / lmbd[-1] = -bkappa / lmbdag
+			v := -kappa.GetIndex(0) / lmbda.GetIndex(-1)
+			kappa.SetIndex(0, matrix.FScalar(v))
+
+            // tau[0] = tau[0] + kappa[0] / dgi = btau[0] - bkappa / tau
+			v = tau.GetIndex(0) + kappa.GetIndex(0)/dgi.Float()
+			tau.SetIndex(0,  matrix.FScalar(v))
+
+            //tau[0] = dgi * ( tau[0] + xdot(c,x) + ydot(b,y) + 
+            //    misc.sdot(th, z, dims) ) / (1.0 + misc.sdot(z1, z1, dims))
+			v = tau.GetIndex(0) + blas.Dot(c, x).Float() + blas.Dot(b, y).Float()
+			v *= dgi.Float()
+			v2 := Sdot(th, z, dims)/(1.0 + Sdot(z1, z1, dims))
+			tau.SetIndex(0, v/v2)
+
+			blas.Axpy(x1, x, matrix.FScalar(v/v2))
+			blas.Axpy(y1, y, matrix.FScalar(v/v2))
+			blas.Axpy(z1, z, matrix.FScalar(v/v2))
+
+			blas.Axpy(z, s, minusOne)
+			kappa.SetIndex(0, kappa.GetIndex(0)-tau.GetIndex(0))
+
+			return
+
+		}
+
+        // f6(x, y, z, tau, s, kappa) solves the same system as f6_no_ir, 
+        // but applies iterative refinement.
+		var wx, wy, ws, wz, wtau, wkappa *matrix.FloatMatrix
+		var wx2, wy2, ws2, wz2, wtau2, wkappa2 *matrix.FloatMatrix
+
+		if iter == 0 {
+			if refinement > 0 || solopts.Debug {
+				wx = c.Copy()
+				wy = b.Copy()
+				wz = matrix.FloatZeros(cdim, 1)
+				ws = matrix.FloatZeros(cdim, 1)
+				wtau = matrix.FloatValue()
+				wkappa = matrix.FloatValue()
+			} else if refinement > 0 {
+				wx2 = c.Copy()
+				wy2 = b.Copy()
+				wz2 = matrix.FloatZeros(cdim, 1)
+				ws2 = matrix.FloatZeros(cdim, 1)
+				wtau2 = matrix.FloatValue()
+				wkappa2 = matrix.FloatValue()
+			}
+		}
+
+		f6 := func(x, y, z, tau, s, kappa *matrix.FloatMatrix) (err error) {
+			err =  nil
+			if refinement > 0 or solopts.Debug {
+				blas.Copy(x, wx)
+				blas.Copy(y, wy)
+				blas.Copy(z, wz)
+				blas.Copy(s, ws)
+				wtau.SetIndex(0, tau.FloatValue())
+				wkappa.SetIndex(0, kappa.FloatValue())
+			}
+			err = f6_no_ir(x, y, z, tau, s, kappa)
+			for i := 0; i < refinement; i++ {
+				blas.Copy(wx, wx2)
+				blas.Copy(wy, wy2)
+				blas.Copy(wz, wz2)
+				blas.Copy(ws, ws2)
+				wtau2.SetIndex(0, wtau.FloatValue())
+				wkappa2.SetIndex(0, wkappa.FloatValue())
+				err = res(x, y, z, tau, s, kappa, wx2, wy2, wz2, wtau2,, ws2, wkappa2, W, dg, lmbda)
+				err = f6_no_ir(wx2, wy2, wz2, wtau2, ws2, wkappa2)
+				blas.Copy(wx2, x)
+				blas.Copy(wy2, y)
+				blas.Copy(wz2, z)
+				blas.Copy(ws2, s)
+				v := tau.FloatValue() + wtau2.FloatValue()
+				tau.SetIndex(0, v)
+				v = kappa.FloatValue() + wkappa2.FloatValue()
+				kappa.SetIndex(0, v)
+			}
+			if solopts.Debug {
+				res(x, y, z, tau, s, kappa, wx, wy, wz, wtau, ws, wkappa, W, dg, lmbda)
+				fmt.Printf("KKT residuals\n")
+			}
+		}
+
+        mu := math.Pow(blas.Nrm2(lmbda).Float(),2) / (1 + cdim_diag) 
+        sigma := 0.0
+
+		for i := 0; i < 2; i++ {
+			var wkappa3 float64
+
+			/*
+             Solve
+            
+                 [ 0         ]   [  0   A'  G'  c ] [ dx        ]
+                 [ 0         ]   [ -A   0   0   b ] [ dy        ]
+                 [ W'*ds     ] - [ -G   0   0   h ] [ W^{-1}*dz ]
+                 [ dg*dkappa ]   [ -c' -b' -h'  0 ] [ dtau/dg   ]
+            
+                                   [ rx   ]
+                                   [ ry   ]
+                     = - (1-sigma) [ rz   ]
+                                   [ rtau ]
+            
+                 lmbda o (dz + ds) = -lmbda o lmbda + sigma*mu*e
+                 lmbdag * (dtau + dkappa) = - kappa * tau + sigma*mu
+            
+             ds = -lmbdasq if i is 0
+                = -lmbdasq - dsa o dza + sigma*mu*e if i is 1
+             dkappa = -lambdasq[-1] if i is 0 
+                    = -lambdasq[-1] - dkappaa*dtaua + sigma*mu if i is 1.
+			 */
+			ind := dism.Sum("l", "q")
+			blas.Copy(lmbdasq, ds, &la_.IOpt{"n", ind})
+			ind2 := ind
+			blas.Scal(ds, matrix.FScalar(0,0), &la_.IOpt{"offset", ind})
+			for _, m := range dims.At("s") {
+				blas.Copy(lmbdasq, ds, &la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind2},
+					&la_.IOpt{"offsety", ind}, &la_.IOpt{"incy", m+1})
+				ind += m*m
+				ind2 += m
+			}
+			// dkappa[0] = lmbdasq[-1]
+			dkappa.SetIndex(0, lmbdasq.GetIndex(-1))
+			if i == 1 {
+				blas.Axpy(ws3, ds, matrix.FScalar(1.0))
+				sigmaMu := func(a float64)float64 {
+					return a - sigma*mu
+				}
+				// ds[:dims['l']] -= sigma*mu
+				ds.ApplyToIndexes(nil, MakeIndexSet(0, dims.At("l")[0], 1), sigmaMu)
+				// ds[indq[:-1]] -= sigma*mu  !! WHAT IS THIS !!
+				ds.ApplyToIndexes(nil, indq, sigmaMu)
+				for _, m := range dims.At("s") {
+					// ds[ind : ind+m*m : m+1] -= sigma*mu
+					ds.ApplyToIndexes(nil, MakeIndexSet(ind, ind+m*m, m+1), sigmaMu)
+					ind += m*m
+				}
+				v := dkappa.FloatValue() + wkappa3 - sigma*mu
+				dkappa.SetIndex(0, v)
+			}
+            // (dx, dy, dz, dtau) = (1-sigma)*(rx, ry, rz, rt)
+			blas.Copy(rx, dx)
+			blas.Scal(dx, matrix.FScalar(1.0-sigma))
+			blas.Copy(ry, dy)
+			blas.Scal(dy, matrix.FScalar(1.0-sigma))
+			blas.Copy(rz, dz)
+			blas.Scal(dz, matrix.FScalar(1.0-sigma))
+            // dtau[0] = (1.0 - sigma) * rt 
+			dtau.SetIndex(0, (1.0-sigma)*rt)
+
+			err = f6(dx, dy, dz, dtau, ds, dkappa)
+
+			// Save ds o dz and dkappa * dtau for Mehrotra correction
+			if i == 0 {
+				blas.Copy(ds, ws3)
+				Sprod(ws3, dz, dims, 0)
+				wkappa3 = dtau.FloatValue() * dkappa.FloatValue()
+			}
+			/*
+             Maximum step to boundary.
+            
+             If i is 1, also compute eigenvalue decomposition of the 's' 
+             blocks in ds, dz.  The eigenvectors Qs, Qz are stored in 
+             dsk, dzk.  The eigenvalues are stored in sigs, sigz. 
+			 */
+			var ts, tz float64
+			Scale2(lmbda, ds, dims)
+			Scale2(lmbda, dz, dims)
+			if i == 0 {
+				ts = MaxStep(ds, dims, 0, nil)
+				tz = MaxStep(dz, dims, 0, nil)
+			} else {
+				ts = MaxStep(ds, dims, 0, sigs)
+				tz = MaxStep(dz, dims, 0, sigz)
+			}
+			tt := -dtau.FloatValue() / lmbda.GetIndex(-1)
+			tk := -dkappa.FloatValue() / lmbda.GetIndex(-1)
+			t := maxvec([]float64{0.0, ts, tz, tt, tk})
+			if t == 0.0 {
+				step = 1.0
+			} else {
+				if i == 0 {
+					step = math.Min(1.0, 1.0/t)
+				} else {
+					step = math.Min(1.0, STEP/t)
+				}
+			}
+			if i == 0 {
+				sigma = math.Pow((1.0 - step), EXPON)
+			}
+		}
+
+		// Update x, y
+		blas.Axpy(dx, x, matrix.FScalar(step))
+		blas.Axpy(dy, y, matrix.FScalar(step))
+		/*
+          Replace 'l' and 'q' blocks of ds and dz with the updated 
+          variables in the current scaling.
+          Replace 's' blocks of ds and dz with the factors Ls, Lz in a 
+          factorization Ls*Ls', Lz*Lz' of the updated variables in the 
+          current scaling.
+
+          ds := e + step*ds for 'l' and 'q' blocks.
+          dz := e + step*dz for 'l' and 'q' blocks.
+		 */
+		blas.Scal(ds, step, &la_.IOpt{"n", dims.Sum("l", "q")})
+		blas.Scal(dz, step, &la_.IOpt{"n", dims.Sum("l", "q")})
+
+		addOne := func(v float64)float64 { return v+1.0 }
+		ds.ApplyToIndexes(nil, matrix.MakeIndexSet(0, dims.At("l")[0], 1), addOne)
+		dz.ApplyToIndexes(nil, matrix.MakeIndexSet(0, dims.At("l")[0], 1), addOne)
+		ds.ApplyToIndexes(nil, indq, addOne)
+		dz.ApplyToIndexes(nil, indq, addOne)
+
+		/*
+          ds := H(lambda)^{-1/2} * ds and dz := H(lambda)^{-1/2} * dz.
+         
+          This replaces the 'l' and 'q' components of ds and dz with the
+          updated variables in the current scaling.  
+          The 's' components of ds and dz are replaced with 
+         
+              diag(lmbda_k)^{1/2} * Qs * diag(lmbda_k)^{1/2} 
+              diag(lmbda_k)^{1/2} * Qz * diag(lmbda_k)^{1/2} 
+		 */
+		Scale2(lmbda, ds, dims, true)
+		Scale2(lmbda, dz, dims, true)
+
 		// !! EMPTY REF !!
 		if dg.Float() > 0.0 {
 		}

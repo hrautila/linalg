@@ -111,6 +111,14 @@ func TestIndexing(t *testing.T) {
 	fmt.Printf(" every 2nd: %v\n", A.GetIndexes(MakeIndexSet(0, A.NumElements(), 2)))
 }
 
+func TestScalars(t *testing.T) {
+	f := FScalar(2.0)
+	fmt.Printf(" f = %v\n", f)
+	fmt.Printf("-f = %v\n", -f)
+	z := FScalar(f*f)
+	fmt.Printf(" z = %v\n", z)
+}
+	
 // Local Variables:
 // tab-width: 4
 // End:

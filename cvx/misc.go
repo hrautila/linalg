@@ -185,6 +185,86 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
 	return 
 }
 
+/*
+    Evaluates
+
+        x := H(lambda^{1/2}) * x   (inverse is 'N')
+        x := H(lambda^{-1/2}) * x  (inverse is 'I').
+    
+    H is the Hessian of the logarithmic barrier.
+
+*/
+func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse bool) (err error) {
+	err = nil
+
+	// For the nonlinear and 'l' blocks, 
+    //
+    //     xk := xk ./ l   (inverse is 'N')
+    //     xk := xk .* l   (inverse is 'I')
+    //
+    // where l is lmbda[:mnl+dims['l']].
+	ind := mnl + dims.Sum("l")
+	if ! inverse {
+		blas.Tbsv(lmbda, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+	} else {
+		blas.Tbmv(lmbda, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+	}
+
+    // For 'q' blocks, if inverse is 'N',
+    //
+    //     xk := 1/a * [ l'*J*xk;  
+    //         xk[1:] - (xk[0] + l'*J*xk) / (l[0] + 1) * l[1:] ].
+    //
+    // If inverse is 'I',
+    //
+    //     xk := a * [ l'*xk; 
+    //         xk[1:] + (xk[0] + l'*xk) / (l[0] + 1) * l[1:] ].
+    //
+    // a = sqrt(lambda_k' * J * lambda_k), l = lambda_k / a.
+	for _, m := range dims.At("q") {
+		var lx, a, c, x0 matrix.FScalar
+		a = Jnrm2(lmbda, x, &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+		if ! inverse {
+			lx = Jdot(lmbda, x, &la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
+				&la_.IOpt{"offsetx", ind})
+			lx /= a
+		} else {
+			lx = blas.Dot(lmbda, x, &la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
+				&la_.IOpt{"offsetx", ind}).Float()
+			lx /= a
+		}
+		x0 = x.GetIndex(ind)
+		x.SetIndex(ind, lx)
+		c = (lx + x0) / (lmbda.GetIndex(ind)/a + 1.0) / a
+		if ! inverse { c *= -1.0 }
+		blas.Axpy(lmbda, x, c, &la_.IOpt{"n", m-1}, &la_.IOpt{"offsetx", ind+1},
+			&la_.IOpt{"offsety", ind+1})
+		if ! inverse { a = 1.0/a }
+		blas.Scal(x, a, &la_.IOpt{"offset", ind}, &la_.IOpt{"n", m})
+		ind += m
+	}
+    // For the 's' blocks, if inverse is 'N',
+    //
+    //     xk := vec( diag(l)^{-1/2} * mat(xk) * diag(k)^{-1/2}).
+    //
+    // If inverse is true,
+    //
+    //     xk := vec( diag(l)^{1/2} * mat(xk) * diag(k)^{1/2}).
+    //
+    // where l is kth block of lambda.
+    // 
+    // We scale upper and lower triangular part of mat(xk) because the
+    // inverse operation will be applied to nonsymmetric matrices.
+	ind2 := ind
+	sdims := dims.At("s")
+	for k := 0; k < len(sdims); k++ {
+		m = sdims[k]
+		for j := 0; j < m; j++ {
+		}
+	}
+	return
+}
+
 // Inner product of two vectors in S.
 func Sdot(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
 	ind := mnl + dims.At("l")[0] + dims.Sum("q")
