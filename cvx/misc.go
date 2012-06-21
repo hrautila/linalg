@@ -222,8 +222,8 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
     //
     // a = sqrt(lambda_k' * J * lambda_k), l = lambda_k / a.
 	for _, m := range dims.At("q") {
-		var lx, a, c, x0 matrix.FScalar
-		a = Jnrm2(lmbda, x, m, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+		var lx, a, c, x0 float64
+		a = Jnrm2(lmbda, m, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
 		if ! inverse {
 			lx = Jdot(lmbda, x, m, ind, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
 				//&la_.IOpt{"offsety", ind})
@@ -237,10 +237,10 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
 		x.SetIndex(ind, lx)
 		c = (lx + x0) / (lmbda.GetIndex(ind)/a + 1.0) / a
 		if ! inverse { c *= -1.0 }
-		blas.Axpy(lmbda, x, c, &la_.IOpt{"n", m-1}, &la_.IOpt{"offsetx", ind+1},
+		blas.Axpy(lmbda, x, matrix.FScalar(c), &la_.IOpt{"n", m-1}, &la_.IOpt{"offsetx", ind+1},
 			&la_.IOpt{"offsety", ind+1})
 		if ! inverse { a = 1.0/a }
-		blas.Scal(x, a, &la_.IOpt{"offset", ind}, &la_.IOpt{"n", m})
+		blas.Scal(x, matrix.FScalar(a), &la_.IOpt{"offset", ind}, &la_.IOpt{"n", m})
 		ind += m
 	}
     // For the 's' blocks, if inverse is 'N',
@@ -258,9 +258,11 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
 	ind2 := ind
 	sdims := dims.At("s")
 	for k := 0; k < len(sdims); k++ {
-		m = sdims[k]
+		m := sdims[k]
 		for j := 0; j < m; j++ {
 		}
+		ind += m*m
+		ind2 += m
 	}
 	return
 }
@@ -283,6 +285,7 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
 
 func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err error) {
 	err = nil
+	return
 }
 
 
@@ -333,6 +336,7 @@ func Symm(x *matrix.FloatMatrix, n, offset int) (err error) {
 
 func Sinv(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
 	err = nil
+	return
 }
 
 func maxdim(vec []int) int {
@@ -600,7 +604,7 @@ func Jdot(x, y *matrix.FloatMatrix, n, offsetx, offsety int) float64 {
 		n = x.NumElements()
 	}
 	a := blas.Dot(x, y, &la_.IOpt{"n", n-1}, &la_.IOpt{"offsetx", offsetx+1},
-		&la_.IOpt{"offsety", offsety+1})
+		&la_.IOpt{"offsety", offsety+1}).Float()
 	return x.GetIndex(offsetx)*y.GetIndex(offsety) - a
 }
 
@@ -615,7 +619,7 @@ func Jnrm2(x *matrix.FloatMatrix, n, offset int) float64 {
 	if offset < 0 {
 		offset = 0
 	}
-	a := blas.Nrm2(x, &la_.IOpt{"n", n-1}, &la_.IOpt{"offset", offset+1})
+	a := blas.Nrm2(x, &la_.IOpt{"n", n-1}, &la_.IOpt{"offset", offset+1}).Float()
 	fst := x.GetIndex(offset)
 	return math.Sqrt(fst - a) * math.Sqrt(fst + a)
 }

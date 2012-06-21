@@ -35,7 +35,7 @@ func setDiagonal(M *matrix.FloatMatrix, srow, scol, erow, ecol int, val float64)
 // H is n x n,  A is p x n, Df is mnl x n, G is N x n where
 // N = dims['l'] + sum(dims['q']) + sum( k**2 for k in dims['s'] ).
 //
-func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mnl int) KKTSolver {
+func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mnl int) (KKTFactor, error) {
 
 	p, n := A.Size()
 	ldK := n + p + mnl + dims.At("l")[0] + dims.Sum("q") + dims.SumPacked("s")
@@ -44,8 +44,9 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 	u := matrix.FloatZeros(ldK, 1)
 	g := matrix.FloatZeros(mnl+G.Rows(), 1)
 	
-	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) KKTFunc {
+	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
 
+		var err error = nil
 		// Zero K for each call.
 		blas.Scal(K, matrix.FScalar(0.0))
 		if H != nil {
@@ -64,7 +65,8 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			Pack(g, K, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", k*ldK+n+p})
 		}
 		setDiagonal(K, n+p, n+n, ldK, ldK, -1.0)
-		lapack.Sytrf(K, ipiv)
+		err = lapack.Sytrf(K, ipiv)
+		if err != nil { return nil, err }
 
 		solve := func(x, y, z *matrix.FloatMatrix) (err error) {
             // Solve
@@ -94,9 +96,9 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			err = UnPack(u, z, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsetx", n+p})
 			return 
 		}
-		return solve
+		return solve, err
 	}
-	return factor
+	return factor, nil
 }
 
 // Local Variables:
