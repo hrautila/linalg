@@ -223,14 +223,14 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
     // a = sqrt(lambda_k' * J * lambda_k), l = lambda_k / a.
 	for _, m := range dims.At("q") {
 		var lx, a, c, x0 matrix.FScalar
-		a = Jnrm2(lmbda, x, &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+		a = Jnrm2(lmbda, x, m, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
 		if ! inverse {
-			lx = Jdot(lmbda, x, &la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
-				&la_.IOpt{"offsetx", ind})
+			lx = Jdot(lmbda, x, m, ind, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
+				//&la_.IOpt{"offsety", ind})
 			lx /= a
 		} else {
 			lx = blas.Dot(lmbda, x, &la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
-				&la_.IOpt{"offsetx", ind}).Float()
+				&la_.IOpt{"offsety", ind}).Float()
 			lx /= a
 		}
 		x0 = x.GetIndex(ind)
@@ -264,6 +264,27 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
 	}
 	return
 }
+
+/*
+    Updates the Nesterov-Todd scaling matrix W and the scaled variable 
+    lmbda so that on exit
+    
+          W * zt = W^{-T} * st = lmbda.
+     
+    On entry, the nonlinear, 'l' and 'q' components of the arguments s 
+    and z contain W^{-T}*st and W*zt, i.e, the new iterates in the current 
+    scaling.
+    
+    The 's' components contain the factors Ls, Lz in a factorization of 
+    the new iterates in the current scaling, W^{-T}*st = Ls*Ls',   
+    W*zt = Lz*Lz'.
+
+ */
+
+func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err error) {
+	err = nil
+}
+
 
 // Inner product of two vectors in S.
 func Sdot(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
@@ -303,6 +324,15 @@ func Symm(x *matrix.FloatMatrix, n, offset int) (err error) {
 		if err != nil { return }
 	}
 	return
+}
+
+/*
+ The inverse product x := (y o\ x), when the 's' components of y are 
+ diagonal.
+*/
+
+func Sinv(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
+	err = nil
 }
 
 func maxdim(vec []int) int {
@@ -560,6 +590,34 @@ func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl in
 	err = nil
 	W = FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
 	return 
+}
+
+/*
+    Returns x' * J * y, where J = [1, 0; 0, -I].
+ */
+func Jdot(x, y *matrix.FloatMatrix, n, offsetx, offsety int) float64 {
+	if n <= 0 {
+		n = x.NumElements()
+	}
+	a := blas.Dot(x, y, &la_.IOpt{"n", n-1}, &la_.IOpt{"offsetx", offsetx+1},
+		&la_.IOpt{"offsety", offsety+1})
+	return x.GetIndex(offsetx)*y.GetIndex(offsety) - a
+}
+
+/*
+    Returns sqrt(x' * J * x) where J = [1, 0; 0, -I], for a vector
+    x in a second order cone. 
+ */
+func Jnrm2(x *matrix.FloatMatrix, n, offset int) float64 {
+	if n <= 0 {
+		n = x.NumElements()
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	a := blas.Nrm2(x, &la_.IOpt{"n", n-1}, &la_.IOpt{"offset", offset+1})
+	fst := x.GetIndex(offset)
+	return math.Sqrt(fst - a) * math.Sqrt(fst + a)
 }
 
 // Local Variables:

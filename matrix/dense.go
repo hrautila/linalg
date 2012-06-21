@@ -139,12 +139,12 @@ func (A *FloatMatrix) ComplexArray() []complex128 {
 }
 
 // Return the first element column-major element array.
-func (A *FloatMatrix) FloatValue() float64 {
+func (A *FloatMatrix) Float() float64 {
 	return A.elements[0]
 }
 
 // Return Nan for complex singleton.
-func (A *FloatMatrix) ComplexValue() complex128 {
+func (A *FloatMatrix) Complex() complex128 {
 	return cmplx.NaN()
 }
 
@@ -263,6 +263,11 @@ func (A *FloatMatrix) GetSlice(start, end int) []float64 {
 func (A *FloatMatrix) Set(i int, j int, val float64) {
 	step := A.LeadingIndex()
 	A.elements[j*step:j*step+A.Cols()][i] = val
+}
+
+// Set value of singleton matrix.
+func (A *FloatMatrix) SetValue(val float64) {
+	A.elements[0] = val
 }
 
 // Set i'th element in column-major ordering. If i < 0 then i = A.NumElements() + i.

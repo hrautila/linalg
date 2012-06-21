@@ -143,12 +143,12 @@ func (A *ComplexMatrix) ComplexArray() []complex128 {
 }
 
 // Return Nan for float singleton.
-func (A *ComplexMatrix) FloatValue() float64 {
+func (A *ComplexMatrix) Float() float64 {
 	return math.NaN()
 }
 
 // Return the first element column-major element array.
-func (A *ComplexMatrix) ComplexValue() complex128 {
+func (A *ComplexMatrix) Complex() complex128 {
 	return A.elements[0]
 }
 

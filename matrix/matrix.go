@@ -27,10 +27,10 @@ type Matrix interface {
 	IsComplex() bool
 	// For all float valued matrices return the value of A[0,0]. Returns NaN
 	// if not float valued.
-	FloatValue() float64
+	Float() float64
 	// For all complex valued matrices return the value of A[0,0]. Returns
 	// NaN if not complex valued.
-	ComplexValue() complex128
+	Complex() complex128
 	// Matrix in string format.
 	String() string
 	// Make a copy  and return as Matrix interface type.
