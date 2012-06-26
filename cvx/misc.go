@@ -285,6 +285,93 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
 
 func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err error) {
 	err = nil
+	var stmp, ztmp *matrix.FloatMatrix
+	/*
+     Nonlinear and 'l' blocks
+    
+        d :=  d .* sqrt( s ./ z )
+        lmbda := lmbda .* sqrt(s) .* sqrt(z)
+	 */
+	mnl := 0
+	dnlset := W.Get("dnl")
+	dnliset := W.Get("dnli")
+	dset := W.Get("d")
+	diset := W.Get("di")
+	if dnlset != nil && dnlset[0].NumElements() > 0 {
+		mnl = dnlset[0].NumElements()
+	}
+	ml := dset[0].NumElements()
+	m := mnl + ml
+	stmp = matrix.FloatVector(s.FloatArray()[:m])
+	stmp.Apply(stmp, math.Sqrt)
+	s.SetIndexes(matrix.MakeIndexSet(0, m, 1), stmp.FloatArray())
+
+	ztmp = matrix.FloatVector(z.FloatArray()[:m])
+	ztmp.Apply(ztmp, math.Sqrt)
+	z.SetIndexes(matrix.MakeIndexSet(0, m, 1), ztmp.FloatArray())
+
+    // d := d .* s .* z 
+	if len(dnlset) > 0 {
+		blas.Tbmv(s, dnlset[0], &la_.IOpt{"n", mnl}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+		blas.Tbsv(z, dnlset[0], &la_.IOpt{"n", mnl}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
+		dnliset[0].Apply(dnlset[0], func(a float64)float64 { return 1.0/a})
+	}
+	blas.Tbmv(s, dset[0], &la_.IOpt{"n", ml},
+		&la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", mnl})
+	blas.Tbsv(z, dset[0], &la_.IOpt{"n", ml},
+		&la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", mnl})
+	diset[0].Apply(dset[0], func(a float64)float64 { return 1.0/a})
+
+    // lmbda := s .* z
+	blas.Copy(s, lmbda, &la_.IOpt{"n", m})
+	blas.Tbmv(z, lmbda, &la_.IOpt{"n", m}, &la_.IOpt{"k", 0}, , &la_.IOpt{"lda", 1})
+
+    // 'q' blocks.
+    // Let st and zt be the new variables in the old scaling:
+    //
+    //     st = s_k,   zt = z_k
+    //
+    // and a = sqrt(st' * J * st),  b = sqrt(zt' * J * zt).
+    //
+    // 1. Compute the hyperbolic Householder transformation 2*q*q' - J 
+    //    that maps st/a to zt/b.
+    // 
+    //        c = sqrt( (1 + st'*zt/(a*b)) / 2 ) 
+    //        q = (st/a + J*zt/b) / (2*c). 
+    //
+    //    The new scaling point is 
+    //
+    //        wk := betak * sqrt(a/b) * (2*v[k]*v[k]' - J) * q 
+    //
+    //    with betak = W['beta'][k].
+    // 
+    // 3. The scaled variable:
+    //
+    //        lambda_k0 = sqrt(a*b) * c
+    //        lambda_k1 = sqrt(a*b) * ( (2vk*vk' - J) * (-d*q + u/2) )_1
+    //
+    //    where 
+    //
+    //        u = st/a - J*zt/b 
+    //        d = ( vk0 * (vk'*u) + u0/2 ) / (2*vk0 *(vk'*q) - q0 + 1).
+    //
+    // 4. Update scaling
+    //   
+    //        v[k] := wk^1/2 
+    //              = 1 / sqrt(2*(wk0 + 1)) * (wk + e).
+    //        beta[k] *=  sqrt(a/b)
+
+	ind := m
+	for k, v := range W.At("v") {
+		m = v.NumElements()
+        // ln = sqrt( lambda_k' * J * lambda_k )
+		ln := Jnrm2(lmbda, m, ind)
+        // a = sqrt( sk' * J * sk ) = sqrt( st' * J * st ) 
+        // s := s / a = st / a
+		aa := Jnrm2(s, m, ind)
+		blas.Scal(s, matrix.FScalar(1.0/aa), &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+
+	}
 	return
 }
 
@@ -293,6 +380,19 @@ func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err erro
     scaled variable in lmbda. 
     
         W * z = W^{-T} * s = lmbda. 
+
+    W is a MatrixSet with entries:
+    
+    - W['dnl']: positive vector
+    - W['dnli']: componentwise inverse of W['dnl']
+    - W['d']: positive vector
+    - W['di']: componentwise inverse of W['d']
+    - W['v']: lists of 2nd order cone vectors with unit hyperbolic norms
+    - W['beta']: list of positive numbers
+    - W['r']: list of square matrices 
+    - W['rti']: list of square matrices.  rti[k] is the inverse transpose
+      of r[k].
+
  */
 func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl int) (W *FloatMatrixSet, err error) {
 	err = nil
@@ -304,22 +404,181 @@ func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl in
     //     W['dnli'] = sqrt( z[:mnl] ./ s[:mnl] )
     //     lambda[:mnl] = sqrt( s[:mnl] .* z[:mnl] )
 
+	var stmp, ztmp, lmd *matrix.FloatMatrix
 	if mnl < 0 {
 		mnl = 0
 	} else {
-		smnl := matrix.FloatVector(s.FloatArray()[:mnl])
-		zmnl := matrix.FloatVector(z.FloatArray()[:mnl])
-		dnl := smnl.Div(zmnl)
+		stmp = matrix.FloatVector(s.FloatArray()[:mnl])
+		ztmp = matrix.FloatVector(z.FloatArray()[:mnl])
+		dnl := stmp.Div(ztmp)
 		dnl.Apply(dnl, math.Sqrt)
 		dnli := dnl.Copy()
 		dnli.Apply(dnli, func(a float64)float64 { return 1.0/a })
 		W.Add("dnl", dnl)
 		W.Add("dnli", dnli)
-		lmd := smnl.Mul(zmnl)
+		lmd = stmp.Mul(ztmp)
 		lmd.Apply(lmd, math.Sqrt)
 		lmbda.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), lmd.FloatArray())
 	}
 
+    // For the 'l' block: 
+    //
+    //     W['d'] = sqrt( sk ./ zk )
+    //     W['di'] = sqrt( zk ./ sk )
+    //     lambdak = sqrt( sk .* zk )
+    //
+    // where sk and zk are the first dims['l'] entries of s and z.
+    // lambda_k is stored in the first dims['l'] positions of lmbda.
+             
+	m := dims.At("l")[0]
+	stmp = matrix.FloatVector(s.FloatArray()[mnl:mnl+m])
+	ztmp = matrix.FloatVector(z.FloatArray()[mnl:mnl+m])
+	d := stmp.Div(ztmp)
+	d.Apply(d, math.Sqrt)
+	di := d.Copy()
+	di.Apply(di, func(a float64)float64 { return 1.0/a })
+	W.Add("d", d)
+	W.Add("di", di)
+	lmd = stmp.Mul(ztmp)
+	lmbda.SetIndexes(matrix.MakeIndexSet(mnl, mnl+m, 1), lmd.FloatArray())
+
+	/*
+     For the 'q' blocks, compute lists 'v', 'beta'.
+    
+     The vector v[k] has unit hyperbolic norm: 
+     
+         (sqrt( v[k]' * J * v[k] ) = 1 with J = [1, 0; 0, -I]).
+     
+     beta[k] is a positive scalar.
+    
+     The hyperbolic Householder matrix H = 2*v[k]*v[k]' - J
+     defined by v[k] satisfies 
+     
+         (beta[k] * H) * zk  = (beta[k] * H) \ sk = lambda_k
+    
+     where sk = s[indq[k]:indq[k+1]], zk = z[indq[k]:indq[k+1]].
+    
+     lambda_k is stored in lmbda[indq[k]:indq[k+1]].
+	 */
+	ind := mnl + dims.At("l")[0]
+	var beta *matrix.FloatMatrix
+
+	for _, k := range dims.At("q") {
+		W.Add("v", matrix.FloatZeros(k, 1))
+	}
+	beta = matrix.FloatZeros(len(dims.At("q")), 1)
+	W.Add("beta", beta)
+	vset := W.At("v")
+	for k, m := range dims.At("q") {
+		v := vset[k]
+        // a = sqrt( sk' * J * sk )  where J = [1, 0; 0, -I]
+		aa := Jnrm2(s, m, ind)
+		// b = sqrt( zk' * J * zk )
+		bb := Jnrm2(z, m, ind)
+        // beta[k] = ( a / b )**1/2
+		beta.SetIndex(k, math.Sqrt(aa/bb))
+        // c = sqrt( (sk/a)' * (zk/b) + 1 ) / sqrt(2)    
+		zz := blas.Dot(s, z, &la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"offsety", ind})
+		cc := math.Sqrt((zz / aa / bb + 1.0) / 2.0)
+
+        // vk = 1/(2*c) * ( (sk/a) + J * (zk/b) )
+		blas.Copy(z, v, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"n", m})
+		blas.Scal(v, matrix.FScalar(-1.0/bb))
+		v.SetIndex(0, -1.0*v.GetIndex(0))
+		blas.Axpy(s, v, matrix.FScalar(1.0/aa), &la_.IOpt{"offsetx", ind}, &la_.IOpt{"n", m})
+		blas.Scal(v, matrix.FScalar(1.0/2.0/cc))
+
+        // v[k] = 1/sqrt(2*(vk0 + 1)) * ( vk + e ),  e = [1; 0]
+		v.SetIndex(0, v.GetIndex(0)+1.0)
+		blas.Scal(v, matrix.FScalar(1.0/math.Sqrt(2.0*v.GetIndex(0))))
+		/*
+         To get the scaled variable lambda_k
+         
+             d =  sk0/a + zk0/b + 2*c
+             lambda_k = [ c; 
+                          (c + zk0/b)/d * sk1/a + (c + sk0/a)/d * zk1/b ]
+             lambda_k *= sqrt(a * b)
+		 */
+		lmbda.SetIndex(ind, cc)
+		dd := 2*cc + s.GetIndex(ind)/aa + z.GetIndex(ind)/bb
+		blas.Copy(s, lmbda, &la_.IOpt{"offsetx", ind+1}, &la_.IOpt{"offsety", ind+1},
+			&la_.IOpt{"n", m-1})
+		zz := (cc + z.GetIndex(ind)/bb)/dd/aa
+		ss := (cc + s.GetIndex(ind)/aa)/dd/bb
+		blas.Scal(lmbda, matrix.FScalar(zz), &la_.IOpt{"offset", ind+1}, &la_.IOpt{"n", m-1})
+		blas.Axpy(z, lmbda, matrix.FScalar(ss), &la_.IOpt{"offsetx", ind+1},
+			&la_.IOpt{"offsety", ind+1}, &la_.IOpt{"n", m-1})
+		blas.Scal(lmbda, matrix.FScalar(math.Sqrt(aa*bb)), &la_.IOpt{"offset", ind}, &la_.IOpt{"n", m})
+		
+		ind += m
+	}
+	/*
+     For the 's' blocks: compute two lists 'r' and 'rti'.
+    
+         r[k]' * sk^{-1} * r[k] = diag(lambda_k)^{-1}
+         r[k]' * zk * r[k] = diag(lambda_k)
+    
+     where sk and zk are the entries inds[k] : inds[k+1] of
+     s and z, reshaped into symmetric matrices.
+    
+     rti[k] is the inverse of r[k]', so 
+    
+         rti[k]' * sk * rti[k] = diag(lambda_k)^{-1}
+         rti[k]' * zk^{-1} * rti[k] = diag(lambda_k).
+    
+     The vectors lambda_k are stored in 
+     
+         lmbda[ dims['l'] + sum(dims['q']) : -1 ]
+	 */
+	for _, k := range dims.At("s") {
+		W.Add("r", matrix.FloatZeros(k, k))
+		W.Add("rti", matrix.FloatZeros(k, k))
+	}
+	maxs := maxind(dims.At("s"))
+	work := matrix.FloatZeros(maxs*maxs, 1)
+	Ls := matrix.FloatZeros(maxs*maxs, 1)
+	Lz := matrix.FloatZeros(maxs*maxs, 1)
+	ind2 := ind
+	for k, m := range dims.At("s") {
+		r := W.At("r")[k]
+		rti := W.At("rti")[k]
+
+		// Factor sk = Ls*Ls'; store Ls in ds[inds[k]:inds[k+1]].
+		blas.Copy(s, Ls, &la_.IOpt{"offsetx", ind2}, &la_.IOpt{"n", m*m})
+		lapack.Potrf(Ls, &la_.IOpt{"n", m}, &la_.IOpt{"lda", m})
+
+        // Factor zs[k] = Lz*Lz'; store Lz in dz[inds[k]:inds[k+1]].
+		blas.Copy(z, Lz, &la_.IOpt{"offsetx", ind2}, &la_.IOpt{"n", m*m})
+		lapack.Potrf(Lz, &la_.IOpt{"n", m}, &la_.IOpt{"lda", m})
+
+        // SVD Lz'*Ls = U*diag(lambda_k)*V'.  Keep U in work. 
+		for i := 0; i < m; i++ {
+			blas.Scal(Ls, matrix.FScalar(0.0), &la_.IOpt{"offset", i*m}, &la_.IOpt{"n", i})
+		}
+		blas.Copy(Ls, work, &la_.IOpt{"n", m*m})
+		blas.Trmm(Lz, work, la_.POptTransA, &la_.IOpt{"lda", m}, &la_.IOpt{"ldb", m},
+			&la_.IOpt{"n", m}, &la_.IOpt{"m", m})
+		lapack.Gesvd(work, lmbda, la_.POptJobuO, &la_.IOpt{"lda", m}, &la_.IOpt{"offsetS", ind},
+			&la_.IOpt{"n", m}, &la_.IOpt{"m", m})
+		
+		// r = Lz^{-T} * U 
+		blas.Copy(work, r, &la_.IOpt{"n", m*m})
+		blas.Trsm(Lz, r, POptTransA,  &la_.IOpt{"lda", m}, &la_.IOpt{"n", m}, &la_.IOpt{"m", m})
+
+        // rti = Lz * U 
+		blas.Copy(work, rti, &la_.IOpt{"n", m*m})
+		blas.Trmm(Lz, rti, POptTransA,  &la_.IOpt{"lda", m}, &la_.IOpt{"n", m}, &la_.IOpt{"m", m})
+
+        // r := r * diag(sqrt(lambda_k))
+        // rti := rti * diag(1 ./ sqrt(lambda_k))
+		for i := 0; i < m; i++ {
+			a := math.Sqrt(lmbda.GetIndex(ind+i))
+			blas.Scal(r, matrix.FScalar(a), &la_.IOpt{"offset", m*i}, &la_.IOpt{"n", m})
+			blas.Scal(rti, matrix.FScalar(1.0/a), &la_.IOpt{"offset", m*i}, &la_.IOpt{"n", m})
+		}
+		ind += m
+		ind2 += m*m
+	}
 	return 
 }
 
