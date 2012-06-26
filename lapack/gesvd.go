@@ -93,7 +93,32 @@ import (
 
  */
 func Gesvd(A, S, U, Vt matrix.Matrix, opts ...linalg.Option) error {
-	return errors.New("not implemented yet")
+	if ! matrix.EqualTypes(A, S, U, Vt) {
+		return errors.New("Gesvd: arguments not same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := (*matrix.FloatMatrix)(A)
+		Sm := (*matrix.FloatMatrix)(S)
+		Um := (*matrix.FloatMatrix)(U)
+		Vm := (*matrix.FloatMatrix)(V)
+		return GesvdFloat(Am, Sm, Um, Vm, opts...)
+	case *matrix.ComplexMatrix:
+		Am := (*matrix.ComplexMatrix)(A)
+		Sm := (*matrix.ComplexMatrix)(S)
+		Um := (*matrix.ComplexMatrix)(U)
+		Vm := (*matrix.ComplexMatrix)(V)
+		return GesvdComplex(Am, Sm, Um, Vm, opts...)
+	}
+	return errors.New("Gesvd: unknown parameter types")
+}
+
+func GesvdFloat(A, S, U, Vt *matrix.FloatMatrix, opts ...linalg.Option) error {
+	return errors.New("GesvdFloat not implemented yet")
+}
+
+func GesvdComplex(A, S, U, Vt *matrix.ComplexMatrix, opts ...linalg.Option) error {
+	return errors.New("GesvdComplex not implemented yet")
 }
 
 
