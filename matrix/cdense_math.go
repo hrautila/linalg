@@ -92,14 +92,20 @@ func (A *ComplexMatrix) Times(B *ComplexMatrix) *ComplexMatrix {
 }
 
 
-// Compute C = fn(A) by applying function fn element wise to A. For all i, j:
-// C[i,j] = fn(A[i,j]). Returns new matrix.
-func (A *ComplexMatrix) Apply(fn func(complex128)complex128) *ComplexMatrix {
-	C := ComplexZeros(A.Rows(), A.Cols())
-	for k,v := range A.elements {
-		C.elements[k] = fn(v)
+// Compute A = fn(C) by applying function fn element wise to A. For all i, j:
+// A[i,j] = fn(C[i,j]). If C == nil reduces to A[i,j] = fn(A[i,j]). Returns self. 
+func (A *ComplexMatrix) Apply(C *ComplexMatrix, fn func(complex128)complex128) *ComplexMatrix {
+	if C != nil && ! A.SizeMatch(C.Size()) {
+		return nil
 	}
-	return C
+	B := C
+	if B == nil {
+		B = A
+	}
+	for k,v := range B.elements {
+		A.elements[k] = fn(v)
+	}
+	return A
 }
 
 // Compute C = fn(A, x) by applying function fn element wise to A. For all i, j:
@@ -125,9 +131,9 @@ func (A *ComplexMatrix) ApplyToIndexes(C *ComplexMatrix, indexes []int, fn func(
 		B = A
 	}
 	for _,v := range indexes {
-		B.elements[v] = fn(A.elements[v])
+		A.elements[v] = fn(B.elements[v])
 	}
-	return B
+	return A
 }
 
 

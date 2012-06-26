@@ -288,6 +288,41 @@ func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err erro
 	return
 }
 
+/*
+    Returns the Nesterov-Todd scaling W at points s and z, and stores the 
+    scaled variable in lmbda. 
+    
+        W * z = W^{-T} * s = lmbda. 
+ */
+func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl int) (W *FloatMatrixSet, err error) {
+	err = nil
+	W = FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
+
+    // For the nonlinear block:
+    //
+    //     W['dnl'] = sqrt( s[:mnl] ./ z[:mnl] )
+    //     W['dnli'] = sqrt( z[:mnl] ./ s[:mnl] )
+    //     lambda[:mnl] = sqrt( s[:mnl] .* z[:mnl] )
+
+	if mnl < 0 {
+		mnl = 0
+	} else {
+		smnl := matrix.FloatVector(s.FloatArray()[:mnl])
+		zmnl := matrix.FloatVector(z.FloatArray()[:mnl])
+		dnl := smnl.Div(zmnl)
+		dnl.Apply(dnl, math.Sqrt)
+		dnli := dnl.Copy()
+		dnli.Apply(dnli, func(a float64)float64 { return 1.0/a })
+		W.Add("dnl", dnl)
+		W.Add("dnli", dnli)
+		lmd := smnl.Mul(zmnl)
+		lmd.Apply(lmd, math.Sqrt)
+		lmbda.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), lmd.FloatArray())
+	}
+
+	return 
+}
+
 
 // Inner product of two vectors in S.
 func Sdot(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
@@ -330,12 +365,108 @@ func Symm(x *matrix.FloatMatrix, n, offset int) (err error) {
 }
 
 /*
+    Matrix-vector multiplication.
+
+    A is a matrix or spmatrix of size (m, n) where 
+    
+        N = dims['l'] + sum(dims['q']) + sum( k**2 for k in dims['s'] ) 
+
+    representing a mapping from R^n to S.  
+    
+    If trans is 'N': 
+    
+        y := alpha*A*x + beta * y   (trans = 'N').
+    
+    x is a vector of length n.  y is a vector of length N.
+    
+    If trans is 'T':
+    
+        y := alpha*A'*x + beta * y  (trans = 'T').
+    
+    x is a vector of length N.  y is a vector of length n.
+    
+    The 's' components in S are stored in unpacked 'L' storage.
+*/
+func Sgemv(A, x, y *matrix.FloatMatrix, alpha, beta matrix.FScalar, dims *DimensionSet, opts ...la_.Option) error {
+
+	m := dims.Sum("l", "q") + dims.SumSquared("s")
+	n := la_.GetIntOpt("n", -1, opts...)
+	if n == -1 {
+		n = A.Cols()
+	}
+	trans := la_.GetIntOpt("trans", int(la_.PNoTrans), opts...)
+	offsetX := la_.GetIntOpt("offsetx", 0, opts...)
+	offsetY := la_.GetIntOpt("offsety", 0, opts...)
+	offsetA := la_.GetIntOpt("offseta", 0, opts...)
+
+	if trans == int(la_.PTrans) && alpha != 0.0 {
+		Trisc(x, dims,  offsetX)
+	}
+	blas.Gemv(A, x, y, matrix.FScalar(alpha), matrix.FScalar(beta),
+		&la_.IOpt{"n", n}, &la_.IOpt{"m", m}, &la_.IOpt{"offseta", offsetA},
+		&la_.IOpt{"offsetx", offsetX},	&la_.IOpt{"offsety", offsetY})
+	if trans == int(la_.PTrans) && alpha != 0.0 {
+		Triusc(x, dims,  offsetX)
+	}
+	return nil
+}
+
+/*
  The inverse product x := (y o\ x), when the 's' components of y are 
  diagonal.
 */
 
 func Sinv(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
+
 	err = nil
+
+    // For the nonlinear and 'l' blocks:  
+    // 
+    //     yk o\ xk = yk .\ xk.
+
+	ind := mnl + dims.At("l")[0]
+    blas.Tbsv(y, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"ldA", 1})
+
+    // For the 'q' blocks: 
+    //
+    //                        [ l0   -l1'              ]  
+    //     yk o\ xk = 1/a^2 * [                        ] * xk
+    //                        [ -l1  (a*I + l1*l1')/l0 ]
+    //
+    // where yk = (l0, l1) and a = l0^2 - l1'*l1.
+
+	for _, m := range dims.At("q") {
+		aa := math.Pow(Jnrm2(y, m, ind), 2.0)
+		cc := x.GetIndex(ind)
+		dd := blas.Dot(y, x, &la_.IOpt{"n", m-1}, &la_.IOpt{"offsetx", ind+1},
+			&la_.IOpt{"offsety", ind+1}).Float()
+		ee := y.GetIndex(ind)
+		x.SetIndex(0, cc*ee - dd)
+		blas.Scal(x, matrix.FScalar(aa/ee), &la_.IOpt{"n", m-1}, &la_.IOpt{"offset", ind+1})
+		blas.Axpy(y, x, matrix.FScalar(dd/ee - cc), &la_.IOpt{"n", m-1},
+			&la_.IOpt{"offsetx", ind+1}, &la_.IOpt{"offsety", ind+1})
+		blas.Scal(x, matrix.FScalar(1.0/aa), &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+		ind += m
+	}
+
+    // For the 's' blocks:
+    //
+    //     yk o\ xk =  xk ./ gamma
+    //
+    // where gammaij = .5 * (yk_i + yk_j).
+
+	ind2 := ind
+	for _, m := range dims.At("s") {
+		for j := 0; j < m; j++ {
+			u := matrix.FloatVector(y.FloatArray()[ind2+j:ind2+m])
+			u.Add(y.GetIndex(ind2+j))
+			u.Mult(0.5)
+			blas.Tbsv(u, x, &la_.IOpt{"n", m-j}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
+				&la_.IOpt{"offsetx", ind+j*(m+1)})
+		}
+		ind += m*m
+		ind2 += m
+	}
 	return
 }
 
@@ -348,6 +479,48 @@ func maxdim(vec []int) int {
 	}
 	return res
 }
+
+/*
+    Sets upper triangular part of the 's' components of x equal to zero
+    and scales the strictly lower triangular part by 2.0.
+ */
+func Trisc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
+
+	//m := dims.Sum("l", "q") + dims.SumSquared("s")
+	ind := offset + dims.Sum("l", "q")
+	
+	for _, mk := range dims.At("s") {
+		for j := 1; j < mk; j++ {
+			blas.Scal(x, matrix.FScalar(0.0), &la_.IOpt{"n", mk-j}, &la_.IOpt{"inc", mk},
+				&la_.IOpt{"offset", ind+j*(mk+1)-1})
+			blas.Scal(x, matrix.FScalar(2.0), &la_.IOpt{"n", mk-j},
+				&la_.IOpt{"offset", ind+mk*(j-1)+j})
+		}
+		ind += mk*mk
+	}
+	return nil
+}
+
+/*
+    Scales the strictly lower triangular part of the 's' components of x 
+    by 0.5.
+
+ */
+func Triusc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
+
+	//m := dims.Sum("l", "q") + dims.SumSquared("s")
+	ind := offset + dims.Sum("l", "q")
+	
+	for _, mk := range dims.At("s") {
+		for j := 1; j < mk; j++ {
+			blas.Scal(x, matrix.FScalar(0.5), &la_.IOpt{"n", mk-j},
+				&la_.IOpt{"offset", ind+mk*(j-1)+j})
+		}
+		ind += mk*mk
+	}
+	return nil
+}
+
 
 func maxvec(vec []float64) float64 {
 	res := math.Inf(-1)
@@ -582,18 +755,6 @@ func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (e
 	err = blas.Scal(y, matrix.FScalar(1.0/math.Sqrt(2.0)),
 		&la_.IOpt{"n", nu}, &la_.IOpt{"offset", offsety+nlq})
 	return
-}
-
-/*
-    Returns the Nesterov-Todd scaling W at points s and z, and stores the 
-    scaled variable in lmbda. 
-    
-        W * z = W^{-T} * s = lmbda. 
- */
-func ComputeScaling(s, z, lambda *matrix.FloatMatrix, dims *DimensionSet, mnl int) (W *FloatMatrixSet, err error) {
-	err = nil
-	W = FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
-	return 
 }
 
 /*

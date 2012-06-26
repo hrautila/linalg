@@ -10,17 +10,9 @@ package matrix
 import "math"
 
 // Compute in-place product A[i,j] *= alpha
-func (A *FloatMatrix) Mult(alpha float64) *FloatMatrix {
+func (A *FloatMatrix) Scale(alpha float64) *FloatMatrix {
 	for k, v := range A.elements {
 		A.elements[k] = alpha * v
-	}
-	return A
-}
-
-// Compute in-place division A[i,j] /= alpha
-func (A *FloatMatrix) Div(alpha float64) *FloatMatrix {
-	for k, v := range A.elements {
-		A.elements[k] = v / alpha
 	}
 	return A
 }
@@ -57,7 +49,31 @@ func (A *FloatMatrix) Neg() *FloatMatrix {
 	return A
 }
 
-// Compute sum C = A + B. Returns a new matrix.
+// Compute element wise division C[i,] = A[i,j] / B[i,j]. Returns new matrix.
+func (A *FloatMatrix) Div(B *FloatMatrix) *FloatMatrix {
+	if ! A.SizeMatch(B.Size()) {
+		return nil
+	}
+	C := FloatZeros(A.Rows(), A.Cols())
+	for k, v := range B.elements {
+		C.elements[k] = A.elements[k] / v
+	}
+	return C
+}
+
+// Compute element-wise product C[i,j] = A[i,j] * B[i,j]. Returns new matrix.
+func (A *FloatMatrix) Mul(B *FloatMatrix) *FloatMatrix {
+	if ! A.SizeMatch(B.Size()) {
+		return nil
+	}
+	C := FloatZeros(A.Rows(), A.Cols())
+	for k, v := range B.elements {
+		C.elements[k] = A.elements[k] * v
+	}
+	return C
+}
+
+// Compute element-wise sum C = A + B. Returns a new matrix.
 func (A *FloatMatrix) Plus(B *FloatMatrix) *FloatMatrix {
 	if ! A.SizeMatch(B.Size()) {
 		return nil
@@ -69,7 +85,7 @@ func (A *FloatMatrix) Plus(B *FloatMatrix) *FloatMatrix {
 	return C
 }
 
-// Compute difference C = A - B. Returns a new matrix.
+// Compute element-wise difference C = A - B. Returns a new matrix.
 func (A *FloatMatrix) Minus(B *FloatMatrix) *FloatMatrix {
 	if ! A.SizeMatch(B.Size()) {
 		return nil
@@ -80,6 +96,7 @@ func (A *FloatMatrix) Minus(B *FloatMatrix) *FloatMatrix {
 	}
 	return C
 }
+
 
 // Compute product C = A * B. Returns a new matrix.
 func (A *FloatMatrix) Times(B *FloatMatrix) *FloatMatrix {
@@ -102,10 +119,10 @@ func (A *FloatMatrix) Times(B *FloatMatrix) *FloatMatrix {
 }
 
 
-// Compute C = fn(A) by applying function fn element wise to A.
-// For all i, j: C[i,j] = fn(A[i,j]). If C is nil then computes inplace
+// Compute A = fn(C) by applying function fn element wise to C.
+// For all i, j: A[i,j] = fn(C[i,j]). If C is nil then computes inplace
 // A = fn(A). If C is not nil then sizes of A and C must match.
-// Returns pointer to the result matrix.
+// Returns pointer to self.
 func (A *FloatMatrix) Apply(C *FloatMatrix, fn func(float64)float64) *FloatMatrix {
 	if C != nil && ! A.SizeMatch(C.Size()) {
 		return nil
@@ -114,16 +131,16 @@ func (A *FloatMatrix) Apply(C *FloatMatrix, fn func(float64)float64) *FloatMatri
 	if C == nil {
 		B = A
 	}
-	for k,v := range A.elements {
-		B.elements[k] = fn(v)
+	for k,v := range B.elements {
+		A.elements[k] = fn(v)
 	}
-	return B
+	return A
 }
 
-// Compute C = fn(A) by applying function fn to all elements in indexes.
-// For all i in indexes: C[i] = fn(A[i]).
+// Compute A = fn(C) by applying function fn to all elements in indexes.
+// For all i in indexes: A[i] = fn(C[i]).
 // If C is nil then computes inplace A = fn(A). If C is not nil then sizes of A and C must match.
-// Returns pointer to the result matrix.
+// Returns pointer to self.
 func (A *FloatMatrix) ApplyToIndexes(C *FloatMatrix, indexes []int, fn func(float64)float64) *FloatMatrix {
 	if C != nil && ! A.SizeMatch(C.Size()) {
 		return nil
@@ -133,14 +150,14 @@ func (A *FloatMatrix) ApplyToIndexes(C *FloatMatrix, indexes []int, fn func(floa
 		B = A
 	}
 	for _,v := range indexes {
-		B.elements[v] = fn(A.elements[v])
+		A.elements[v] = fn(B.elements[v])
 	}
-	return B
+	return A
 }
 
-// Compute A = fn(A, x) by applying function fn element wise to A.
-// For all i, j: A[i,j] = fn(A[i,j], x). 
-func (A *FloatMatrix) Apply2(C *FloatMatrix, fn func(float64,float64)float64, x float64) *FloatMatrix {
+// Compute A = fn(C, x) by applying function fn element wise to C.
+// For all i, j: A[i,j] = fn(C[i,j], x). 
+func (A *FloatMatrix) ApplyConst(C *FloatMatrix, fn func(float64,float64)float64, x float64) *FloatMatrix {
 
 	if C != nil && ! A.SizeMatch(C.Size()) {
 		return nil
@@ -149,10 +166,10 @@ func (A *FloatMatrix) Apply2(C *FloatMatrix, fn func(float64,float64)float64, x 
 	if C == nil {
 		B = A
 	}
-	for k,v := range A.elements {
-		B.elements[k] = fn(v, x)
+	for k,v := range B.elements {
+		A.elements[k] = fn(v, x)
 	}
-	return B
+	return A
 }
 
 // Find element-wise maximum. 
