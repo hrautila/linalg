@@ -39,6 +39,16 @@ import (
   offsetA   nonnegative integer
  */
 func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := (*matrix.FloatMatrix)(A)
+		return Gbtrf(Am, ipiv, M, KL, opts...)
+	case *matrix.ComplexMatrix:
+		return errors.New("complex not yet implemented.")
+	}
+}
+
+func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	ind.M = M
 	ind.Kl = KL
@@ -76,19 +86,14 @@ func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Option) erro
 	if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
 		return errors.New("size ipiv")
 	}
-	info := -1
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		info = dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
-	case *matrix.ComplexMatrix:
-		return errors.New("complex not yet implemented.")
-	}
+	Aa := A.FloatArray()
+	info := dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
 	if info != 0 {
-		return errors.New("gbtrf call error")
+		return errors.New(fmt.Sprintf("gbtrf call error: %d", info))
 	}
 	return nil
 }
+
 
 
 // Local Variables:

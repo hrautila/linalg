@@ -371,8 +371,148 @@ func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err erro
 		aa := Jnrm2(s, m, ind)
 		blas.Scal(s, matrix.FScalar(1.0/aa), &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
 
+        // b = sqrt( zk' * J * zk ) = sqrt( zt' * J * zt )
+        // z := z / a = zt / b
+		bb := Jnrm2(s, m, ind)
+		blas.Scal(z, matrix.FScalar(1.0/bb), &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+
+        // c = sqrt( ( 1 + (st'*zt) / (a*b) ) / 2 )
+		cc := blas.Dot(s, z, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"offsety", ind},
+			&la_.IOpt{"n", m})
+		cc = math.Sqrt((1.0 + cc)/2.0)
+
+        // vs = v' * st / a 
+		vs := blas.Dot(v, s, &la_.IOpt{"offsety", ind}, &la_.IOpt{"n", m})
+
+		// vz = v' * J *zt / b
+		vq := Jdot(v, z, m, ind)
+
+		// vq = v' * q where q = (st/a + J * zt/b) / (2 * c)
+		vq := (vs + vz) / 2.0/ cc
+
+        // vq = v' * q where q = (st/a + J * zt/b) / (2 * c)
+		vu := vs - vz
+        // lambda_k0 = c
+		lmbda.SetIndex(ind, cc)
+
+        // wk0 = 2 * vk0 * (vk' * q) - q0 
+		wk0 := 2.0 * v.GetIndex(0)*vq - (s.GetIndex(ind) + z.GetIndex(ind))/2.0/cc
+
+		// d = (v[0] * (vk' * u) - u0/2) / (wk0 + 1)
+		dd := (v.GetIndex(0)*vu - s.GetIndex(ind)/2.0 + z.GetIndex(ind)/2.0) / (wk0 + 1.0)
+
+		// lambda_k1 = 2 * v_k1 * vk' * (-d*q + u/2) - d*q1 + u1/2
+		blas.Copy(v, lmbda, &la_.IOpt{"offsetx", 1}, &la_.IOpt{"offsety", ind+1},
+			&la_.IOpt{"n", m})
+		blas.Scal(lmbda, matrix.FScalar(2.0*(-dd*vq + 0.5*vu)),
+			&la_.IOpt{"offsetx", ind+1}, &la_.IOpt{"offsety", ind+1}, &la_.IOpt{"n", m-1})
+		blas.Axpy(s, lmbda, matrix.FScalar(0.5*(1.0 - dd/cc)),
+			&la_.IOpt{"offsetx", ind+1}, &la_.IOpt{"offsety", ind+1}, &la_.IOpt{"n", m-1})
+		blas.Axpy(z, lmbda, matrix.FScalar(0.5*(1.0 + dd/cc)),
+			&la_.IOpt{"offsetx", ind+1}, &la_.IOpt{"offsety", ind+1}, &la_.IOpt{"n", m-1})
+
+        // Scale so that sqrt(lambda_k' * J * lambda_k) = sqrt(aa*bb).
+		blas.Scal(lmbda, matrix.FScalar(math.Sqrt(aa*bb)), &la_.IOpt{"offset", ind},
+			&la_.IOpt{"n", m})
+		
+        // v := (2*v*v' - J) * q 
+        //    = 2 * (v'*q) * v' - (J* st/a + zt/b) / (2*c)
+		blas.Scal(v, matrix.FScalar(2.0*vq))
+		v.SetIndex(0, v.GetIndex(0)-(s.GetIndex(ind)/2.0/cc))
+		blas.Axpy(s, v, matrix.FScalar(0.5/cc), 
+			&la_.IOpt{"offsetx", ind+1}, &la_.IOpt{"offsety", 1}, &la_.IOpt{"n", m-1})
+		blas.Axpy(z, v, matrix.FScalar(-0.5/cc), 
+			&la_.IOpt{"offsetx", ind}, &la_.IOpt{"n", m-1})
+
+        // v := v^{1/2} = 1/sqrt(2 * (v0 + 1)) * (v + e)
+		v0 := v.GetIndex(0)
+		v.SetIndex(0, v0+1.0)
+		blas.Scal(v, matrix.FScalar(math.Sqrt(2.0*v0)))
+
+        // beta[k] *= ( aa / bb )**1/2
+		bk := beta.GetIndex(k)
+		beta.SetIndex(k, bk*math.Sqrt(aa/bb))
+
+		ind += m
+	}
+
+    // 's' blocks
+    // 
+    // Let st, zt be the updated variables in the old scaling:
+    // 
+    //     st = Ls * Ls', zt = Lz * Lz'.
+    //
+    // where Ls and Lz are the 's' components of s, z.
+    //
+    // 1.  SVD Lz'*Ls = Uk * lambda_k^+ * Vk'.
+    //
+    // 2.  New scaling is 
+    //
+    //         r[k] := r[k] * Ls * Vk * diag(lambda_k^+)^{-1/2}
+    //         rti[k] := r[k] * Lz * Uk * diag(lambda_k^+)^{-1/2}.
+    //
+
+	maxr := 0
+	for _, m := range W.At("r") {
+		if m.Rows() > maxr { maxr = m.Rows() }
+	}
+	work = matrix.FloatZeros(maxr*maxr, 1)
+	vlensum := 0
+	for _, m := range W.At("v") {
+		vlensum += m.NumElements()
+	}
+	ind = mnl + ml + vlensum
+	ind2 = ind
+	ind3 := 0
+	rset := W.At("r")
+	rtiset := W.At("rti")
+
+	for k, _ := range rset {
+		r := rset[k]
+		rti := rtiset[k]
+		m = r.Rows()
+
+		// r := r*sk = r*Ls
+		blas.Gemm(r, s, work, &la_.IOpt{"m", m}, &la_.IOpt{"n", m}, &la_.IOpt{"k", m},
+			&la_.IOpt{"ldb", m}, &la_.IOpt{"ldc", m},&la_.IOpt{"offsetb", ind2})
+		blas.Copy(work, r, &la_.IOpt{"n", m*m})
+		
+        // rti := rti*zk = rti*Lz
+		blas.Gemm(rti, z, work, &la_.IOpt{"m", m}, &la_.IOpt{"n", m}, &la_.IOpt{"k", m},
+			&la_.IOpt{"ldb", m}, &la_.IOpt{"ldc", m},&la_.IOpt{"offsetb", ind2})
+		blas.Copy(work, rti, &la_.IOpt{"n", m*m})
+
+        // SVD Lz'*Ls = U * lmbds^+ * V'; store U in sk and V' in zk. '
+		blas.Gemm(z, s, work, la_.OptTransA, &la_.IOpt{"m", m}, &la_.IOpt{"n", m},
+			&la_.IOpt{"k", m}, &la_.IOpt{"lda", m}, &la_.IOpt{"ldb", m}, &la_.IOpt{"ldc", m},
+			&la_.IOpt{"offseta", ind2}, &la_.IOpt{"offsetb", ind2})
+		// U = s, Vt = z
+		lapack.Gesvd(work, lmbda, s, z, OptJobuAll, OptJobvtAll, &la_.IOpt{"m", m}, &la_.IOpt{"n", m},
+			&la_.IOpt{"lda", m}, &la_.IOpt{"ldu", m}, &la_.IOpt{"ldvt", m},
+			&la_.IOpt{"offsets", ind}, &la_.IOpt{"offsetu", ind2}, &la_.IOpt{"offsetvt", ind2})
+
+        // r := r*V
+		blas.Gemm(r, z, work, OptTransB, &la_.IOpt{"m", m}, &la_.IOpt{"n", m},
+			&la_.IOpt{"k", m}, &la_.IOpt{"ldb", m}, &la_.IOpt{"ldc", m},
+			&la_.IOpt{"offsetb", ind2})
+		blas.Copy(work, r, &la_.IOpt{"n", m*m})
+
+        // rti := rti*U
+		blas.Gemm(rti, s, work, OptTransB, &la_.IOpt{"m", m}, &la_.IOpt{"n", m},
+			&la_.IOpt{"k", m}, &la_.IOpt{"ldb", m}, &la_.IOpt{"ldc", m},
+			&la_.IOpt{"offsetb", ind2})
+		blas.Copy(work, rti, &la_.IOpt{"n", m*m})
+
+		for i := 0; i < m; i++ {
+			a := 1.0 / math.Sqrt(lmbda.GetIndex(ind+i))
+			blas.Scal(r, matrix.FScalar(a), &la_.IOpt{"n", m}, &la_.IOpt{"offset", m*i})
+			blas.Scal(rti, matrix.FScalar(a), &la_.IOpt{"n", m}, &la_.IOpt{"offset", m*i})
+		}
+		ind += m
+		ind2 += m*m
 	}
 	return
+
 }
 
 /*

@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -57,11 +58,29 @@ import (
 
  */
 func Gbsv(A, B matrix.Matrix, ipiv []int32, kl int, opts ...linalg.Option) error {
-	var info int
+	if ! matrix.EqualTypes(A, B) {
+		return errors.New("Gbsv: not same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := (*matrix.FloatMatrix)(A)
+		Bm := (*matrix.FloatMatrix)(B)
+		return GbsvFloat(Am, Bm, ipiv, kl, opts...)
+	case *matrix.ComplexMatrix:
+		Am := (*matrix.ComplexMatrix)(A)
+		Bm := (*matrix.ComplexMatrix)(B)
+		return GbsvComplex(Am, Bm, ipiv, kl, opts...)
+	}
+	return errors.New("Gbsv: unknown argument types!")
+}
+
+
+func GbsvFloat(A, B *matrix.FloatMatrix, ipiv []int32, kl int, opts ...linalg.Option) error {
+	
 	ind := linalg.GetIndexOpts(opts...)
 	ind.Kl = kl
 	if ind.Kl < 0 {
-		return errors.New("invalid kl")
+		return errors.New("Gbsv: invalid kl")
 	}
 	if ind.N < 0 {
 		ind.N = A.Rows()
@@ -76,49 +95,92 @@ func Gbsv(A, B matrix.Matrix, ipiv []int32, kl int, opts ...linalg.Option) error
 		ind.Ku = A.Rows() - 2*ind.Kl - 1
 	}
 	if ind.Ku < 0 {
-		return errors.New("invalid ku")
+		return errors.New("Gbsv: invalid ku")
 	}
 	if ind.LDa == 0 {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < 2*ind.Kl + ind.Ku + 1 {
-		return errors.New("lda")
+		return errors.New("Gbsv: lda")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Gbsv: offsetA")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa + 2*ind.Kl + ind.Ku + 1 {
-		return errors.New("sizeA")
+		return errors.New("Gbsv: sizeA")
 	}
 	if ind.LDb == 0 {
 		ind.LDb = max(1, B.Rows())
 	}
 	if ind.OffsetB < 0 {
-		return errors.New("offsetB")
+		return errors.New("Gbsv: offsetB")
 	}
 	sizeB := B.NumElements()
 	if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb + ind.N {
-		return errors.New("sizeB")
+		return errors.New("Gbsv: sizeB")
 	}
 	if ipiv != nil && len(ipiv) < ind.N {
-		return errors.New("size ipiv")
+		return errors.New("Gbsv: size ipiv")
 	}
-	if ! matrix.EqualTypes(A, B) {
-		return errors.New("not same type")
-	}
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
-		info = dgbsv(ind.N, ind.Kl, ind.Ku, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
-			ipiv, Ba[ind.OffsetB:], ind.LDb)
-	case *matrix.ComplexMatrix:
-	}
+
+	Aa := A.FloatArray()
+	Ba := B.FloatArray()
+	info := dgbsv(ind.N, ind.Kl, ind.Ku, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
+		ipiv, Ba[ind.OffsetB:], ind.LDb)
 	if info != 0 {
-		return errors.New("dgbsv call error")
+		return errors.New(fmt.Sprintf("Gbsv call error: %d", info))
 	}
-	return nil
+}
+
+func GbsvComplex(A, B *matrix.ComplexMatrix, ipiv []int32, kl int, opts ...linalg.Option) error {
+	ind := linalg.GetIndexOpts(opts...)
+	ind.Kl = kl
+	if ind.Kl < 0 {
+		return errors.New("Gbsv: invalid kl")
+	}
+	if ind.N < 0 {
+		ind.N = A.Rows()
+	}
+	if ind.Nrhs < 0 {
+		ind.Nrhs = A.Cols()
+	}
+	if ind.N == 0 || ind.Nrhs == 0 {
+		return nil
+	}
+	if ind.Ku < 0 {
+		ind.Ku = A.Rows() - 2*ind.Kl - 1
+	}
+	if ind.Ku < 0 {
+		return errors.New("Gbsv: invalid ku")
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.Rows())
+	}
+	if ind.LDa < 2*ind.Kl + ind.Ku + 1 {
+		return errors.New("Gbsv: lda")
+	}
+	if ind.OffsetA < 0 {
+		return errors.New("Gbsv: offsetA")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa + 2*ind.Kl + ind.Ku + 1 {
+		return errors.New("Gbsv: sizeA")
+	}
+	if ind.LDb == 0 {
+		ind.LDb = max(1, B.Rows())
+	}
+	if ind.OffsetB < 0 {
+		return errors.New("Gbsv: offsetB")
+	}
+	sizeB := B.NumElements()
+	if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb + ind.N {
+		return errors.New("Gbsv: sizeB")
+	}
+	if ipiv != nil && len(ipiv) < ind.N {
+		return errors.New("Gbsv: size ipiv")
+	}
+	return errors.New("GbsvComplex not implemented yet")
 }
 
 // Local Variables:
