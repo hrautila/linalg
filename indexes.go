@@ -35,6 +35,8 @@ type IndexOpts struct {
 	OffsetD, OffsetDL, OffsetDU int
 	LDw, LDz int
 	OffsetW, OffsetZ int
+	LDu, LDvt int
+	OffsetS, OffsetU, OffsetVt int
 }
 
 // Parse option list and return index structure with relevant fields set and
@@ -51,6 +53,8 @@ func GetIndexOpts(opts ...Option) *IndexOpts {
 		 0,  0,  0,				// offsetD, offsetDL, OffsetDU,
 		 0,  0,					// LDw, LDz
 		 0,  0,					// OffsetW, OffsetZ
+		 0,  0,					// LDu, LDvt
+		 0, 0,  0,				// OffsetS, OffsetU, OffsetVt
 	}
 
 loop:
@@ -73,6 +77,10 @@ loop:
 			is.LDw = o.Int()
 		case strings.EqualFold(o.Name(), "ldz"):
 			is.LDz = o.Int()
+		case strings.EqualFold(o.Name(), "ldu"):
+			is.LDu = o.Int()
+		case strings.EqualFold(o.Name(), "ldvt"):
+			is.LDvt = o.Int()
 		case strings.EqualFold(o.Name(), "offset"):
 			is.OffsetX = o.Int(); is.OffsetY = o.Int()
 			is.OffsetA = o.Int(); is.OffsetB = o.Int()
@@ -99,6 +107,12 @@ loop:
 			is.OffsetW = o.Int()
 		case strings.EqualFold(o.Name(), "offsetdz"):
 			is.OffsetZ = o.Int()
+		case strings.EqualFold(o.Name(), "offsetu"):
+			is.OffsetU = o.Int()
+		case strings.EqualFold(o.Name(), "offsets"):
+			is.OffsetS = o.Int()
+		case strings.EqualFold(o.Name(), "offsetvt"):
+			is.OffsetVt = o.Int()
 		case strings.EqualFold(o.Name(), "n"):
 			is.N = o.Int(); is.Nx = o.Int(); is.Ny = o.Int()
 		case strings.EqualFold(o.Name(), "nx"):

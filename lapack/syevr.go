@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 
@@ -71,6 +72,20 @@ import (
 
 */
 func Syevr(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int, opts ...linalg.Option) error {
+	if ! matrix.EqualTypes(A, W, Z) {
+		return errors.New("Syevr: not same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := A.(*matrix.FloatMatrix)
+		Wm := W.(*matrix.FloatMatrix)
+		Zm := Z.(*matrix.FloatMatrix)
+		return SyevrFloat(Am, Wm, Zm, abstol, vlimit, ilimit, opts...)
+	}
+	return errors.New("Syevr: unknown types")
+}
+
+func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int, opts ...linalg.Option) error {
 	var vl, vu float64
 	var il, iu int
 
@@ -82,7 +97,7 @@ func Syevr(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int
 	if ind.N < 0 {
 		ind.N = A.Rows()
 		if ind.N != A.Cols() {
-			return errors.New("A not square")
+			return errors.New("Syevr: A not square")
 		}
 	}
 	// Check indexes
@@ -93,94 +108,88 @@ func Syevr(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, A.Rows()) {
-		return errors.New("lda")
+		return errors.New("Syevr: lda")
 	}
 	if pars.Range == linalg.PRangeValue {
 		if vlimit == nil {
-			return errors.New("vlimit is nil")
+			return errors.New("Syevr: vlimit is nil")
 		}
 		vl = vlimit[0]
 		vu = vlimit[1]
 		if vl >= vu {
-			return errors.New("must be: vl < vu")
+			return errors.New("Syevr: must be: vl < vu")
 		}
 	} else if pars.Range == linalg.PRangeInt {
 		if ilimit == nil {
-			return errors.New("ilimit is nil")
+			return errors.New("Syevr: ilimit is nil")
 		}
 		il = ilimit[0]
 		iu = ilimit[1]
 		if il < 1 || il > iu || iu > ind.N {
-			return errors.New("must be:1 <= il <= iu <= N")
+			return errors.New("Syevr: must be:1 <= il <= iu <= N")
 		}
 	}
 	if pars.Jobz == linalg.PJobValue {
 		if Z == nil {
-			return errors.New("Z is nil")
+			return errors.New("Syevr: Z is nil")
 		}
 		if ind.LDz == 0 {
 			ind.LDz = max(1, Z.Rows())
 		}
 		if ind.LDz < max(1, ind.N) {
-			return errors.New("ldz")
+			return errors.New("Syevr: ldz")
 		}
 	} else {
 		if ind.LDz == 0 {
 			ind.LDz = 1
 		}
 		if ind.LDz < 1 {
-			return errors.New("ldz")
+			return errors.New("Syevr: ldz")
 		}
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("OffsetA")
+		return errors.New("Syevr: OffsetA")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA + (ind.N-1)*ind.LDa + ind.N {
-		return errors.New("sizeA")		
+		return errors.New("Syevr: sizeA")		
 	}
 	if ind.OffsetW < 0 {
-		return errors.New("OffsetW")
+		return errors.New("Syevr: OffsetW")
 	}
 	sizeW := W.NumElements()
 	if sizeW < ind.OffsetW + ind.N {
-		return errors.New("sizeW")		
+		return errors.New("Syevr: sizeW")		
 	}
 	if pars.Jobz == linalg.PJobValue {
 		if ind.OffsetZ < 0 {
-			return errors.New("OffsetW")
+			return errors.New("Syevr: OffsetW")
 		}
 		minZ := ind.OffsetZ + (ind.N-1)*ind.LDz + ind.N
 		if pars.Range == linalg.PRangeInt {
 			minZ = ind.OffsetZ + (iu-il)*ind.LDz + ind.N
 		}
 		if Z.NumElements() < minZ {
-			return errors.New("sizeZ")
+			return errors.New("Syevr: sizeZ")
 		}
 	}
 			
-	info := -1
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Wa := W.FloatArray()
-		var Za []float64
-		if pars.Jobz == linalg.PJobValue {
-			Za = Z.FloatArray()
-		} else {
-			Za = nil
-		}
-		jobz := linalg.ParamString(pars.Jobz)
-		rnge := linalg.ParamString(pars.Range)
-		uplo := linalg.ParamString(pars.Uplo)
-		
-		info = dsyevr(jobz, rnge, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa,
-			vl, vu, il, iu, ind.M, Wa[ind.OffsetW:], Za, ind.LDz)
-	case *matrix.ComplexMatrix:
-		return errors.New("not a complex function")
+	Aa := A.FloatArray()
+	Wa := W.FloatArray()
+	var Za []float64
+	if pars.Jobz == linalg.PJobValue {
+		Za = Z.FloatArray()
+	} else {
+		Za = nil
 	}
+	jobz := linalg.ParamString(pars.Jobz)
+	rnge := linalg.ParamString(pars.Range)
+	uplo := linalg.ParamString(pars.Uplo)
+	
+	info := dsyevr(jobz, rnge, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa,
+		vl, vu, il, iu, ind.M, Wa[ind.OffsetW:], Za, ind.LDz)
 	if info != 0 {
-		return errors.New("syevr failed")
+		return errors.New(fmt.Sprintf("Syevr: call failed %d", info))
 	}
 	return nil
 }

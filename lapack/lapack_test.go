@@ -2,7 +2,7 @@
 package lapack
 
 import (
-	"matrix"
+	"github.com/hrautila/go.opt/matrix"
 	"testing"
 	"fmt"
 )
