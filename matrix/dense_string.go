@@ -70,6 +70,49 @@ func FloatParse(s string) (A *FloatMatrix, err error) {
 	return
 }
 
+// Parse python cvxopt string representation of a matrix.
+//   [1,0 2.0 3.0]
+//   [1.1 2.1 3.1]
+// Returns a new FloatMatrix.
+func FloatParsePy(s string) (A *FloatMatrix, err error) {
+	var arrays [][]float64
+	// rowString is matrix row starting with '[' character.
+	// Remove newlines and split on ']'
+	rowStrings := strings.Split(strings.Trim(s, "\n"), "]")
+	//fmt.Printf("rows string: '%v'\n", rowStrings)
+	ncols := 0
+rows:
+	for _, row := range rowStrings {
+		//fmt.Printf("row string: '%v'\n", row)
+		if len(row) == 0 { continue rows }
+
+		rowElems := strings.Split(strings.Trim(row, " \n]["), " ")
+		//fmt.Printf("row elems: '%v'\n", rowElems)
+		if ncols == 0 {
+			ncols = len(rowElems)
+		} else if ncols != len(rowElems) {
+			err = ErrorDimensionMismatch
+			return
+		}
+		row := []float64{}
+	cols:
+		for _, valString := range rowElems {
+			fmt.Printf("val: '%v'\n", valString)
+			if len(valString) == 0 { continue cols }
+			var val float64
+			val, err = strconv.ParseFloat(valString, 64)
+			if err != nil {
+				return
+			}
+			row = append(row, val)
+		}
+		arrays = append(arrays, row)
+	}
+	A = FloatMatrixStacked(arrays, true)
+	return
+}
+
+
 // Local Variables:
 // tab-width: 4
 // End:

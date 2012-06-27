@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 /*
  Inverse of a real symmetric or complex Hermitian positive definite
@@ -36,11 +37,38 @@ import (
   offsetA   nonnegative integer;
 */
 func Potri(A matrix.Matrix, opts ...linalg.Option) error {
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		return PotriFloat(A.(*matrix.FloatMatrix), opts...)
+	case *matrix.ComplexMatrix:
+		return errors.New("ComplexMatrix: not implemented yet")
+	}
+	return errors.New("Potri: unknown types")
+}
+
+func PotriFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err
 	}
 	ind := linalg.GetIndexOpts(opts...)
+	err = checkPotri(ind, A)
+	if err != nil {
+		return err
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	uplo := linalg.ParamString(pars.Uplo)
+	info := dpotri(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
+	if info != 0 {
+		return errors.New(fmt.Sprintf("Potri: call error %d", info))
+	}
+	return nil
+}
+
+func checkPotri(ind *linalg.IndexOpts, A matrix.Matrix) error {
 	if ind.N < 0 {
 		ind.N = A.Rows()
 	}
@@ -51,25 +79,13 @@ func Potri(A matrix.Matrix, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.N) {
-		return errors.New("lda")
+		return errors.New("Potri: lda")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Potri: offsetA")
 	}
 	if A.NumElements() < ind.OffsetA + (ind.N-1)*ind.LDa + ind.N {
-		return errors.New("sizeA")
-	}
-	info := -1
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		uplo := linalg.ParamString(pars.Uplo)
-		info = dpotri(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
-	case *matrix.ComplexMatrix:
-		return errors.New("ComplexMatrx: not implemented yet")
-	}
-	if info != 0 {
-		return errors.New("Potri failed")
+		return errors.New("Potri: sizeA")
 	}
 	return nil
 }

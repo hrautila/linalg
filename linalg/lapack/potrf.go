@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -40,15 +41,40 @@ import (
 
  */
 func Potrf(A matrix.Matrix, opts ...linalg.Option) error {
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		return PotrfFloat(A.(*matrix.FloatMatrix), opts...)
+	case *matrix.ComplexMatrix:
+		return errors.New("ComplexMatrx: not implemented yet")
+	}
+	return errors.New("Potrf unknown types")
+}
+
+func PotrfFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err
 	}
 	ind := linalg.GetIndexOpts(opts...)
+	err = checkPotrf(ind, A)
+	if ind.N == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	uplo := linalg.ParamString(pars.Uplo)
+	info := dpotrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
+	if info != 0 {
+		return errors.New(fmt.Sprintf("Potrf: call error %d", info))
+	}
+	return nil
+}
+
+
+func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
 	if ind.N < 0 {
 		ind.N = A.Rows()
 		if ind.N != A.Cols() {
-			return errors.New("not square")
+			return errors.New("Potrf: not square")
 		}
 	}
 	if ind.N == 0 {
@@ -58,29 +84,16 @@ func Potrf(A matrix.Matrix, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.N) {
-		return errors.New("lda")
+		return errors.New("Potrf: lda")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Potrf: offsetA")
 	}
 	if A.NumElements() < ind.OffsetA + (ind.N-1)*ind.LDa + ind.N {
-		return errors.New("sizeA")
-	}
-	info := -1
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		uplo := linalg.ParamString(pars.Uplo)
-		info = dpotrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
-	case *matrix.ComplexMatrix:
-		return errors.New("ComplexMatrx: not implemented yet")
-	}
-	if info != 0 {
-		return errors.New("Potrf failed")
+		return errors.New("Potrf: sizeA")
 	}
 	return nil
 }
-
 
 // Local Variables:
 // tab-width: 4

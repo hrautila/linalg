@@ -11,13 +11,14 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"math"
 )
 
 // See function Nrm2.
-func Nrm2Float(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err error) {
-	v = 0.0
+func Nrm2Float(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64) {
+	v = math.NaN()
 	ind := linalg.GetIndexOpts(opts...)
-	err = check_level1_func(ind, fnrm2, X, nil)
+	err := check_level1_func(ind, fnrm2, X, nil)
 	if err != nil {
 		return
 	}
@@ -30,10 +31,10 @@ func Nrm2Float(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err err
 }
 
 // See function Asum.
-func AsumFloat(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err error) {
-	v = 0.0
+func AsumFloat(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64) {
+	v = math.NaN()
 	ind := linalg.GetIndexOpts(opts...)
-	err = check_level1_func(ind, fasum, X, nil)
+	err := check_level1_func(ind, fasum, X, nil)
 	if err != nil {
 		return
 	}
@@ -47,10 +48,10 @@ func AsumFloat(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err err
 
 
 // See functin Dot.
-func DotFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (v float64, err error) {
-	v = 0.0
+func DotFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (v float64) {
+	v = math.NaN()
 	ind := linalg.GetIndexOpts(opts...)
-	err = check_level1_func(ind, fdot, X, Y)
+	err := check_level1_func(ind, fdot, X, Y)
 	if err != nil {
 		return
 	}
