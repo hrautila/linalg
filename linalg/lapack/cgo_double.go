@@ -191,7 +191,20 @@ func dpotri(uplo string, N int, A []float64, lda int) int {
 
 // void dposv_(char *uplo, int *n, int *nrhs, double *A, int *lda,
 //		double *B, int *ldb, int *info);
-
+func dposv(uplo string, N, Nrhs int, A []float64, lda int, B []float64, ldb int) int {
+	var info int = 0
+	cuplo := C.CString(uplo)
+	defer C.free(unsafe.Pointer(cuplo))
+	C.dposv_(cuplo,
+		(*C.int)(unsafe.Pointer(&N)),
+		(*C.int)(unsafe.Pointer(&Nrhs)),
+		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.int)(unsafe.Pointer(&lda)),
+		(*C.double)(unsafe.Pointer(&B[0])),
+		(*C.int)(unsafe.Pointer(&ldb)),
+		(*C.int)(unsafe.Pointer(&info)))
+	return info
+}
 
 // void dpbtrf_(char *uplo, int *n, int *kd, double *AB, int *ldab, int *info);
 

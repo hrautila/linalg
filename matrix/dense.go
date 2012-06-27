@@ -155,7 +155,9 @@ func (A *FloatMatrix) IsComplex() bool {
 
 // Test if parameter matrices are of same type as self.
 func (A *FloatMatrix) EqualTypes(mats ...Matrix) bool {
+loop:
 	for _, m := range mats {
+		if m == nil { continue loop }
 		switch m.(type) {
 		case *FloatMatrix:	// of same type, NoOp
 		default:		// all others fail.

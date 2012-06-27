@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -41,22 +42,39 @@ import (
 func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Am := (*matrix.FloatMatrix)(A)
+		Am := A.(*matrix.FloatMatrix)
 		return Gbtrf(Am, ipiv, M, KL, opts...)
 	case *matrix.ComplexMatrix:
 		return errors.New("complex not yet implemented.")
 	}
+	return errors.New("Gbtrf: unknown types")
 }
 
 func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	ind.M = M
 	ind.Kl = KL
+	err := checkGbtrf(ind, A, ipiv)
+	if err != nil {
+		return err
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	info := dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
+	if info != 0 {
+		return errors.New(fmt.Sprintf("Gbtrf call error: %d", info))
+	}
+	return nil
+}
+
+func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
 	if ind.M < 0 {
-		return errors.New("illegal m")
+		return errors.New("Gbtrf: illegal m")
 	}
 	if ind.Kl < 0 {
-		return errors.New("illegal kl")
+		return errors.New("GBtrf: illegal kl")
 	}
 	if ind.N < 0 {
 		ind.N = A.Rows()
@@ -68,32 +86,26 @@ func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.O
 		ind.Ku = A.Rows() - 2*ind.Kl - 1
 	}
 	if ind.Ku < 0 {
-		return errors.New("invalid ku")
+		return errors.New("Gbtrf: invalid ku")
 	}
 	if ind.LDa == 0 {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < 2*ind.Kl + ind.Ku + 1 {
-		return errors.New("lda")
+		return errors.New("Gbtrf: lda")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Gbtrf: offsetA")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa + 2*ind.Kl + ind.Ku + 1 {
-		return errors.New("sizeA")
+		return errors.New("Gbtrf: sizeA")
 	}
 	if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
-		return errors.New("size ipiv")
-	}
-	Aa := A.FloatArray()
-	info := dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
-	if info != 0 {
-		return errors.New(fmt.Sprintf("gbtrf call error: %d", info))
+		return errors.New("Gbtrf: size ipiv")
 	}
 	return nil
 }
-
 
 
 // Local Variables:

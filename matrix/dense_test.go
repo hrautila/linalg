@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+func check(m Matrix) {
+	fmt.Printf("complex: %v\n", m.Complex())
+}
+
 func PrintArray(m Matrix) {
 	ar := m.FloatArray()
 	fmt.Printf("matrix: %d, %d [%d elements]\n",
@@ -61,9 +65,10 @@ func TestFMath(t *testing.T) {
 	fmt.Printf("Test matrix basic math.\n")
 	A := FloatZeros(2, 2)
 	fmt.Printf("A\n%v\n", A)
+	/*
 	A.Add(1.0)
 	fmt.Printf("A += 1.0\n%v\n", A)
-	A.Mult(9.0)
+	A.Mul(9.0)
 	fmt.Printf("A *= 9.0\n%v\n", A)
 	A.Sub(1.0)
 	fmt.Printf("A -= 1.0\n%v\n", A)
@@ -73,6 +78,7 @@ func TestFMath(t *testing.T) {
 	fmt.Printf("A %%= 3.0\n%v\n", A)
 	A.Neg()
 	fmt.Printf("A = -A:\n%v\n", A)
+	 */
 	C := A.Times(A)
 	fmt.Printf("C = A*A:\n%v\n", C)
 	D := C.Plus(A)
@@ -109,6 +115,7 @@ func TestIndexing(t *testing.T) {
 	fmt.Printf("-1: %v\n", A.GetIndex(-1))
 	fmt.Printf(" 6: %v\n", A.GetIndex(6))
 	fmt.Printf(" every 2nd: %v\n", A.GetIndexes(MakeIndexSet(0, A.NumElements(), 2)))
+	check(A)
 }
 
 func TestScalars(t *testing.T) {
@@ -117,6 +124,7 @@ func TestScalars(t *testing.T) {
 	fmt.Printf("-f = %v\n", -f)
 	z := FScalar(f*f)
 	fmt.Printf(" z = %v\n", z)
+	
 }
 	
 // Local Variables:

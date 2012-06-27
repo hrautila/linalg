@@ -160,7 +160,9 @@ func (A *ComplexMatrix) IsComplex() bool {
 
 // Test if parameter matrices are of same type as self.
 func (A *ComplexMatrix) EqualTypes(mats ...Matrix) bool {
+loop:
 	for _, m := range mats {
+		if m == nil { continue loop }
 		switch m.(type) {
 		case *ComplexMatrix:	// of same type, NoOp
 		default:		// all others fail.

@@ -33,6 +33,9 @@ const (
 	// These for LAPACK only
 	PJobNo = ParamValue(151)			// 'N'
 	PJobValue = ParamValue(152)			// 'V'
+	PJobAll = ParamValue(153)			// 'A'
+	PJobS = ParamValue(154)				// 'S'
+	PJobO = ParamValue(155)				// 'O'
 	PRangeAll = ParamValue(161)			// 'A'
 	PRangeValue = ParamValue(162)		// 'V'
 	PRangeInt = ParamValue(163)			// 'I'
@@ -45,6 +48,8 @@ type Parameters struct {
 	Diag ParamValue
 	Side ParamValue
 	Jobz ParamValue
+	Jobu ParamValue
+	Jobvt ParamValue
 	Range ParamValue
 }
 
@@ -71,6 +76,8 @@ func GetParameters(params ...Option) (p *Parameters, err error) {
 		PUnit,			// Diag
 		PLeft,			// Side
 		PJobNo,			// Jobz
+		PJobNo,			// Jobu
+		PJobNo,			// Jobvt
 		PRangeAll}		// Range
 
 Loop:
@@ -126,14 +133,28 @@ Loop:
 		// Lapack parameters
 		case strings.EqualFold(o.Name(), "jobz"):
 			if pval == PJobNo || pval == PJobValue {
-				p.Side = pval
+				p.Jobz = pval
 			} else {
 				err = errors.New("Illegal value for Jobz parameter")
 				break Loop
 			}
+		case strings.EqualFold(o.Name(), "jobu"):
+			if pval == PJobNo || pval == PJobAll || pval == PJobS || pval == PJobO {
+				p.Jobu = pval
+			} else {
+				err = errors.New("Illegal value for Jobu parameter")
+				break Loop
+			}
+		case strings.EqualFold(o.Name(), "jobvt"):
+			if pval == PJobNo || pval == PJobAll || pval == PJobS || pval == PJobO {
+				p.Jobvt = pval
+			} else {
+				err = errors.New("Illegal value for Jobu parameter")
+				break Loop
+			}
 		case strings.EqualFold(o.Name(), "range"):
 			if pval == PRangeAll || pval == PRangeValue || pval == PRangeInt {
-				p.Side = pval
+				p.Range = pval
 			} else {
 				err = errors.New("Illegal value for Range parameter")
 				break Loop
@@ -170,6 +191,16 @@ var (
 	// Lapack jobz 
 	OptJobZNo =  &IOpt{"jobz", int(PJobNo)}
 	OptJobZValue =  &IOpt{"jobz", int(PJobValue)}
+	// Lapack jobu
+	OptJobuNo =  &IOpt{"jobu", int(PJobNo)}
+	OptJobuAll =  &IOpt{"jobu", int(PJobAll)}
+	OptJobuS =  &IOpt{"jobu", int(PJobS)}
+	OptJobuO =  &IOpt{"jobu", int(PJobO)}
+	// Lapack jobvt
+	OptJobvtNo =  &IOpt{"jobvt", int(PJobNo)}
+	OptJobvtAll =  &IOpt{"jobvt", int(PJobAll)}
+	OptJobvtS =  &IOpt{"jobvt", int(PJobS)}
+	OptJobvtO =  &IOpt{"jobvt", int(PJobO)}
 	// Lapack range
 	OptRangeAll =  &IOpt{"range", int(PRangeAll)}
 	OptRangeValue =  &IOpt{"range", int(PRangeValue)}
@@ -188,6 +219,9 @@ var paramString map[ParamValue]string = map[ParamValue]string{
 	PNonUnit: "N",
 	PJobNo: "N",
 	PJobValue: "V",
+	PJobAll: "A",
+	PJobS: "S",
+	PJobO: "O",
 	PRangeAll: "A",
 	PRangeValue: "V",
 	PRangeInt: "I",

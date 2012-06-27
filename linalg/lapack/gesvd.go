@@ -98,27 +98,151 @@ func Gesvd(A, S, U, Vt matrix.Matrix, opts ...linalg.Option) error {
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Am := (*matrix.FloatMatrix)(A)
-		Sm := (*matrix.FloatMatrix)(S)
-		Um := (*matrix.FloatMatrix)(U)
-		Vm := (*matrix.FloatMatrix)(V)
+		Am := A.(*matrix.FloatMatrix)
+		Sm := S.(*matrix.FloatMatrix)
+		Um := U.(*matrix.FloatMatrix)
+		Vm := Vt.(*matrix.FloatMatrix)
 		return GesvdFloat(Am, Sm, Um, Vm, opts...)
 	case *matrix.ComplexMatrix:
-		Am := (*matrix.ComplexMatrix)(A)
-		Sm := (*matrix.ComplexMatrix)(S)
-		Um := (*matrix.ComplexMatrix)(U)
-		Vm := (*matrix.ComplexMatrix)(V)
+		Am := A.(*matrix.ComplexMatrix)
+		Sm := S.(*matrix.ComplexMatrix)
+		Um := U.(*matrix.ComplexMatrix)
+		Vm := Vt.(*matrix.ComplexMatrix)
 		return GesvdComplex(Am, Sm, Um, Vm, opts...)
 	}
 	return errors.New("Gesvd: unknown parameter types")
 }
 
 func GesvdFloat(A, S, U, Vt *matrix.FloatMatrix, opts ...linalg.Option) error {
-	return errors.New("GesvdFloat not implemented yet")
+	pars, err := linalg.GetParameters(opts...)
+	if err != nil {
+		return err
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = checkGesvd(ind, pars, A, S, U, Vt)
+	if err != nil {
+		return err
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	Sa := S.FloatArray()
+	var Ua, Va []float64
+	Ua = nil; Va = nil
+	if U != nil {
+		Ua = U.FloatArray()[ind.OffsetU:]
+	}
+	if Vt != nil {
+		Va = Vt.FloatArray()[ind.OffsetVt:]
+	}
+	info := dgesvd(linalg.ParamString(pars.Jobu), linalg.ParamString(pars.Jobvt),
+		ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, Sa[ind.OffsetS:], Ua, ind.LDu, Va, ind.LDvt)
+	if info != 0 {
+		return errors.New("GesvdFloat not implemented yet")
+	}
+	return nil
 }
 
 func GesvdComplex(A, S, U, Vt *matrix.ComplexMatrix, opts ...linalg.Option) error {
+	pars, err := linalg.GetParameters(opts...)
+	if err != nil {
+		return err
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = checkGesvd(ind, pars, A, S, U, Vt)
+	if err != nil {
+		return err
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return nil
+	}
 	return errors.New("GesvdComplex not implemented yet")
+}
+
+func checkGesvd(ind *linalg.IndexOpts, pars *linalg.Parameters, A, S, U, Vt matrix.Matrix) error {
+	if ind.M < 0 {
+		ind.M = A.Rows()
+	}
+	if ind.N < 0 {
+		ind.N = A.Cols()
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return nil
+	}
+	if pars.Jobu == linalg.PJobO && pars.Jobvt == linalg.PJobO {
+		return errors.New("Gesvd: jobu and jobvt cannot both have value PJobO")
+	}
+	if pars.Jobu == linalg.PJobAll || pars.Jobu == linalg.PJobS {
+		if U == nil {
+			return errors.New("Gesvd: missing matrix U")
+		}
+		if ind.LDu == 0 {
+			ind.LDu = max(1, U.Rows())
+		}
+		if ind.LDu < max(1, ind.M) {
+			return errors.New("Gesvd: ldU")
+		}
+	} else {
+		if ind.LDu == 0 { ind.LDu = 1 }
+		if ind.LDu < 1 {
+			return errors.New("Gesvd: ldU")
+		}
+	}
+	if pars.Jobvt == linalg.PJobAll || pars.Jobvt == linalg.PJobS {
+		if Vt == nil {
+			return errors.New("Gesvd: missing matrix Vt")
+		}
+		if ind.LDvt == 0 {
+			ind.LDvt = max(1, Vt.Rows())
+		}
+		if pars.Jobvt == linalg.PJobAll && ind.LDvt < max(1, ind.N)  {
+			return errors.New("Gesvd: ldVt")
+		} else if pars.Jobvt != linalg.PJobAll && ind.LDvt < max(1, min(ind.M, ind.N))  {
+			return errors.New("Gesvd: ldVt")
+		}
+	} else {
+		if ind.LDvt == 0 { ind.LDvt = 1 }
+		if ind.LDvt < 1 {
+			return errors.New("Gesvd: ldVt")
+		}
+	}
+	if ind.OffsetA < 0 {
+		return errors.New("Gesvd: offsetA")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA + (ind.N-1)*ind.LDa + ind.M {
+		return errors.New("Gesvd: sizeA")
+	}
+
+	if ind.OffsetS < 0 {
+		return errors.New("Gesvd: offsetS")
+	}
+	sizeS := S.NumElements()
+	if sizeS < ind.OffsetS + min(ind.M, ind.N) {
+		return errors.New("Gesvd: sizeA")
+	}
+
+	if ind.OffsetU < 0 {
+		return errors.New("Gesvd: OffsetU")
+	}
+	sizeU := U.NumElements()
+	if pars.Jobu == linalg.PJobAll && sizeU < ind.LDu*(ind.M-1) {
+		return errors.New("Gesvd: sizeU")
+	} else if pars.Jobu == linalg.PJobS && sizeU < ind.LDu*(min(ind.M,ind.N)-1) {
+		return errors.New("Gesvd: sizeU")
+	}
+
+	if ind.OffsetVt < 0 {
+		return errors.New("Gesvd: OffsetVt")
+	}
+	sizeVt := Vt.NumElements()
+	if pars.Jobvt == linalg.PJobAll && sizeVt <  ind.N {
+		return errors.New("Gesvd: sizeVt")
+	} else if pars.Jobvt == linalg.PJobS && sizeVt < min(ind.M, ind.N) {
+		return errors.New("Gesvd: sizeVt")
+	}
+	return nil
 }
 
 

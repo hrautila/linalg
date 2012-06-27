@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -36,11 +37,42 @@ import (
 
 */
 func Sytrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		return SytrfFloat(A.(*matrix.FloatMatrix), ipiv, opts...)
+	case *matrix.ComplexMatrix:
+		return SytrfComplex(A.(*matrix.ComplexMatrix), ipiv, opts...)
+	}
+	return errors.New("Sytrf: unknown types")
+}
+
+func SytrfFloat(A *matrix.FloatMatrix, ipiv []int32, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err
 	}
 	ind := linalg.GetIndexOpts(opts...)
+	err = checkSytrf(ind, A, ipiv)
+	if err != nil {
+		return err
+	}
+	if ind.N == 0  {
+		return nil
+	}
+	Aa := A.FloatArray()
+	uplo := linalg.ParamString(pars.Uplo)
+	info := dsytrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
+	if info != 0 {
+		return errors.New(fmt.Sprintf("Sytrf: call error %d", info))
+	}
+	return nil
+}
+
+func SytrfComplex(A *matrix.ComplexMatrix, ipiv []int32, opts ...linalg.Option) error {
+	return errors.New(fmt.Sprintf("SytrfComplex: not yet implemented"))
+}
+
+func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
 	if ind.N < 0 {
 		ind.N = A.Rows()
 		if ind.N != A.Cols() {
@@ -54,32 +86,20 @@ func Sytrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.N) {
-		return errors.New("lda")
+		return errors.New("Sytrf: lda")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Sytrf: offsetA")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
-		return errors.New("sizeA")
+		return errors.New("Sytrf: sizeA")
 	}
 	if ipiv != nil && len(ipiv) < ind.N {
-		return errors.New("size ipiv")
-	}
-	info := -1
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		uplo := linalg.ParamString(pars.Uplo)
-		info = dsytrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
-	case *matrix.ComplexMatrix:
-	}
-	if info != 0 {
-		return errors.New("sytrf failed")
+		return errors.New("Sytrf: size ipiv")
 	}
 	return nil
 }
-
 
 // Local Variables:
 // tab-width: 4
