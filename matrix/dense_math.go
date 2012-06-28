@@ -98,7 +98,8 @@ func (A *FloatMatrix) Minus(B *FloatMatrix) *FloatMatrix {
 }
 
 
-// Compute product C = A * B. Returns a new matrix.
+// Compute matrix product C = A * B where A is m*p and B is p*n.
+// Returns a new m*n matrix.
 func (A *FloatMatrix) Times(B *FloatMatrix) *FloatMatrix {
 	if A.Cols() != B.Rows() {
 		return nil
@@ -190,16 +191,25 @@ func (A *FloatMatrix) Min() float64 {
 	return m
 }
 
+// Return sum of elements
+func (A *FloatMatrix) Sum() float64 {
+	m := 0.0
+	for _, v := range A.elements {
+		m += v
+	}
+	return m
+}
+
 // Compute C = Exp(A). Returns a new matrix.
 func (A *FloatMatrix) Exp() *FloatMatrix {
 	C := FloatZeros(A.Rows(), A.Cols())
-	return A.Apply(C, math.Exp)
+	return C.Apply(A, math.Exp)
 }
 
 // Compute C = Log(A). Returns a new matrix.
 func (A *FloatMatrix) Log() *FloatMatrix {
 	C := FloatZeros(A.Rows(), A.Cols())
-	return A.Apply(C, math.Log)
+	return C.Apply(A, math.Log)
 }
 		
 // Local Variables:

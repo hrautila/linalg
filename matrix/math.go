@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/rand"
 	"math/cmplx"
+	"errors"
 )
 
 // Find maximum element value for matrix. For complex matrix returns NaN.
@@ -118,27 +119,108 @@ func Conj(A Matrix) Matrix {
 	return B
 }
 
-// Return copy of A with each element as Pow(A[i,j], y). For complex matrix
-// y is complex(y, 0.0).
-func PowF(A Matrix, y float64) Matrix {
+// Return copy of A with each element as Pow(A[i,j], y). 
+func Pow(A Matrix, y Scalar) Matrix {
 	C := A.MakeCopy()
 	if C.IsComplex() {
-		applyComplex(C, cmplx.Pow, complex(y, 0.0))
+		applyComplex(C, cmplx.Pow, y.Complex())
 	} else {
-		applyFloat(C, math.Pow, y)
+		applyFloat(C, math.Pow, y.Float())
 	}
 	return C
 }
 
-// Return copy of A with each element as Pow(A[i,j], y). For float matrix
-// returns nil.
-func PowC(A Matrix, y complex128) Matrix {
-	if ! A.IsComplex() {
-		return nil
+// Return new matrix which is element wise division A / B.
+// A and B matrices must be of same type and have equal number of elements.
+func Div(A, B Matrix) (Matrix, error) {
+	res := A.MakeCopy()
+	if A.NumElements() != B.NumElements() {
+		return nil, errors.New("Mismatching sizes")
 	}
-	C := A.MakeCopy()
-	applyComplex(C, cmplx.Pow, y)
-	return C
+	if ! res.EqualTypes(B) {
+		return nil, errors.New("Mismatching types")
+	}
+	if res.IsComplex() {
+		ar := res.ComplexArray()
+		br := B.ComplexArray()
+		for i, _ := range ar {
+			ar[i] /= br[i]
+		}
+	} else {
+		ar := res.FloatArray()
+		br := B.FloatArray()
+		for i, _ := range ar {
+			ar[i] /= br[i]
+		}
+	}
+	return res, nil
+}
+
+// Return new matrix which is element wise product of argument matrices.
+// A and B matrices must be of same type and have equal number of elements.
+func Mul(ml ...Matrix) (Matrix, error) {
+	fst := ml[0]
+	res := fst.MakeCopy()
+	for _, m := range ml[1:] {
+		if fst.NumElements() != m.NumElements() {
+			return nil, errors.New("Mismatching sizes")
+		}
+		if ! fst.EqualTypes(m) {
+			return nil, errors.New("Mismatching types")
+		}
+		mul(res, m)
+	}
+	return res, nil
+}
+
+
+func mul(a, b Matrix) {
+	if a.IsComplex() {
+		ar := a.ComplexArray()
+		br := b.ComplexArray()
+		for i, _ := range ar {
+			ar[i] *= br[i]
+		}
+	} else {
+		ar := a.FloatArray()
+		br := b.FloatArray()
+		for i, _ := range ar {
+			ar[i] *= br[i]
+		}
+	}
+}
+
+// Return new matrix which is element wise sum of argument matrices.
+// A and B matrices must be of same type and have equal number of elements.
+func Sum(ml ...Matrix) (Matrix, error) {
+	fst := ml[0]
+	res := fst.MakeCopy()
+	for _, m := range ml[1:] {
+		if fst.NumElements() != m.NumElements() {
+			return nil, errors.New("Mismatching sizes")
+		}
+		if ! fst.EqualTypes(m) {
+			return nil, errors.New("Mismatching types")
+		}
+		add(res, m)
+	}
+	return res, nil
+}
+
+func add(a, b Matrix) {
+	if a.IsComplex() {
+		ar := a.ComplexArray()
+		br := b.ComplexArray()
+		for i, _ := range ar {
+			ar[i] += br[i]
+		}
+	} else {
+		ar := a.FloatArray()
+		br := b.FloatArray()
+		for i, _ := range ar {
+			ar[i] += br[i]
+		}
+	}
 }
 
 func applyFunc(A Matrix, rFunc func(float64)float64, cFunc func(complex128)complex128) {
@@ -181,14 +263,8 @@ func uniformFloat64(nonNegative bool) float64 {
 		return val
 	}
 	return 2.0*(val - 0.5)
-	/*
-	n := rand.Int63()
-	if n & 1 != 0 {
-		val = -val
-	}
-	return val
-	 */
 }
+
 
 // Local Variables:
 // tab-width: 4
