@@ -81,30 +81,33 @@ func FloatParsePy(s string) (A *FloatMatrix, err error) {
 	rowStrings := strings.Split(strings.Trim(s, "\n"), "]")
 	//fmt.Printf("rows string: '%v'\n", rowStrings)
 	ncols := 0
+	firstRow := true
+	currow := 0
 rows:
 	for _, row := range rowStrings {
-		//fmt.Printf("row string: '%v'\n", row)
 		if len(row) == 0 { continue rows }
 
-		rowElems := strings.Split(strings.Trim(row, " \n]["), " ")
+		rowElems := strings.Fields(strings.Trim(row, " \n]["))
 		//fmt.Printf("row elems: '%v'\n", rowElems)
-		if ncols == 0 {
-			ncols = len(rowElems)
-		} else if ncols != len(rowElems) {
-			err = ErrorDimensionMismatch
-			return
-		}
 		row := []float64{}
-	cols:
+		collen := 0
 		for _, valString := range rowElems {
-			fmt.Printf("val: '%v'\n", valString)
-			if len(valString) == 0 { continue cols }
 			var val float64
+			if firstRow { ncols += 1 }
+			collen += 1
 			val, err = strconv.ParseFloat(valString, 64)
 			if err != nil {
 				return
 			}
 			row = append(row, val)
+		}
+		currow += 1
+		if firstRow {
+			firstRow = false
+		}
+		if collen != ncols {
+			err = errors.New(fmt.Sprintf("row %d: num columns %d, expected %d\n", currow, collen, ncols))
+			return
 		}
 		arrays = append(arrays, row)
 	}

@@ -29,7 +29,6 @@ func TestFParse(t *testing.T) {
 
 func TestFParse2(t *testing.T) {
 	fmt.Printf("Test matrix string parsing.\n")
-	//s := "[1.0 2.0 3.0]\n[1.1 2.1 3.1]"
 	s2 := "[-7.44e-01  1.11e-01  1.29e+00  2.62e+00 -1.82e+00][ 4.59e-01  7.06e-01  3.16e-01 -1.06e-01  7.80e-01][-2.95e-02 -2.22e-01 -2.07e-01 -9.11e-01 -3.92e-01][-7.75e-01  1.03e-01 -1.22e+00 -5.74e-01 -3.32e-01][-1.80e+00  1.24e+00 -2.61e+00 -9.31e-01 -6.38e-01]"
 
 	A, err := FloatParsePy(s2)
@@ -37,6 +36,12 @@ func TestFParse2(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Printf("Py-A :\n%v\n", A)
+	// this produces error (column count mismatch)
+	s := "[1.0  2.0  3.0 4.0]\n[1.1  2.1 3.1]"
+	A, err = FloatParsePy(s)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
 }
 
 func TestCRandom(t *testing.T) {
