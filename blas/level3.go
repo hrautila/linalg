@@ -218,7 +218,7 @@ func Hemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 /*
  Rank-k update of symmetric matrix. (L3)
 
- Syrk(A, C, alpha, beta, uplo=PLower, trans=PNoTrans, n=-1,
+ Syrk(A, C, alpha=1.0, beta=0.0, uplo=PLower, trans=PNoTrans, n=-1,
  k=-1, ldA=max(1,A.Rows), ldC=max(1,C.Rows), offsetA=0, offsetB=0)
 
  PURPOSE   
