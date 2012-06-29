@@ -29,7 +29,11 @@ func TestFParse(t *testing.T) {
 
 func TestFParse2(t *testing.T) {
 	fmt.Printf("Test matrix string parsing.\n")
-	s2 := "[-7.44e-01  1.11e-01  1.29e+00  2.62e+00 -1.82e+00][ 4.59e-01  7.06e-01  3.16e-01 -1.06e-01  7.80e-01][-2.95e-02 -2.22e-01 -2.07e-01 -9.11e-01 -3.92e-01][-7.75e-01  1.03e-01 -1.22e+00 -5.74e-01 -3.32e-01][-1.80e+00  1.24e+00 -2.61e+00 -9.31e-01 -6.38e-01]"
+	s2 := "[-7.44e-01  1.11e-01  1.29e+00  2.62e+00 -1.82e+00]" +
+		"[ 4.59e-01  7.06e-01  3.16e-01 -1.06e-01  7.80e-01]" +
+		"[-2.95e-02 -2.22e-01 -2.07e-01 -9.11e-01 -3.92e-01]" +
+		"[-7.75e-01  1.03e-01 -1.22e+00 -5.74e-01 -3.32e-01]" +
+		"[-1.80e+00  1.24e+00 -2.61e+00 -9.31e-01 -6.38e-01]"
 
 	A, err := FloatParsePy(s2)
 	if err != nil {
@@ -80,13 +84,15 @@ func TestFMath(t *testing.T) {
 	fmt.Printf("Test matrix basic math.\n")
 	A := FloatZeros(2, 2)
 	fmt.Printf("A\n%v\n", A)
-	/*
 	A.Add(1.0)
 	fmt.Printf("A += 1.0\n%v\n", A)
-	A.Mul(9.0)
+	A.Scale(9.0)
 	fmt.Printf("A *= 9.0\n%v\n", A)
 	A.Sub(1.0)
 	fmt.Printf("A -= 1.0\n%v\n", A)
+	B := A.Mul(A)
+	fmt.Printf("B = A .* A\n%v\n", B)
+	/*
 	A.Div(2.0)
 	fmt.Printf("A /= 2.0\n%v\n", A)
 	A.Mod(3.0)
@@ -101,11 +107,15 @@ func TestFMath(t *testing.T) {
 	F := D.Minus(A)
 	fmt.Printf("F = D-A:\n%v\n", F)
 	G := FloatZeros(3, 2); G.Add(1.0)
-	H := G.Copy().Transpose()
+	H := G.Transpose()
 	fmt.Printf("G:\n%v\n", G)
 	fmt.Printf("H:\n%v\n", H)
 	K := G.Times(H)
 	fmt.Printf("K = G*H:\n%v\n", K)
+	X := FloatNumbers(K.Cols(), 1, 2.0)
+	fmt.Printf("X:\n%v\n", X)
+	Z := K.Times(X)
+	fmt.Printf("Z = K*X:\n%v\n", Z)
 }
 
 func TestFuncs(t *testing.T) {

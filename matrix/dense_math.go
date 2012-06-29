@@ -66,9 +66,10 @@ func (A *FloatMatrix) Mul(B *FloatMatrix) *FloatMatrix {
 	if ! A.SizeMatch(B.Size()) {
 		return nil
 	}
-	C := FloatZeros(A.Rows(), A.Cols())
-	for k, v := range B.elements {
-		C.elements[k] = A.elements[k] * v
+	var C *FloatMatrix = FloatZeros(A.Rows(), A.Cols())
+	for k, _ := range B.elements {
+		val := A.elements[k] * B.elements[k]
+		C.elements[k] = val
 	}
 	return C
 }
@@ -104,15 +105,17 @@ func (A *FloatMatrix) Times(B *FloatMatrix) *FloatMatrix {
 	if A.Cols() != B.Rows() {
 		return nil
 	}
-	C := FloatZeros(A.Rows(), B.Cols())
+	rows := A.Rows()
+	cols := B.Cols()
+	C := FloatZeros(rows, cols)
 	arow := make([]float64, A.Cols())
 	bcol := make([]float64, B.Rows())
-	for i := 0; i < A.Rows(); i++ {
-		for j := 0; j < B.Cols(); j++ {
-			arow = A.GetRow(i, arow)
+	for i := 0; i < rows; i++ {
+		arow = A.GetRow(i, arow)
+		for j := 0; j < cols; j++ {
 			bcol = B.GetColumn(j, bcol)
 			for k, _ := range arow {
-				C.elements[i*A.Rows()+j] += arow[k]*bcol[k]
+				C.elements[j*rows+i] += arow[k]*bcol[k]
 			}
 		}
 	}
@@ -128,8 +131,8 @@ func (A *FloatMatrix) Apply(C *FloatMatrix, fn func(float64)float64) *FloatMatri
 	if C != nil && ! A.SizeMatch(C.Size()) {
 		return nil
 	}
-	B := C
-	if C == nil {
+	var B *FloatMatrix = C
+	if B == nil {
 		B = A
 	}
 	for k,v := range B.elements {

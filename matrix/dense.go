@@ -9,6 +9,7 @@ package matrix
 
 import (
 	"math/cmplx"
+	"fmt"
 )
 
 // A column-major matrix backed by a flat array of all elements.
@@ -264,7 +265,15 @@ func (A *FloatMatrix) GetSlice(start, end int) []float64 {
 // Set the element in the i'th row and j'th column to val.
 func (A *FloatMatrix) Set(i int, j int, val float64) {
 	step := A.LeadingIndex()
-	A.elements[j*step:j*step+A.Cols()][i] = val
+	if i < 0 {
+		i = A.Rows() + i
+	}
+	if j < 0 {
+		j = A.Cols() + j
+	}
+	i %= A.Rows()
+	j %= A.Cols()
+	A.elements[j*step+i] = val
 }
 
 // Set value of singleton matrix.
@@ -299,6 +308,10 @@ func (A *FloatMatrix) SetIndexes(indexes []int, values []float64) {
 // Set values of i'th row.
 func (A *FloatMatrix) SetRow(i int, vals []float64) {
 	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Rows() + i
+	}
+	i %= A.Rows()
 	for j := 0; j < A.Cols(); j++ {
 		A.elements[j*step+i] = vals[j]
 	}
@@ -307,6 +320,10 @@ func (A *FloatMatrix) SetRow(i int, vals []float64) {
 // Set values of i'th row. Matrix vals is either (A.Cols(), 1) or (1, A.Cols()) matrix.
 func (A *FloatMatrix) SetRowMatrix(i int, vals *FloatMatrix) {
 	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Rows() + i
+	}
+	i %= A.Rows()
 	for j := 0; j < A.Cols(); j++ {
 		A.elements[j*step+i] = vals.elements[j]
 	}
@@ -316,6 +333,10 @@ func (A *FloatMatrix) SetRowMatrix(i int, vals *FloatMatrix) {
 // Set values of i'th column.
 func (A *FloatMatrix) SetColumn(i int, vals []float64) {
 	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Cols() + i
+	}
+	i %= A.Cols()
 	for j := 0; j < A.Rows(); j++ {
 		A.elements[i*step+j] = vals[j]
 	}
@@ -324,6 +345,10 @@ func (A *FloatMatrix) SetColumn(i int, vals []float64) {
 // Set values of i'th column. Matrix vals is either (A.Rows(), 1) or (1, A.Rows()) matrix.
 func (A *FloatMatrix) SetColumnMatrix(i int, vals *FloatMatrix) {
 	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Cols() + i
+	}
+	i %= A.Cols()
 	for j := 0; j < A.Rows(); j++ {
 		A.elements[i*step+j] = vals.elements[j]
 	}
@@ -334,7 +359,8 @@ func (A *FloatMatrix) SetColumnMatrix(i int, vals *FloatMatrix) {
 // A.Rows() or col+mat.Cols() greater than A.Cols() matrix A is not changed.
 func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) {
 	r, c := mat.Size()
-	if r + row >= A.Rows() || c + col >= A.Cols() {
+	if r + row > A.Rows() || c + col > A.Cols() {
+		fmt.Printf("(%d+%d, %d+%d) > (%d,%d)\n", r, row, c, col, A.Rows(), A.Cols())
 		return
 	}
 	for i := 0; i < r; i++  {
