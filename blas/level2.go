@@ -751,7 +751,7 @@ func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
   offsetA   nonnegative integer;
 
 */
-func Ger(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
+func Ger(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -822,7 +822,7 @@ func Ger(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err
   offsetA   nonnegative integer;
 
 */
-func Geru(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
+func Geru(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -891,7 +891,7 @@ func Geru(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
   offsetx   nonnegative integer
   offsetA   nonnegative integer;
 */
-func Syr(A, X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
+func Syr(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -951,7 +951,7 @@ func Syr(A, X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
   offsetA   nonnegative integer;
 
 */
-func Her(A, X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
+func Her(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -1016,7 +1016,7 @@ func Her(A, X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
  offsety   nonnegative integer
  offsetA   nonnegative integer;
 */
-func Syr2(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
+func Syr2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -1078,7 +1078,7 @@ func Syr2(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
  offsety   nonnegative integer
  offsetA   nonnegative integer;
 */
-func Her2(A, X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
+func Her2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)

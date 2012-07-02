@@ -191,6 +191,9 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
 		if ind.N < 0 {
 			ind.N = A.Cols()
 		}
+		if ind.M == 0 || ind.N == 0 {
+			return nil
+		}
 		if ind.M > 0 && ind.N > 0 {
 			if ind.LDa == 0 {
 				ind.LDa = max(1, A.Rows())
@@ -215,7 +218,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
  				return errors.New("sizeX")
 			}
 			sizeY := Y.NumElements()
-			if sizeY < ind.OffsetY + (ind.M-1)*abs(ind.IncY) + 1 {
+			if sizeY < ind.OffsetY + (ind.N-1)*abs(ind.IncY) + 1 {
  				return errors.New("sizeY")
 			}
 		}			
@@ -538,9 +541,9 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 	case fsyrk, fsyr2k: 
 		if ind.N < 0 {
 			if pars.Trans == linalg.PNoTrans {
-				ind.N = A.Rows()
+				ind.N = B.Rows()
 			} else {
-				ind.N = A.Cols()
+				ind.N = B.Cols()
 			}
 		}
 		if ind.K < 0 {
@@ -602,7 +605,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 				return errors.New("ldC")
 			}
 			sizeC := C.NumElements()
-			if sizeC < ind.OffsetC + (ind.N-1)*ind.LDc + ind.M {
+			if sizeC < ind.OffsetC + (ind.N-1)*ind.LDc + ind.N {
 				return errors.New("sizeC")
 			}
 		}
