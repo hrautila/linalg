@@ -211,6 +211,9 @@ func Swap(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
+	if ind.Nx == 0 {
+		return
+	}
 	if ind.Nx != ind.Ny {
 		err = errors.New("arrays have unequal default lengths")
 		return
@@ -255,7 +258,10 @@ func Copy(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	err = check_level1_func(ind, fcopy, X, Y)
 	if err != nil {
 		return
-		}
+	}
+	if ind.Nx == 0 {
+		return
+	}
 	if ind.Nx != ind.Ny {
 		err = errors.New("arrays have unequal default lengths")
 		return
@@ -354,6 +360,9 @@ func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, faxpy, X, Y)
 	if err != nil {
+		return
+	}
+	if ind.Nx == 0 {
 		return
 	}
 	if ind.Nx != ind.Ny {

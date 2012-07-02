@@ -75,6 +75,9 @@ func SwapFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
+	if ind.Nx == 0 {
+		return
+	}
 	if ind.Nx != ind.Ny {
 		err = errors.New("arrays have unequal default lengths")
 		return
@@ -90,6 +93,9 @@ func CopyFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level1_func(ind, fcopy, X, Y)
 	if err != nil {
+		return
+	}
+	if ind.Nx == 0 {
 		return
 	}
 	if ind.Nx != ind.Ny {
@@ -127,6 +133,9 @@ func AxpyFloat(X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (
 	if err != nil {
 		return
 	}
+	if ind.Nx == 0 {
+		return
+	}
 	if ind.Nx != ind.Ny {
 		err = errors.New("arrays have unequal default lengths")
 		return
@@ -153,6 +162,12 @@ func GemvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level2_func(ind, fgemv, X, Y, A, params)
 	if err != nil {
+		return
+	}
+	if ind.M == 0 && params.Trans == linalg.PNoTrans {
+		return
+	}
+	if ind.N == 0 && (params.Trans == linalg.PTrans || params.Trans == linalg.PConjTrans) {
 		return
 	}
 	Xa := X.FloatArray()
@@ -567,7 +582,7 @@ func TbsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 */
 
 // See function Ger.
-func GerFloat(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
+func GerFloat(X, Y, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -577,6 +592,9 @@ func GerFloat(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option)
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level2_func(ind, fger, X, Y, A, params)
 	if err != nil {
+		return
+	}
+	if ind.N == 0 || ind.M == 0 {
 		return
 	}
 	Xa := X.FloatArray()
@@ -609,7 +627,7 @@ func GerFloat(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option)
 */
 
 // See function Syr.
-func SyrFloat(A, X *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
+func SyrFloat(X, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -651,7 +669,7 @@ func SyrFloat(A, X *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (e
 */
 
 // See function Syr2.
-func Syr2Float(A, X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
+func Syr2Float(X, Y, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
@@ -930,6 +948,9 @@ func Syr2kFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level3_func(ind, fsyr2k, A, B, C, params)
 	if err != nil {
+		return
+	}
+	if ind.N == 0 {
 		return
 	}
 	Aa := A.FloatArray()

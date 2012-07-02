@@ -123,7 +123,7 @@ func FloatIdentity(rows, cols int) (A *FloatMatrix) {
 	}
 	A = FloatZeros(rows, cols)
 	step := A.LeadingIndex()
-	for k := rows; k < rows; k++ {
+	for k := 0; k < rows; k++ {
 		A.elements[k*step+k] = 1.0
 	}
 	return 
@@ -171,7 +171,8 @@ loop:
 // Get the element in the i'th row and j'th column.
 func (A *FloatMatrix) Get(i int, j int) (val float64) {
 	step := A.LeadingIndex()
-	val = A.elements[j*step:j*step+A.Cols()][i]
+	//val = A.elements[j*step:j*step+A.Cols()][i]
+	val = A.elements[j*step+i]
 	return
 }
 

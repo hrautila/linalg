@@ -35,10 +35,11 @@ func (M *FloatMatrixSet) At(name string) []*matrix.FloatMatrix {
 
 // Set the contents of matrix set.
 func (M *FloatMatrixSet) Set(key string, ms ...*matrix.FloatMatrix) {
-	mset := make([]*matrix.FloatMatrix, len(ms), 2*len(ms))
+	mset := make([]*matrix.FloatMatrix, 0, 2*len(ms))
 	for _, v := range ms {
-		M.sets[key] = append(mset, v)
+		mset = append(mset, v)
 	}
+	M.sets[key] = mset
 }
 
 // Append matrices to matrix set.
@@ -48,8 +49,9 @@ func (M *FloatMatrixSet) Append(key string, ms ...*matrix.FloatMatrix) {
 		mset = make([]*matrix.FloatMatrix, 0, 2*len(ms))
 	}
 	for _, v := range ms {
-		M.sets[key] = append(mset, v)
+		mset = append(mset, v)
 	}
+	M.sets[key] = mset
 }
 
 
@@ -88,16 +90,32 @@ func (ds *DimensionSet) Append(key string, dims []int) {
 		dset = make([]int, 0, 2*len(dims))
 	}
 	for _, v := range dims {
-		ds.sets[key] = append(dset, v)
+		dset = append(dset, v)
 	}
+	ds.sets[key] = dset
 }
 
 // Append dimension key to dis.
 func (ds *DimensionSet) Set(key string, dims []int) {
 	dset := make([]int, 0, 2*len(dims))
 	for _, v := range dims {
-		ds.sets[key] = append(dset, v)
+		dset = append(dset, v)
 	}
+	ds.sets[key] = dset
+}
+
+// Find maximum dimension in sets.
+func (ds *DimensionSet) Max(keys ...string) int {
+	mx := 0
+	for _, key := range keys {
+		dset := ds.sets[key]
+		for _, n := range dset {
+			if n > mx {
+				mx = n
+			}
+		}
+	}
+	return mx
 }
 
 // Calculate sum over set of keys.

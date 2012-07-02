@@ -103,13 +103,16 @@ func Acent(A, b *matrix.FloatMatrix, niters int) (*matrix.FloatMatrix, []float64
 }
 
 func main() {
-	sA := "[-7.44e-01  1.11e-01  1.29e+00  2.62e+00 -1.82e+00]" +
+	// matrix string in row order presentation
+	sA :=
+		"[-7.44e-01  1.11e-01  1.29e+00  2.62e+00 -1.82e+00]" +
 		"[ 4.59e-01  7.06e-01  3.16e-01 -1.06e-01  7.80e-01]" + 
 		"[-2.95e-02 -2.22e-01 -2.07e-01 -9.11e-01 -3.92e-01]" +
 		"[-7.75e-01  1.03e-01 -1.22e+00 -5.74e-01 -3.32e-01]" +
 		"[-1.80e+00  1.24e+00 -2.61e+00 -9.31e-01 -6.38e-01]"
 	
-	sb := "[ 8.38e-01]" +
+	sb :=
+		"[ 8.38e-01]" +
 		"[ 9.92e-01]" +
 		"[ 9.56e-01]" +
 		"[ 6.14e-01]" +
@@ -127,6 +130,8 @@ func main() {
 	A.SetSubMatrix(0, 0, Al)
 	A.SetSubMatrix(Al.Rows(), 0, Au)
 
+	//fmt.Printf("A (%d,%d):\n%v\n", A.Rows(), A.Cols(), A)
+	//fmt.Printf("b (%d,%d):\n%v\n", b.Rows(), b.Cols(), b)
 	x, nt := Acent(A, b, 10)
 	fmt.Printf("nt:\n%v\n", nt)
 	fmt.Printf("x :\n%v\n", x)

@@ -27,7 +27,7 @@ func (A *FloatMatrix) String() string {
 			if j > 0 {
 				s += " "
 			}
-			s += fmt.Sprintf("%f", A.elements[j*step+i])
+			s += fmt.Sprintf("%9.2e", A.elements[j*step+i])
 		}
 		s += "]"
 	}
