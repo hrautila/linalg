@@ -8,6 +8,7 @@
 package matrix
 
 import (
+	"math"
 	"math/cmplx"
 	"fmt"
 )
@@ -131,6 +132,9 @@ func FloatIdentity(rows, cols int) (A *FloatMatrix) {
 
 // Return the flat column-major element array.
 func (A *FloatMatrix) FloatArray() []float64 {
+	if A == nil {
+		return nil
+	}
 	return A.elements
 }
 
@@ -141,6 +145,9 @@ func (A *FloatMatrix) ComplexArray() []complex128 {
 
 // Return the first element column-major element array.
 func (A *FloatMatrix) Float() float64 {
+	if A == nil {
+		return math.NaN()
+	}
 	return A.elements[0]
 }
 

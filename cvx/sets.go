@@ -4,6 +4,7 @@ package cvx
 import (
 	//"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
+	"fmt"
 )
 
 
@@ -21,7 +22,7 @@ func FloatSetNew(names ...string) *FloatMatrixSet {
 	mcap := 2*sz
 	ms := new(FloatMatrixSet)
 	ms.sets = make(map[string][]*matrix.FloatMatrix, mcap)
-	for _,k := range names {
+	for _, k := range names {
 		ms.sets[k] = nil
 	}
 	return ms
@@ -53,6 +54,24 @@ func (M *FloatMatrixSet) Append(key string, ms ...*matrix.FloatMatrix) {
 	}
 	M.sets[key] = mset
 }
+
+func (M *FloatMatrixSet) Keys() []string {
+	s := make([]string, len(M.sets))
+	for key := range M.sets {
+		s = append(s, key)
+	}
+	return s
+}
+
+func (M *FloatMatrixSet) Print() {
+	for key := range M.sets {
+		ms := M.sets[key]
+		for i, m := range ms {
+			fmt.Printf("** %s[%d] **\n%v\n", key, i, m)
+		}
+	}
+}
+	
 
 
 // DimensionSet is a collection of named sets of sizes.

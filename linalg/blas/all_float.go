@@ -23,6 +23,7 @@ func Nrm2Float(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64) {
 		return
 	}
 	if ind.Nx == 0 {
+		v = 0.0
 		return
 	}
 	Xa := X.FloatArray()
@@ -39,6 +40,7 @@ func AsumFloat(X *matrix.FloatMatrix, opts ...linalg.Option) (v float64) {
 		return
 	}
 	if ind.Nx == 0 {
+		v = 0.0
 		return
 	}
 	Xa := X.FloatArray()
@@ -56,6 +58,7 @@ func DotFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (v float64) {
 		return
 	}
 	if ind.Nx == 0 {
+		v = 0.0
 		return 
 	}
 	if ind.Nx != ind.Ny {

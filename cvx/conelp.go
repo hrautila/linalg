@@ -10,6 +10,9 @@ import (
 	"math"
 )
 
+// KKTFactory creates solver factor
+type KKTFactory func(*matrix.FloatMatrix, *DimensionSet, *matrix.FloatMatrix, int) (KKT)
+
 // KTTFunc solves
 type KKTFunc func(x, y, z *matrix.FloatMatrix) error
 
@@ -31,9 +34,21 @@ func KKTNullSolver(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMat
 }
 
 type SolverMap map[string]KKTSolver
+type SolverFactoryMap map[string]KKTFactory
 
 var solvers SolverMap = SolverMap{
-	"ldl": KktLdl, "ldl2": KktLdl, "qr": KktLdl, "chol": KktLdl, "chol2": KktLdl}
+	"ldl": KktLdl,
+	"ldl2": KktLdl,
+	"qr": KktLdl,
+	"chol": KktLdl,
+	"chol2": KktLdl}
+
+var factories SolverFactoryMap = SolverFactoryMap{
+	"ldl": CreateLdlSolver,
+	"ldl2": CreateLdlSolver,
+	"qr": CreateLdlSolver,
+	"chol": CreateLdlSolver,
+	"chol2": CreateLdlSolver}
 
 func checkConeLpDimensions(dims *DimensionSet) error {
 	return nil
@@ -111,7 +126,6 @@ const (
 // ConeLp(c, G, h, A=nil, b=nil, dims=nil, ...)
 func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, opts ...la_.Option) (sol *Solution, err error) {
 
-	fmt.Printf("entering ConeLp ...\n")
 	err = nil
 	EXPON := 3
 	STEP := 0.99
@@ -123,7 +137,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 	var primalstart *FloatMatrixSet = nil
 	var dualstart *FloatMatrixSet = nil
-	var kktsolver KKTFactor = nil
+	//var kktsolver KKTFactor = nil
+	var kktsolver KKT
 	var refinement int
 
 	if solopts.Refinement > 0 {
@@ -238,8 +253,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
     //     [ 0   A'  G'*W^{-1} ] [ ux ]   [ bx ]
     //     [ A   0   0         ] [ uy ] = [ by ].
     //     [ G   0   -W'       ] [ uz ]   [ bz ]
-	var factor KKTFactor
-	if kkt, ok := solvers[solvername]; ok {
+	//var factor KKTFactor
+	if kkt, ok := factories[solvername]; ok {
 		if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
 			err = errors.New("Rank(A) < p or Rank[G; A] < n")
 			return
@@ -248,12 +263,13 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			err = errors.New(fmt.Sprintf("solver '%s' not yet implemented", solvername))
 			return
 		}
+		kktsolver = kkt(G, dims, A, 0)
 		// kkt function returns us problem spesific factor function.
-		factor, err = kkt(G, dims, A, 0)
+		// factor, err = kkt(G, dims, A, 0)
 		// solver is 
-		kktsolver = func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
-			return factor(W, H, Df)
-		}
+		// kktsolver = func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
+		//	return factor(W, H, Df)
+		//}
 	} else {
 		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
 		return
@@ -317,7 +333,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 	// select initial points
 
-	fmt.Printf("c = %d, b = %d \n", c.NumElements(), b.NumElements())
+	fmt.Printf("** initial resx0=%.4f, resy0=%.4f, resz0=%.4f \n", resx0, resy0, resz0)
+
 	x := c.Copy()
 	blas.ScalFloat(x, 0.0)
 	y := b.Copy()
@@ -337,9 +354,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	fmt.Printf("initial point set ...\n")
 
 	var W *FloatMatrixSet
-	var f KKTFunc
+	//var f KKTFunc
 	if primalstart == nil || dualstart == nil {
-		fmt.Printf("primalstart & dualstart == nil ...\n")
 		// Factor
 		//
 		//     [ 0   A'  G' ] 
@@ -364,15 +380,18 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			W.Append("r", matrix.FloatIdentity(n, n))
 			W.Append("rti", matrix.FloatIdentity(n, n))
 		}
-		f, err = kktsolver(W, nil, nil)
+		//f, err = kktsolver(W, nil, nil)
+		_, err = kktsolver.Factor(W, nil, nil)
 		if err != nil {
 			fmt.Printf("kktsolver error: %s\n", err)
 			return
 		}
+		fmt.Printf("** empty W:\n")
+		W.Print()
+		fmt.Printf("** end of empty W:\n")
 	}
 
 	if primalstart == nil {
-		fmt.Printf("primalstart  == nil ...\n")
 		// minimize    || G * x - h ||^2
 		// subject to  A * x = b
 		//
@@ -384,13 +403,14 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		blas.ScalFloat(x, 0.0)
 		blas.CopyFloat(y, dy)
 		blas.CopyFloat(h, s)
-		fmt.Printf("primalstart: calling factor ...\n")
-		err = f(x, dy, s)
+		//err = f(x, dy, s)
+		err = kktsolver.Solve(x, dy, s)
 		if err != nil {
 			fmt.Printf("f(x,dy,s): %s\n", err)
 			return
 		}
 		blas.ScalFloat(s, -1.0)
+		fmt.Printf("** initial s:\n%v\n", s)
 	} else {
 		blas.Copy(primalstart.At("x")[0], x)
 		blas.Copy(primalstart.At("s")[0], s)
@@ -398,13 +418,13 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 	// ts = min{ t | s + t*e >= 0 }
 	ts := MaxStep(s, dims, 0, nil)
+	fmt.Printf("** initial ts:\n%v\n", ts)
 	if ts >= 0 && primalstart != nil {
 		err = errors.New("initial s is not positive")
 		return 
 	}
 
 	if dualstart == nil {
-		fmt.Printf("dualstart == nil ...\n")
 		// minimize   || z ||^2
 		// subject to G'*z + A'*y + c = 0
 		//
@@ -414,11 +434,15 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		//     [ A   0   0  ] [ y  ] = [  0 ].
 		//     [ G   0  -I  ] [ z  ]   [  0 ]
 		blas.Copy(c, dx)
-		blas.Scal(dx, matrix.FScalar(-1.0))
-		blas.Scal(y, matrix.FScalar(0.0))
-		if err = f(dx, y, z); err != nil {
+		blas.ScalFloat(dx, -1.0)
+		blas.ScalFloat(y, 0.0)
+		//err = f(dx, y, z)
+		err = kktsolver.Solve(dx, y, z)
+		if err != nil {
+			fmt.Printf("f(dx,y,z): %s\n", err)
 			return
 		}
+		fmt.Printf("** initial z:\n%v\n", z)
 	} else {
 		if my := dualstart.At("y")[0]; my !=nil {
 			blas.Copy(my, y)
@@ -428,6 +452,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 	// ts = min{ t | z + t*e >= 0 }
 	tz := MaxStep(z, dims, 0, nil)
+	fmt.Printf("** initial tz:\n%v\n", tz)
 	if tz >= 0 && dualstart != nil {
 		err = errors.New("initial z is not positive")
 		return 
@@ -435,6 +460,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 	nrms := Snrm2(s, dims, 0)
 	nrmz := Snrm2(z, dims, 0)
+	fmt.Printf("** nrms=%.4f, nrmz=%.4f\n", nrms, nrmz)
 
 	gap := 0.0
 	pcost := 0.0
@@ -762,6 +788,9 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		var dg, dgi float64
 		if iter == 0 {
 			W, err = ComputeScaling(s, z, lmbda, dims, 0)
+			fmt.Printf("*** initial scaling:\ns:\n%v\nz:\n%v\nlmbda:\n%v\n", s, z, lmbda)
+			W.Print()
+			fmt.Printf("*** end of initial scaling\n")
 
 			//     dg = sqrt( kappa / tau )
 			//     dgi = sqrt( tau / kappa )
@@ -795,9 +824,9 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		//     [-G   0   W'*W  ] [ W^{-1}*z1 ]          [ h ]
 
 		var x1, y1, z1 *matrix.FloatMatrix
-		var f3 KKTFunc
+		//var f3 KKTFunc
 
-		f3, err = kktsolver(W, nil, nil)
+		_, err = kktsolver.Factor(W, nil, nil)
 		if iter == 0 {
 			x1 = c.Copy()
 			y1 = b.Copy()
@@ -807,7 +836,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		blas.ScalFloat(x1, -1.0)
 		blas.Copy(b, y1)
 		blas.Copy(h, z1)
-		err = f3(x1, y1, z1)
+		//err = f3(x1, y1, z1)
+		err = kktsolver.Solve(x1, y1, z1)
 		blas.ScalFloat(x1, dgi)
 		blas.ScalFloat(y1, dgi)
 		blas.ScalFloat(z1, dgi)
@@ -903,7 +933,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			blas.AxpyFloat(ws3, z, 1.0)
 			blas.ScalFloat(z, -1.0)
 
-			err = f3(x, y, z)
+			//err = f3(x, y, z)
+			err = kktsolver.Solve(x, y, z)
 			/*
              Combine with solution of 
              

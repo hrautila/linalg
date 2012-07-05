@@ -6,6 +6,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 type funcNum int
@@ -122,11 +123,12 @@ func check_level1_func(ind *linalg.IndexOpts, fn funcNum, X, Y matrix.Matrix) er
 			// calculate default size for N based on Y size
 			nY = 1 + (sizeY - ind.OffsetY - 1)/ind.IncY
 		}
-		if sizeY < ind.OffsetY + 1 + (ind.Ny-1)*abs(ind.IncY) {
-			return errors.New("Y size error")
-		}
 		if ind.Ny < 0 {
 			ind.Ny = nY
+		}
+		if sizeY < ind.OffsetY + 1 + (ind.Ny-1)*abs(ind.IncY) {
+			fmt.Printf("sizeY=%d, inds: %#v\n", sizeY, ind)
+			return errors.New("Y size error")
 		}
 
 	case frotg, frotmg, frot, frotm:

@@ -10,6 +10,9 @@ import (
 	"fmt"
 )
 
+func foo () {
+	fmt.Printf("foo\n")
+}
 
 func maxdim(vec []int) int {
 	res := 0
@@ -80,7 +83,6 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
     // dnli = W['dnli'].
 
 	if wl = W.At("dnl"); wl != nil {
-		fmt.Printf("scaling nonlinear component ...\n")
 		if inverse {
 			w = W.At("dnli")[0]
 		} else {
@@ -89,7 +91,6 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
 		for k := 0; k < x.Cols(); k++ {
 			err = blas.TbmvFloat(w, x, &la_.IOpt{"n", w.Rows()}, &la_.IOpt{"k", 0},
 				&la_.IOpt{"lda", 1}, &la_.IOpt{"offsetx", k*x.Rows()})
-			fmt.Printf("scale: post-tbmv 0 error:%s\n", err)
 			if err != nil { return }
 		}
 		ind += w.Rows()
@@ -103,13 +104,10 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
 	} else {
 		w = W.At("d")[0]
 	}
-	//fmt.Printf("scaling linear 'l' component ... x.Cols = %d\n", x.Cols())
-	//fmt.Printf("w.Size = %d, %d\n", w.Rows(), w.Cols())
 	
 	for k := 0; k < x.Cols(); k++ {
 		err = blas.TbmvFloat(w, x, &la_.IOpt{"n", w.Rows()}, &la_.IOpt{"k", 0},
 			&la_.IOpt{"lda", 1}, &la_.IOpt{"offsetx", k*x.Rows()+ind})
-		fmt.Printf("scale: post-tbmv 1 error:%s\n", err)
 		if err != nil { return }
 	}
 	ind += w.Rows()
@@ -135,7 +133,6 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
 		err = blas.GemvFloat(x, v, w, 1.0, 0.0, la_.OptTrans, &la_.IOpt{"m", m},
 			&la_.IOpt{"n", x.Cols()}, &la_.IOpt{"offsetA", ind},
 			&la_.IOpt{"lda", x.Rows()})
-		fmt.Printf("scale: post-gemv 0 error:%s\n", err)
 		if err != nil { return }
 
 		err = blas.ScalFloat(x, -1.0, &la_.IOpt{"offset", ind}, &la_.IOpt{"inc", x.Rows()})
@@ -144,7 +141,6 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
 		err = blas.GerFloat(v, w, x, 2.0, &la_.IOpt{"m", m},
 			&la_.IOpt{"n", x.Cols()}, &la_.IOpt{"lda", x.Rows()},
 			&la_.IOpt{"offsetA", ind})
-		fmt.Printf("scale: post-ger 1 error:%s\n", err)
 		if err != nil { return }
 
 		var a float64
@@ -185,7 +181,7 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
 	for k, v := range W.At("r") {
 		t := trans
 		var r *matrix.FloatMatrix
-		if inverse {
+		if ! inverse {
 			r = v
 			t = ! trans
 		} else {
@@ -204,28 +200,24 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
 				err = blas.TrmmFloat(x, a, 1.0, la_.OptRight, &la_.IOpt{"m", n},
 					&la_.IOpt{"n", n}, &la_.IOpt{"lda", n}, &la_.IOpt{"ldb", n},
 					&la_.IOpt{"offsetA", ind+i*x.Rows()})
-				fmt.Printf("scale: post-trmm 0 error:%s\n", err)
 				if err != nil { return }
 
 				// x := (r*a' + a*r')  if t is 'N'
 				err = blas.Syr2kFloat(r, a, x, 1.0, 0.0, la_.OptNoTrans, &la_.IOpt{"n", n},
 					&la_.IOpt{"k", n}, &la_.IOpt{"ldb", n}, &la_.IOpt{"ldc", n},
 					&la_.IOpt{"offsetC", ind+i*x.Rows()})
-				fmt.Printf("scale: post-syr2k 0 error:%s\n", err)
 				if err != nil { return }
 
 			} else {
 				err = blas.TrmmFloat(x, a, 1.0, la_.OptLeft, &la_.IOpt{"m", n},
 					&la_.IOpt{"n", n}, &la_.IOpt{"lda", n}, &la_.IOpt{"ldb", n},
 					&la_.IOpt{"offsetA", ind+i*x.Rows()})
-				fmt.Printf("scale: post-trmm 1 error:%s\n", err)
 				if err != nil { return }
 
 				// x := (r'*a + a'*r)  if t is 'T'
 				err = blas.Syr2kFloat(r, a, x, 1.0, 0.0, la_.OptTrans, &la_.IOpt{"n", n},
 					&la_.IOpt{"k", n}, &la_.IOpt{"ldb", n}, &la_.IOpt{"ldc", n},
 					&la_.IOpt{"offsetC", ind+i*x.Rows()})
-				fmt.Printf("scale: post-syr2k 1 error:%s\n", err)
 				if err != nil { return }
 			}
 		}
@@ -594,9 +586,7 @@ func ComputeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
     //     lambda[:mnl] = sqrt( s[:mnl] .* z[:mnl] )
 
 	var stmp, ztmp, lmd *matrix.FloatMatrix
-	if mnl < 0 {
-		mnl = 0
-	} else {
+	if mnl > 0 {
 		stmp = matrix.FloatVector(s.FloatArray()[:mnl])
 		ztmp = matrix.FloatVector(z.FloatArray()[:mnl])
 		dnl := stmp.Div(ztmp)
@@ -608,7 +598,11 @@ func ComputeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
 		lmd = stmp.Mul(ztmp)
 		lmd.Apply(lmd, math.Sqrt)
 		lmbda.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), lmd.FloatArray())
+	} else {
+		mnl = 0
 	}
+
+
 
     // For the 'l' block: 
     //
@@ -775,19 +769,16 @@ func ComputeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
 	return 
 }
 
-
 // Inner product of two vectors in S.
 func Sdot(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
 	ind := mnl + dims.At("l")[0] + dims.Sum("q")
 	a := blas.DotFloat(x, y, &la_.IOpt{"n", ind})
 	for _, m := range dims.At("s") {
-		aplus := blas.DotFloat(x, y, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"offsety", ind},
+		a += blas.DotFloat(x, y, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"offsety", ind},
 			&la_.IOpt{"incx", m+1}, &la_.IOpt{"incy", m+1}, &la_.IOpt{"n", m})
-		a += aplus
-		for j := 0; j < m; j++ {
-			aplus = 2.0 * blas.DotFloat(x, y, &la_.IOpt{"offsetx", ind+j}, &la_.IOpt{"offsety", ind+j},
+		for j := 1; j < m; j++ {
+			a += 2.0*blas.DotFloat(x, y, &la_.IOpt{"offsetx", ind+j}, &la_.IOpt{"offsety", ind+j},
 				&la_.IOpt{"incx", m+1}, &la_.IOpt{"incy", m+1}, &la_.IOpt{"n", m-j})
-			a += aplus
 		}
 		ind += m*m
 	}
@@ -1097,14 +1088,14 @@ func MaxStep(x *matrix.FloatMatrix, dims *DimensionSet, mnl int, sigma *matrix.F
 		if sigma == nil {
 			blas.Copy(x, Q, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"n", m*m})
 			// !! CHECK THIS !!
-			lapack.Syevr(Q, w, nil, 0.0, nil, []int{1,1}, la_.OptRangeInt, &la_.IOpt{"n", m},
+			lapack.SyevrFloat(Q, w, nil, 0.0, nil, []int{1,1}, la_.OptRangeInt, &la_.IOpt{"n", m},
 				&la_.IOpt{"lda", m})
 			if m > 0 {
 				t = append(t, -w.GetIndex(0))
 			}
 		} else {
 			// !! CHECK THIS !!
-			lapack.Syevr(Q, sigma, nil, 0.0, nil, nil, la_.OptJobZValue, &la_.IOpt{"n", m},
+			lapack.SyevrFloat(Q, sigma, nil, 0.0, nil, nil, la_.OptJobZValue, &la_.IOpt{"n", m},
 				&la_.IOpt{"lda", m}, &la_.IOpt{"offseta", ind}, &la_.IOpt{"offsetw", ind2})
 			if m > 0 {
 				t = append(t, -sigma.GetIndex(ind2))
@@ -1136,8 +1127,8 @@ func Pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err
 	nlq := mnl + dims.At("l")[0] + dims.Sum("q")
 	blas.Copy(x, y, &la_.IOpt{"n", nlq}, &la_.IOpt{"offsetx", offsetx},
 		&la_.IOpt{"offsety", offsety})
+
 	iu, ip := offsetx + nlq, offsety + nlq
-	fmt.Printf("Pack: ox=%d, oy=%d, nlq=%d, iu=%d, ip=%d\n", offsetx, offsety, nlq, iu, ip)
 	for _, n := range dims.At("s") {
 		for k := 0; k < n; k++ {
 			blas.Copy(x, y, &la_.IOpt{"n", n-k}, &la_.IOpt{"offsetx", iu+k*(n+1)},
@@ -1170,7 +1161,7 @@ func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (e
 		&la_.IOpt{"offsety", offsety})
 	if err != nil { return }
 
-	iu, ip := offsetx + nlq, offsety + nlq
+	ip, iu := offsetx + nlq, offsety + nlq
 	for _, n := range dims.At("s") {
 		for k := 0; k < n; k++ {
 			err = blas.Copy(x, y, &la_.IOpt{"n", n-k}, &la_.IOpt{"offsetx", ip},

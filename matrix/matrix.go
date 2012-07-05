@@ -79,16 +79,25 @@ type dimensions struct {
 
 // Return number of rows.
 func (A *dimensions) Rows() int {
+	if A == nil {
+		return 0
+	}
 	return A.rows
 }
 
 // Return number of columns.
 func (A *dimensions) Cols() int {
+	if A == nil {
+		return 0
+	}
 	return A.cols
 }
 
 // Return size of the matrix as rows, cols pair.
 func (A *dimensions) Size() (int, int) {
+	if A == nil {
+		return 0, 0
+	}
 	return A.rows, A.cols
 }
 
@@ -106,6 +115,9 @@ func (A *dimensions) LeadingIndex() int {
 
 // Return total number of elements.
 func (A *dimensions) NumElements() int {
+	if A == nil {
+		return 0
+	}
 	return A.rows * A.cols
 }
 
