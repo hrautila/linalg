@@ -214,10 +214,10 @@ func Swap(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	if ind.Nx == 0 {
 		return
 	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
-	}
+	//if ind.Nx != ind.Ny {
+	//	err = errors.New("arrays have unequal default lengths")
+	//	return
+	//}
 	sameType := matrix.EqualTypes(X, Y)
 	if ! sameType {
 		err = errors.New("arrays not same type")
@@ -262,10 +262,10 @@ func Copy(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	if ind.Nx == 0 {
 		return
 	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
-	}
+	//if ind.Nx != ind.Ny {
+	//	err = errors.New("arrays have unequal default lengths")
+	//	return
+	//}
 	sameType := matrix.EqualTypes(X, Y)
 	if ! sameType {
 		err = errors.New("arrays not same type")
@@ -311,13 +311,6 @@ func Scal(X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err erro
 	if ind.Nx == 0 {
 		return
 	}
-	/*
-	sameType := matrix.EqualTypes(X, alpha)
-	if ! sameType {
-		err = errors.New("arrays not same type")
-		return
-	}
-	 */
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
 		Xa := X.ComplexArray()

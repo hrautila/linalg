@@ -12,7 +12,7 @@ package lapack
 // #include "lapack.h"
 import "C"
 import "unsafe"
-
+import "fmt"
 
 //int ilaenv_(int  *ispec, char **name, char **opts, int *n1, int *n2, int *n3, int *n4);
 func ilaenv(ispec int, name []string, opts []string, n1, n2, n3, n4 int) int {
@@ -475,8 +475,9 @@ func dsyevr(jobz, srange, uplo string, N int, A []float64, lda int, vl, vu float
 
 	// allocate work area
 	lwork = int(work)
-	wbuf := make([]float64, lwork)
 	liwork = int(iwork)
+	fmt.Printf("dsyevr: lwork=%d, liwork=%d\n", lwork, liwork)
+	wbuf := make([]float64, lwork)
 	wibuf := make([]int32, liwork)
 
 	var Zbuf, Wbuf *C.double
@@ -498,8 +499,8 @@ func dsyevr(jobz, srange, uplo string, N int, A []float64, lda int, vl, vu float
 		(*C.double)(unsafe.Pointer(&abstol)), (*C.int)(unsafe.Pointer(&M)),
 		Wbuf, Zbuf,
 		(*C.int)(unsafe.Pointer(&LDz)), nil,
-		(*C.double)(unsafe.Pointer(&wbuf)), (*C.int)(unsafe.Pointer(&lwork)),
-		(*C.int)(unsafe.Pointer(&wibuf)), (*C.int)(unsafe.Pointer(&liwork)),
+		(*C.double)(unsafe.Pointer(&wbuf[0])), (*C.int)(unsafe.Pointer(&lwork)),
+		(*C.int)(unsafe.Pointer(&wibuf[0])), (*C.int)(unsafe.Pointer(&liwork)),
 		(*C.int)(unsafe.Pointer(&info)))
 	
 	return info
@@ -553,7 +554,7 @@ func dgesvd(jobu, jobvt string, M, N int, A []float64, lda int, S []float64, U [
 		(*C.double)(unsafe.Pointer(&A[0])), (*C.int)(unsafe.Pointer(&lda)), 
 		(*C.double)(unsafe.Pointer(&S[0])), Ubuf, (*C.int)(unsafe.Pointer(&ldu)),
 		Vtbuf,(*C.int)(unsafe.Pointer(&ldvt)),
-		(*C.double)(unsafe.Pointer(&wbuf)), (*C.int)(unsafe.Pointer(&lwork)),
+		(*C.double)(unsafe.Pointer(&wbuf[0])), (*C.int)(unsafe.Pointer(&lwork)),
 		(*C.int)(unsafe.Pointer(&info)))
 	return info
 }

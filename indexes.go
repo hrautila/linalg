@@ -73,6 +73,8 @@ loop:
 			is.LDa = o.Int()
 		case strings.EqualFold(o.Name(), "ldb"):
 			is.LDb = o.Int()
+		case strings.EqualFold(o.Name(), "ldc"):
+			is.LDc = o.Int()
 		case strings.EqualFold(o.Name(), "ldw"):
 			is.LDw = o.Int()
 		case strings.EqualFold(o.Name(), "ldz"):

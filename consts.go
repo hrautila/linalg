@@ -73,7 +73,7 @@ func GetParameters(params ...Option) (p *Parameters, err error) {
 		PNoTrans,		// TransA
 		PNoTrans,		// TransB
 		PLower,			// Uplo
-		PUnit,			// Diag
+		PNonUnit,		// Diag
 		PLeft,			// Side
 		PJobNo,			// Jobz
 		PJobNo,			// Jobu

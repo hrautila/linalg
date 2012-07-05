@@ -223,25 +223,31 @@ func checkGesvd(ind *linalg.IndexOpts, pars *linalg.Parameters, A, S, U, Vt matr
 		return errors.New("Gesvd: sizeA")
 	}
 
-	if ind.OffsetU < 0 {
-		return errors.New("Gesvd: OffsetU")
-	}
-	sizeU := U.NumElements()
-	if pars.Jobu == linalg.PJobAll && sizeU < ind.LDu*(ind.M-1) {
-		return errors.New("Gesvd: sizeU")
-	} else if pars.Jobu == linalg.PJobS && sizeU < ind.LDu*(min(ind.M,ind.N)-1) {
-		return errors.New("Gesvd: sizeU")
+	/*
+	if U != nil {
+		if ind.OffsetU < 0 {
+			return errors.New("Gesvd: OffsetU")
+		}
+		sizeU := U.NumElements()
+		if pars.Jobu == linalg.PJobAll && sizeU < ind.LDu*(ind.M-1) {
+			return errors.New("Gesvd: sizeU")
+		} else if pars.Jobu == linalg.PJobS && sizeU < ind.LDu*(min(ind.M,ind.N)-1) {
+			return errors.New("Gesvd: sizeU")
+		}
 	}
 
-	if ind.OffsetVt < 0 {
-		return errors.New("Gesvd: OffsetVt")
+	if Vt != nil {
+		if ind.OffsetVt < 0 {
+			return errors.New("Gesvd: OffsetVt")
+		}
+		sizeVt := Vt.NumElements()
+		if pars.Jobvt == linalg.PJobAll && sizeVt <  ind.N {
+			return errors.New("Gesvd: sizeVt")
+		} else if pars.Jobvt == linalg.PJobS && sizeVt < min(ind.M, ind.N) {
+			return errors.New("Gesvd: sizeVt")
+		}
 	}
-	sizeVt := Vt.NumElements()
-	if pars.Jobvt == linalg.PJobAll && sizeVt <  ind.N {
-		return errors.New("Gesvd: sizeVt")
-	} else if pars.Jobvt == linalg.PJobS && sizeVt < min(ind.M, ind.N) {
-		return errors.New("Gesvd: sizeVt")
-	}
+	 */
 	return nil
 }
 

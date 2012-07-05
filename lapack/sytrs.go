@@ -71,7 +71,7 @@ func Sytrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		return errors.New("lda")
 	}
 	if ind.LDb == 0 {
-		ind.LDa = max(1, B.Rows())
+		ind.LDb = max(1, B.Rows())
 	}
 	if ind.LDb < max(1, ind.N) {
 		return errors.New("ldb")
