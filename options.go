@@ -106,11 +106,16 @@ func GetComplexOpt(name string, defval complex128, opts ...Option) (val complex1
 	return 
 }
 
-
 // Integer valued option.
 type IOpt struct {
 	OptName string
 	Val int
+}
+
+// Return integer valued option.
+func IntOpt(name string, val int) *IOpt {
+	return &IOpt{name, val}
+
 }
 
 func (O *IOpt) Name() string {
@@ -146,6 +151,12 @@ type FOpt struct {
 	Val float64
 }
 
+// Return integer valued option.
+func FloatOpt(name string, val float64) *FOpt {
+	return &FOpt{name, val}
+
+}
+
 func (O *FOpt) Name() string {
 	return O.OptName
 }
@@ -178,6 +189,11 @@ type SOpt struct {
 	Val string
 }
 
+// Return string valued option.
+func StringOpt(name string, val string) *SOpt {
+	return &SOpt{name, val}
+
+}
 func (O *SOpt) Name() string {
 	return O.OptName
 }
@@ -211,6 +227,11 @@ type BOpt struct {
 	Val bool
 }
 
+// Return bool valued option.
+func BoolOpt(name string, val bool) *BOpt {
+	return &BOpt{name, val}
+}
+
 func (O *BOpt) Name() string {
 	return O.OptName
 }
@@ -236,6 +257,11 @@ func (O *BOpt) Bool() bool {
 
 func (O *BOpt) String() string {
 	return "" //string(O.val)
+}
+
+// Return complex valued option.
+func ComplexOpt(name string, val complex128) *COpt {
+	return &COpt{name, val}
 }
 
 // Complex valued option.
