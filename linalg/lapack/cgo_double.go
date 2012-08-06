@@ -12,7 +12,7 @@ package lapack
 // #include "lapack.h"
 import "C"
 import "unsafe"
-import "fmt"
+//import "fmt"
 
 //int ilaenv_(int  *ispec, char **name, char **opts, int *n1, int *n2, int *n3, int *n4);
 func ilaenv(ispec int, name []string, opts []string, n1, n2, n3, n4 int) int {
@@ -476,7 +476,7 @@ func dsyevr(jobz, srange, uplo string, N int, A []float64, lda int, vl, vu float
 	// allocate work area
 	lwork = int(work)
 	liwork = int(iwork)
-	fmt.Printf("dsyevr: lwork=%d, liwork=%d\n", lwork, liwork)
+	//fmt.Printf("dsyevr: lwork=%d, liwork=%d\n", lwork, liwork)
 	wbuf := make([]float64, lwork)
 	wibuf := make([]int32, liwork)
 

@@ -7,12 +7,22 @@ import (
 	"testing"
 )
 
-func TestMatrixSet(t *testing.T) {
+func calcDims(dims *DimensionSet) (int, int, int) {
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
+	cdim_diag := dims.Sum("l", "q", "s")
+	return cdim, cdim_pckd, cdim_diag
+}
+
+func makeDSet() *DimensionSet {
 	dims := DSetNew("l", "q", "s")
 	dims.Set("l", []int{2})
 	dims.Set("q", []int{4, 4})
 	dims.Set("s", []int{3})
+	return dims
+}
 
+func makeMatrixSet(dims *DimensionSet) *FloatMatrixSet {
 	W := FloatSetNew("d", "di", "v", "beta", "r", "rti")
 	dd := dims.At("l")[0]
 	W.Set("d", matrix.FloatOnes(dd, 1))
@@ -29,7 +39,18 @@ func TestMatrixSet(t *testing.T) {
 		W.Append("r", matrix.FloatIdentity(n, n))
 		W.Append("rti", matrix.FloatIdentity(n, n))
 	}
+	return W
+}
 
+func TestDSet(t *testing.T) {
+	dims := makeDSet()
+	cdim, cdim_packd, cdim_diag := calcDims(dims)
+	fmt.Printf("cdim = %d\ncdim_packd = %d\ncdim_diag = %d\n", cdim, cdim_packd, cdim_diag)
+}
+
+func TestMatrixSet(t *testing.T) {
+	dims := makeDSet()
+	W := makeMatrixSet(dims)
 	for k, m := range W.At("d") {
 		fmt.Printf("d[%d]:\n%v\n", k, m)
 	}
@@ -52,7 +73,7 @@ func TestMatrixSet(t *testing.T) {
 		
 }
 
-func CTest(t *testing.T) {
+func TestCompile(t *testing.T) {
 	fmt.Printf("CVX compiles OK\n")
 }
 

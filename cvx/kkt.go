@@ -7,6 +7,7 @@ import (
 	"github.com/hrautila/go.opt/linalg/lapack"
 	"github.com/hrautila/go.opt/matrix"
 	"fmt"
+	"math"
 )
 
 func setDiagonal(M *matrix.FloatMatrix, srow, scol, erow, ecol int, val float64) {
@@ -40,14 +41,13 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 
 	p, n := A.Size()
 	ldK := n + p + mnl + dims.At("l")[0] + dims.Sum("q") + dims.SumPacked("s")
-	fmt.Printf("KktLdl: ldK = %d, p=%d, n=%d\n", ldK, p, n)
+	//fmt.Printf("KktLdl: ldK = %d, p=%d, n=%d\n", ldK, p, n)
 	K := matrix.FloatZeros(ldK, ldK)
 	ipiv := make([]int32, ldK)
 	u := matrix.FloatZeros(ldK, 1)
 	g := matrix.FloatZeros(mnl+G.Rows(), 1)
 	
 	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
-
 		var err error = nil
 		// Zero K for each call.
 		blas.ScalFloat(K, 0.0)
@@ -55,7 +55,6 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			K.SetSubMatrix(0, 0, H)
 		}
 		K.SetSubMatrix(n, 0, A)
-		//fmt.Printf("preloop-K:\n%v\n", K)
 		for k := 0; k < n; k++ {
 			// g is (mnl + G.Rows(), 1) matrix, Df is (mnl, n), G is (N, n)
 			if mnl > 0 {
@@ -63,9 +62,7 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 				g.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), Df.GetColumn(k, nil))
 			}
 			// set values g[mnl:] = G[,k]
-			//fmt.Printf("KktLdl.factor: k = %d\n", k)
-			g.SetIndexes(matrix.MakeIndexSet(mnl, g.Rows(), 1), G.GetColumn(k, nil))
-			//fmt.Printf("prescale-g:\n%v\n", g)
+			g.SetIndexes(matrix.MakeIndexSet(mnl, mnl+g.Rows(), 1), G.GetColumn(k, nil))
 			Scale(g, W, true, true)
 			if err != nil {
 				fmt.Printf("scale error: %s\n", err)
@@ -73,9 +70,7 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			Pack(g, K, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", k*ldK+n+p})
 		}
 		setDiagonal(K, n+p, n+n, ldK, ldK, -1.0)
-		//fmt.Printf("presytrf-K:\n%v\n", K)
 		err = lapack.Sytrf(K, ipiv)
-		//fmt.Printf("postsytrf-K:\n%v\n", K)
 		if err != nil { return nil, err }
 
 		solve := func(x, y, z *matrix.FloatMatrix) (err error) {
@@ -89,15 +84,27 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
             //
             // On entry, x, y, z contain bx, by, bz.  On exit, they contain
             // the solution ux, uy, W*uz.
-			//fmt.Printf("** kktldl.solver ** x=%d, y=%d, z=%d\n", x.NumElements(),
-			//	y.NumElements(), z.NumElements())
+			fmt.Printf("** start solve **\n")
+			fmt.Printf("solving: x=\n%v\n", x)
+			fmt.Printf("solving: z=\n%v\n", z)
 			err = nil
 			blas.Copy(x, u)
 			blas.Copy(y, u, &la_.IOpt{"offsety", n})
+			if matrixNaN(u) {
+				fmt.Printf("warning!! solver: u has NaN value before Scale!!\n")
+			}
+			//W.Print()
 			err = Scale(z, W, true, true)
+			//fmt.Printf("solving: post-scale z=\n%v\n", z)
 			if err != nil { return }
-
+			if matrixNaN(z) {
+				fmt.Printf("warning!! solver: z has NaN value after Scale!!\n")
+				W.Print()
+			}
 			err = Pack(z, u, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", n+p})
+			if matrixNaN(u) {
+				fmt.Printf("warning!! solver: u has NaN value after Pack!!\n")
+			}
 			if err != nil { return }
 
 			err = lapack.Sytrs(K, u, ipiv)
@@ -106,11 +113,24 @@ func KktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			blas.Copy(u, x, &la_.IOpt{"n", n})
 			blas.Copy(u, y, &la_.IOpt{"n", p}, &la_.IOpt{"offsetx", n})
 			err = UnPack(u, z, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsetx", n+p})
+			if matrixNaN(x) {
+				fmt.Printf("warning!! solver: x has NaN value!!\n")
+			}
+			fmt.Printf("** end solve **\n")
 			return 
 		}
 		return solve, err
 	}
 	return factor, nil
+}
+
+func matrixNaN(x *matrix.FloatMatrix) bool {
+	for i := 0; i < x.NumElements(); i++ {
+		if math.IsNaN(x.GetIndex(i)) {
+			return true
+		}
+	}
+	return false
 }
 
 type KKT interface {
@@ -132,7 +152,7 @@ func CreateLdlSolver(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatM
 	kkt := new(KKTLdlSolver)
 	
 	kkt.p, kkt.n = A.Size()
-	kkt.ldK = kkt.n + kkt.p + mnl + dims.At("l")[0] + dims.Sum("q") + dims.SumPacked("s")
+	kkt.ldK = kkt.n + kkt.p + mnl + dims.Sum("l", "q") + dims.SumPacked("s")
 	kkt.K = matrix.FloatZeros(kkt.ldK, kkt.ldK)
 	kkt.ipiv = make([]int32, kkt.ldK)
 	kkt.u = matrix.FloatZeros(kkt.ldK, 1)
@@ -184,50 +204,6 @@ func (kkt *KKTLdlSolver) Factor(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (K
 	err = lapack.Sytrf(kkt.K, kkt.ipiv)
 	//fmt.Printf("factor: postsytrf-K:\n%v\n", kkt.K)
 	return nil, err
-	/*
-	if err != nil { return nil, err }
-
-	solve := func(x, y, z *matrix.FloatMatrix) (err error) {
-		// Solve
-		//
-		//     [ H          A'   GG'*W^{-1} ]   [ ux   ]   [ bx        ]
-		//     [ A          0    0          ] * [ uy   [ = [ by        ]
-		//     [ W^{-T}*GG  0   -I          ]   [ W*uz ]   [ W^{-T}*bz ]
-		//
-		// and return ux, uy, W*uz.
-		//
-		// On entry, x, y, z contain bx, by, bz.  On exit, they contain
-		// the solution ux, uy, W*uz.
-		fmt.Printf("** kktldl.solver ** x=%d, y=%d, z=%d\n", x.NumElements(),
-			y.NumElements(), z.NumElements())
-		err = nil
-		fmt.Printf("kktldl.Copy 0 ...\n")
-		blas.Copy(x, kkt.u)
-		fmt.Printf("kktldl.Copy 1 ...\n")
-		blas.Copy(y, kkt.u, &la_.IOpt{"offsety", kkt.n})
-		fmt.Printf("kktldl.Scale 0 ...\n")
-		err = Scale(z, W, true, true)
-		fmt.Printf("postscale error:%s\n", err)
-		if err != nil { return }
-		
-		err = Pack(z, kkt.u, kkt.dims,
-			&la_.IOpt{"mnl", kkt.mnl}, &la_.IOpt{"offsety", kkt.n+kkt.p})
-		fmt.Printf("postpack error:%s\n", err)
-		if err != nil { return }
-		
-		err = lapack.Sytrs(kkt.K, kkt.u, kkt.ipiv)
-		fmt.Printf("postsytrs error:%s\n", err)
-		if err != nil { return }
-
-		blas.Copy(kkt.u, x, &la_.IOpt{"n", kkt.n})
-		blas.Copy(kkt.u, y, &la_.IOpt{"n", kkt.p}, &la_.IOpt{"offsetx", kkt.n})
-		err = UnPack(kkt.u, z, kkt.dims,
-			&la_.IOpt{"mnl", kkt.mnl}, &la_.IOpt{"offsetx", kkt.n+kkt.p})
-		fmt.Printf("postunpack error:%s\n", err)
-		return 
-	}
-	return solve, err
-	 */
 }
 
 
@@ -245,24 +221,27 @@ func (kkt *KKTLdlSolver) Solve(x, y, z *matrix.FloatMatrix) (err error) {
 	err = nil
 	blas.Copy(x, kkt.u)
 	blas.Copy(y, kkt.u, &la_.IOpt{"offsety", kkt.n})
+	//fmt.Printf("-- solve: pre-scale z:\n%v\n", z)
 	err = Scale(z, kkt.W, true, true)
-	//fmt.Printf("solve: postscale z:\n%v\n", z)
+	//fmt.Printf("-- solve: post-scale z:\n%v\n", z)
 	if err != nil { return }
 	
 	err = Pack(z, kkt.u, kkt.dims,
 		&la_.IOpt{"mnl", kkt.mnl}, &la_.IOpt{"offsety", kkt.n+kkt.p})
 	if err != nil { return }
+	//fmt.Printf("-- solve: post-pack u:\n%v\n", kkt.u)
 	
 	err = lapack.Sytrs(kkt.K, kkt.u, kkt.ipiv)
 	if err != nil { return }
-	//fmt.Printf("solve: postsytrs-K:\n%v\n", kkt.K)
+	//fmt.Printf("--solve: post-sytrs-K:\n%v\n", kkt.K)
+	//fmt.Printf("--solve: post-sytrs-u:\n%v\n", kkt.u)
 
 	blas.Copy(kkt.u, x, &la_.IOpt{"n", kkt.n})
 	blas.Copy(kkt.u, y, &la_.IOpt{"n", kkt.p}, &la_.IOpt{"offsetx", kkt.n})
 	err = UnPack(kkt.u, z, kkt.dims,
 		&la_.IOpt{"mnl", kkt.mnl}, &la_.IOpt{"offsetx", kkt.n+kkt.p})
-	//fmt.Printf("solve: postunpack z:\n%v\n", z)
-	//fmt.Printf("postunpack error:%s\n", err)
+	//fmt.Printf("-- solve: post-unpack z:\n%v\n", z)
+	//fmt.Printf("-- postunpack error:%s\n", err)
 	return 
 }
 

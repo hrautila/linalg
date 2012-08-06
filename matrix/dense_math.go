@@ -153,8 +153,10 @@ func (A *FloatMatrix) ApplyToIndexes(C *FloatMatrix, indexes []int, fn func(floa
 	if C == nil {
 		B = A
 	}
-	for _,v := range indexes {
-		A.elements[v] = fn(B.elements[v])
+	if len(indexes) > 0 {
+		for _,v := range indexes {
+			A.elements[v] = fn(B.elements[v])
+		}
 	}
 	return A
 }

@@ -141,10 +141,13 @@ func MakeIndexSet(start, end, step int) []int {
 	if step < 0 {
 		step = 1
 	}
-	sz := (end-start)/step
-	inds := make([]int, sz)
-	for i, _ := range inds {
-		inds[i] = start + i*step
+	sz := (end-start)/step + 1
+	inds := make([]int, 0, sz)
+	//for i, _ := range inds {
+		//inds[i] = start + i*step
+	//}
+	for k := start; k < end; k += step {
+		inds = append(inds, k)
 	}
 	return inds
 }

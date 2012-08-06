@@ -151,7 +151,13 @@ func TestScalars(t *testing.T) {
 	fmt.Printf(" z = %v\n", z)
 	
 }
-	
+
+func TestArrayCreate(t *testing.T) {
+	m := FloatVector([]float64{0,1,2,3,4,5,6,7,8,9})
+	b := FloatVector(m.FloatArray()[2:5])
+	fmt.Printf("len(m) = %d, len(b) = %d, b=\n%v\n", m.NumElements(), b.NumElements(), b)
+}
+
 // Local Variables:
 // tab-width: 4
 // End:
