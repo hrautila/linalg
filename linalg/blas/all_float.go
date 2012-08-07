@@ -282,7 +282,7 @@ func GbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 */
 
 // See function Symv.
-func SymvFLoat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
+func SymvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
 	params, err = linalg.GetParameters(opts...)
