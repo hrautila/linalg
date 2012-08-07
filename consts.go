@@ -28,6 +28,7 @@ const (
 	PLower = ParamValue(122)			// 'L'
 	PNonUnit = ParamValue(131)			// 'N'
 	PUnit = ParamValue(132)				// 'U'
+	PDiag = ParamValue(133)				// 'D'
 	PLeft = ParamValue(141)				// 'L'
 	PRight = ParamValue(142)			// 'R'
 	// These for LAPACK only
@@ -117,7 +118,7 @@ Loop:
 				break Loop
 			}
 		case strings.EqualFold(o.Name(), "diag"):
-			if pval == PNonUnit || pval == PUnit {
+			if pval == PNonUnit || pval == PUnit || pval == PDiag {
 				p.Diag = pval
 			} else {
 				err = errors.New("Illegal value for Diag parameter")
@@ -188,6 +189,7 @@ var (
 	// diag parameter
 	OptUnit =  &IOpt{"diag", int(PUnit)}
 	OptNonUnit =  &IOpt{"diag", int(PNonUnit)}
+	OptDiag =  &IOpt{"diag", int(PDiag)}
 	// Lapack jobz 
 	OptJobZNo =  &IOpt{"jobz", int(PJobNo)}
 	OptJobZValue =  &IOpt{"jobz", int(PJobValue)}
