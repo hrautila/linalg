@@ -109,7 +109,7 @@ type SolverOptions struct {
 	KKTSolverName string
 }
 
-type f6Closure struct {
+type fClosure struct {
 	wx, wy, ws, wz *matrix.FloatMatrix
 	wx2, wy2, ws2, wz2 *matrix.FloatMatrix
 	// these are singleton matrices
@@ -651,7 +651,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	var x1, y1, z1 *matrix.FloatMatrix
 	var dg, dgi float64
 	var th *matrix.FloatMatrix
-	var WS f6Closure
+	var WS fClosure
 	var f3 KKTFunc
 
 	for iter := 0; iter < solopts.MaxIter; iter++ {
@@ -1275,7 +1275,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		addOne = func(v float64)float64 {return v+1.0}
         sigs.Apply(nil, addOne)
         sigz.Apply(nil, addOne)
-		sdimsum := dims.Sum("q")
+		sdimsum := dims.Sum("s")
 		qdimsum := dims.Sum("l", "q")
 		blas.TbsvFloat(lmbda, sigs, &la_.IOpt{"n", sdimsum}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
 			&la_.IOpt{"offseta", qdimsum})
