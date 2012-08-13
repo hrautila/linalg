@@ -45,8 +45,11 @@ func GetIntOpt(name string, defval int, opts ...Option) (val int) {
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = o.Int()
-			return
+			switch o.(type) {
+			case *IOpt:
+				val = o.Int()
+				return
+			}
 		}
 	}
 	return 
@@ -57,8 +60,11 @@ func GetFloatOpt(name string, defval float64, opts ...Option) (val float64) {
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = o.Float()
-			return
+			switch o.(type) {
+			case *FOpt:
+				val = o.Float()
+				return
+			}
 		}
 	}
 	return 
@@ -87,8 +93,11 @@ func GetStringOpt(name string, defval string, opts ...Option) (val string) {
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = o.String()
-			return
+			switch o.(type) {
+			case *SOpt:
+				val = o.String()
+				return
+			}
 		}
 	}
 	return 
@@ -99,8 +108,11 @@ func GetComplexOpt(name string, defval complex128, opts ...Option) (val complex1
 	val = defval
 	for _, o := range opts {
 		if strings.EqualFold(o.Name(), name) {
-			val = o.Complex()
-			return
+			switch o.(type) {
+			case *COpt:
+				val = o.Complex()
+				return
+			}
 		}
 	}
 	return 

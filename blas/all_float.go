@@ -547,6 +547,9 @@ func TbsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
+	if ind.N == 0 {
+		return
+	}
 	Xa := X.FloatArray()
 	Aa := A.FloatArray()
 	uplo := linalg.ParamString(params.Uplo)
