@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/cmplx"
 	"fmt"
+	"errors"
 )
 
 // A column-major matrix backed by a flat array of all elements.
@@ -96,6 +97,32 @@ func FloatMatrixStacked(data [][]float64, rowOrder bool) *FloatMatrix {
 	return makeFloatMatrix(rows, cols, elements)
 }
 
+// Create a new matrix from a list of matrices. New matrix has dimension (N, colmax),
+// where N is sum of row counts of argument matrices and colmax is the largest column
+// count of matrices.
+func FloatCombined(mlist... *FloatMatrix) *FloatMatrix {
+	maxc := 0
+	maxr := 0
+	N := 0
+	for _, m := range mlist {
+		m, n := m.Size()
+		N += m
+		if m > maxr {
+			maxr = m
+		}
+		if n > maxc {
+			maxc = n
+		}
+	}
+	M := FloatZeros(N, maxc)
+	row := 0
+	for _, m := range mlist {
+		M.SetSubMatrix(row, 0, m)
+		row += m.Rows()
+	}
+	return M
+}
+
 // Create new zero filled matrix.
 func FloatZeros(rows, cols int) *FloatMatrix {
 	A := makeFloatMatrix(rows, cols, make([]float64, rows*cols))
@@ -117,17 +144,22 @@ func FloatNumbers(rows, cols int, value float64) *FloatMatrix {
 }
 
 // Create new identity matrix. Row count must equal column count.
-func FloatIdentity(rows, cols int) (A *FloatMatrix) {
-	A = nil
-	if rows != cols {
-		return 
-	}
-	A = FloatZeros(rows, cols)
+func FloatIdentity(rows int) *FloatMatrix {
+	A := FloatZeros(rows, rows)
 	step := A.LeadingIndex()
 	for k := 0; k < rows; k++ {
 		A.elements[k*step+k] = 1.0
 	}
-	return 
+	return A
+}
+
+func FloatDiagonal(rows int, val float64) *FloatMatrix {
+	A := FloatZeros(rows, rows)
+	step := A.LeadingIndex()
+	for k := 0; k < rows; k++ {
+		A.elements[k*step+k] = val
+	}
+	return A
 }
 
 // Return the flat column-major element array.
@@ -184,12 +216,16 @@ func (A *FloatMatrix) Get(i int, j int) (val float64) {
 }
 
 // Get i'th element in column-major ordering
-func (A *FloatMatrix) GetIndex(i int) float64 {
+func (A *FloatMatrix) GetAt(i int) float64 {
 	if i < 0 {
 		i = A.NumElements() + i
 	}
 	i %= A.NumElements()
 	return A.elements[i]
+}
+
+func (A *FloatMatrix) GetIndex(i int) float64 {
+	return A.GetAt(i)
 }
 
 // Get values for indexed elements. 
@@ -291,12 +327,16 @@ func (A *FloatMatrix) SetValue(val float64) {
 
 // Set i'th element in column-major ordering. If i < 0 then i = A.NumElements() + i.
 // Last element of 
-func (A *FloatMatrix) SetIndex(i int, v float64) {
+func (A *FloatMatrix) SetAt(i int, v float64) {
 	if i < 0 {
 		i = A.NumElements() + i
 	}
 	i %= A.NumElements()
 	A.elements[i] = v
+}
+
+func (A *FloatMatrix) SetIndex(i int, v float64) {
+	A.SetAt(i, v)
 }
 
 // Set values of indexed elements. 
@@ -365,17 +405,18 @@ func (A *FloatMatrix) SetColumnMatrix(i int, vals *FloatMatrix) {
 
 // Set values for sub-matrix starting at (row, col). If row+mat.Rows() greater than
 // A.Rows() or col+mat.Cols() greater than A.Cols() matrix A is not changed.
-func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) {
+func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) error {
 	r, c := mat.Size()
 	if r + row > A.Rows() || c + col > A.Cols() {
-		fmt.Printf("(%d+%d, %d+%d) > (%d,%d)\n", r, row, c, col, A.Rows(), A.Cols())
-		return
+		s := fmt.Sprintf("(%d+%d, %d+%d) > (%d,%d)\n", r, row, c, col, A.Rows(), A.Cols())
+		return errors.New(s)
 	}
 	for i := 0; i < r; i++  {
 		for j := 0; j < c; j++ {
 			A.Set(row+i, col+j, mat.Get(i, j))
 		}
 	}
+	return nil
 }
 
 // Create a copy of matrix.

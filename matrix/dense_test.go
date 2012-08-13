@@ -158,6 +158,24 @@ func TestArrayCreate(t *testing.T) {
 	fmt.Printf("len(m) = %d, len(b) = %d, b=\n%v\n", m.NumElements(), b.NumElements(), b)
 }
 
+func TestParseSpe(t *testing.T) {
+	s := "{2 3 [3.666666666666667 3.142857142857143 4.857142857142857 4.000000000000000 5.000000000000000 6.000000000000000]}"
+	m, err := FloatParseSpe(s)
+	if err != nil {
+		fmt.Printf("parse error: %v\n", err)
+	} else {
+		fmt.Printf("rows: %d, cols: %d, data:\n%v\n", m.Rows(), m.Cols(), m)
+	}
+
+	s2 := "{0 1 []}"
+	m, err = FloatParseSpe(s2)
+	if err != nil {
+		fmt.Printf("parse error: %v\n", err)
+	} else {
+		fmt.Printf("rows: %d, cols: %d, data:\n%v\n", m.Rows(), m.Cols(), m)
+	}
+}
+
 // Local Variables:
 // tab-width: 4
 // End:

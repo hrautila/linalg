@@ -11,8 +11,16 @@ import "math"
 
 // Compute in-place product A[i,j] *= alpha
 func (A *FloatMatrix) Scale(alpha float64) *FloatMatrix {
-	for k, v := range A.elements {
-		A.elements[k] = alpha * v
+	for k, _ := range A.elements {
+		A.elements[k] *= alpha
+	}
+	return A
+}
+
+// Compute in-place product A[i] *= alpha for all indexes in iset.
+func (A *FloatMatrix) ScaleAt(iset []int, alpha float64) *FloatMatrix {
+	for _, k := range iset {
+		A.elements[k] *= alpha
 	}
 	return A
 }
@@ -27,8 +35,16 @@ func (A *FloatMatrix) Mod(alpha float64) *FloatMatrix {
 
 // Compute in-place sum A[i,j] += alpha
 func (A *FloatMatrix) Add(alpha float64) *FloatMatrix {
-	for k, v := range A.elements {
-		A.elements[k] = v + alpha 
+	for k, _ := range A.elements {
+		A.elements[k] += alpha 
+	}
+	return A
+}
+
+// Compute in-place sum A[i] += alpha for all indexes in iset.
+func (A *FloatMatrix) AddAt(iset []int, alpha float64) *FloatMatrix {
+	for _, k := range iset {
+		A.elements[k] += alpha
 	}
 	return A
 }

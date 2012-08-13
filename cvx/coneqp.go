@@ -14,27 +14,61 @@ type InitVals struct {
 	X, Y, S, Z *matrix.FloatMatrix
 }
 
-
-func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, opts ...la_.Option) (sol *Solution, err error) {
+//    Solves a pair of primal and dual convex quadratic cone programs
+//
+//        minimize    (1/2)*x'*P*x + q'*x    
+//        subject to  G*x + s = h      
+//                    A*x = b
+//                    s >= 0
+//
+//        maximize    -(1/2)*(q + G'*z + A'*y)' * pinv(P) * (q + G'*z + A'*y)
+//                    - h'*z - b'*y 
+//        subject to  q + G'*z + A'*y in range(P)
+//                    z >= 0.
+//
+//    The inequalities are with respect to a cone C defined as the Cartesian
+//    product of N + M + 1 cones:
+//    
+//        C = C_0 x C_1 x .... x C_N x C_{N+1} x ... x C_{N+M}.
+//
+//    The first cone C_0 is the nonnegative orthant of dimension ml.  
+//    The next N cones are 2nd order cones of dimension mq[0], ..., mq[N-1].
+//    The second order cone of dimension m is defined as
+//    
+//        { (u0, u1) in R x R^{m-1} | u0 >= ||u1||_2 }.
+//
+//    The next M cones are positive semidefinite cones of order ms[0], ...,
+//    ms[M-1] >= 0.  
+//
+func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions) (sol *Solution, err error) {
 
 	var initvals *InitVals = nil
-
-	addOne := func(v float64)float64 {return v+1.0}
 
 	err = nil
 	EXPON := 3
 	STEP := 0.99
-	if STEP == 0.0 || EXPON == 0.0 {
-	}
 
 	sol = &Solution{Unknown,
 		nil, nil, nil, nil,
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
-	var kktsolver KKTFactor = nil
+	var kktsolver func(*FloatMatrixSet)(kktFunc, error) = nil
 	var refinement int
 	var correction bool = true
+
+	feasTolerance := FEASTOL
+	absTolerance := ABSTOL
+	relTolerance := RELTOL
+	if solopts.FeasTol > 0.0 {
+		feasTolerance = solopts.FeasTol
+	}
+	if solopts.AbsTol > 0.0 {
+		absTolerance = solopts.AbsTol
+	}
+	if solopts.RelTol > 0.0 {
+		relTolerance = solopts.RelTol
+	}
 
 	solvername := solopts.KKTSolverName
 	if len(solvername) == 0 {
@@ -73,8 +107,8 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 	}
 
 	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
-	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
-	//cdim_diag := dims.Sum("l", "q", "s")
+	//cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
+	cdim_diag := dims.Sum("l", "q", "s")
 
 	if h.Rows() != cdim {
 		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
@@ -82,21 +116,21 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 	}
 
 	// Data for kth 'q' constraint are found in rows indq[k]:indq[k+1] of G.
-	indq := make([]int, 10, 100)
+	indq := make([]int, 0)
 	indq = append(indq, dims.At("l")[0])
 	for _, k := range dims.At("q") {
 		indq = append(indq, indq[len(indq)-1]+k)
 	}
 
     // Data for kth 's' constraint are found in rows inds[k]:inds[k+1] of G.
-	inds := make([]int, 10, 100)
+	inds := make([]int, 0)
 	inds = append(inds, indq[len(indq)-1])
-	for _, k := range dims.At("q") {
+	for _, k := range dims.At("s") {
 		inds = append(inds, inds[len(inds)-1]+k*k)
 	}
 
-	if G != nil && !G.SizeMatch(cdim, c.Rows()) {
-		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
+	if G != nil && !G.SizeMatch(cdim, q.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, q.Rows())
 		err = errors.New(estr)
 		return 
 	}
@@ -107,10 +141,10 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 	// Check A and set defaults if it is nil
 	if A == nil {
 		// zeros rows reduces Gemv to vector products
-		A = matrix.FloatZeros(0, c.Rows())
+		A = matrix.FloatZeros(0, q.Rows())
 	}
-	if A.Cols() != c.Rows() {
-		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
+	if A.Cols() != q.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", q.Rows())
 		err = errors.New(estr)
 		return 
 	}
@@ -139,9 +173,9 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
     //     [ 0   A'  G'*W^{-1} ] [ ux ]   [ bx ]
     //     [ A   0   0         ] [ uy ] = [ by ].
     //     [ G   0   -W'       ] [ uz ]   [ bz ]
-	var factor KKTFactor
+	var factor kktFactor
 	if kkt, ok := solvers[solvername]; ok {
-		if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
+		if b.Rows() > q.Rows()  {
 			err = errors.New("Rank(A) < p or Rank[G; A] < n")
 			return
 		}
@@ -152,7 +186,7 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		// kkt function returns us problem spesific factor function.
 		factor, err = kkt(G, dims, A, 0)
 		// solver is 
-		kktsolver = func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
+		kktsolver = func(W *FloatMatrixSet) (kktFunc, error) {
 			return factor(W, P, nil)
 		}
 	} else {
@@ -196,29 +230,29 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		return 
 	}
 
-	resx0 := math.Max(1.0, math.Sqrt(blas.Dot(c,c).Float()))
+	resx0 := math.Max(1.0, math.Sqrt(blas.Dot(q,q).Float()))
 	resy0 := math.Max(1.0, math.Sqrt(blas.Dot(b,b).Float()))
 	resz0 := math.Max(1.0, Snrm2(h, dims, 0))
+	fmt.Printf("resx0: %.9f, resy0: %.9f, resz0: %9.f\n", resx0, resy0, resz0)
 
 	var x, y, z, s, dx, dy, ds, dz, rx, ry, rz *matrix.FloatMatrix
-	//var  wx, wy, wz, wx2, wy2, wz2, ws, ws2 *matrix.FloatMatrix
 	var lmbda, lmbdasq, sigs, sigz *matrix.FloatMatrix
 	var W *FloatMatrixSet
-	var f, f3 KKTFunc
+	var f, f3 kktFunc
 	var resx, resy, resz, step, sigma, mu, eta float64
 	var gap, pcost, dcost, relgap, pres, dres, f0 float64
 
 	if cdim == 0 {
-        // Solve
-        //
-        //     [ P  A' ] [ x ]   [ -q ]
-        //     [       ] [   ] = [    ].
-        //     [ A  0  ] [ y ]   [  b ]
+		// Solve
+		//
+		//     [ P  A' ] [ x ]   [ -q ]
+		//     [       ] [   ] = [    ].
+		//     [ A  0  ] [ y ]   [  b ]
 		//
 		Wtmp := FloatSetNew("d", "di", "beta", "v", "r", "rti")
 		Wtmp.Set("d", matrix.FloatZeros(0, 1))
 		Wtmp.Set("di", matrix.FloatZeros(0, 1))
-		f3, err = kktsolver(Wtmp, nil, nil)
+		f3, err = kktsolver(Wtmp)
 		if err != nil {
 			err = errors.New("Rank(A) < p or Rank(([P; A; G;]) < n")
 			return
@@ -228,7 +262,7 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		y = b.Copy()
 		f3(x, y, matrix.FloatZeros(0, 1))
 		
-        // dres = || P*x + q + A'*y || / resx0 
+		// dres = || P*x + q + A'*y || / resx0 
 		rx = q.Copy()
 		fP(x, rx, 1.0, 1.0)
 		pcost = 0.5 *( blas.DotFloat(x, rx) + blas.DotFloat(x, q))
@@ -283,19 +317,19 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 			W.Append("v", vm)
 		}
 		for _, n := range dims.At("s") {
-			W.Append("r", matrix.FloatIdentity(n, n))
-			W.Append("rti", matrix.FloatIdentity(n, n))
+			W.Append("r", matrix.FloatIdentity(n))
+			W.Append("rti", matrix.FloatIdentity(n))
 		}
-		f, err = kktsolver(W, nil, nil)
+		f, err = kktsolver(W)
 		if err != nil {
 			err = errors.New("Rank(A) < p or Rank([P; G; A]) < n")
 			return 
 		}
-        // Solve
-        //
-        //     [ P   A'  G' ]   [ x ]   [ -q ]
-        //     [ A   0   0  ] * [ y ] = [  b ].
-        //     [ G   0  -I  ]   [ z ]   [  h ]
+		// Solve
+		//
+		//     [ P   A'  G' ]   [ x ]   [ -q ]
+		//     [ A   0   0  ] * [ y ] = [  b ].
+		//     [ G   0  -I  ]   [ z ]   [  h ]
 		x = q.Copy()
 		blas.ScalFloat(x, -1.0)
 		y = b.Copy()
@@ -309,55 +343,44 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		blas.ScalFloat(s, -1.0)
 
 		nrms = Snrm2(s, dims, 0)
-		ts = MaxStep(s, dims, 0, nil)
+		ts,_ = MaxStep(s, dims, 0, nil)
 		if ts >= -1e-8 * math.Max(nrms, 1.0) {
 			// a = 1.0 + ts  
-			addA := func(v float64)float64 {
-				return v+1.0+ts
-			}
-			// s[:dims['l']] += a
-			s.ApplyToIndexes(s, matrix.MakeIndexSet(0, dims.At("l")[0], 1), addA)
-			// s[indq[:-1]] += a
-			s.ApplyToIndexes(s, indq[:len(indq)-1], addA)
-			// ind = dims['l'] + sum(dims['q'])
+			a := 1.0 + ts
+			is := make([]int, 0)
+			// indexes s[:dims['l']]
+			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			// indexes s[indq[:-1]]
+			is = append(is, indq[:len(indq)-1]...)
 			ind := dims.Sum("l", "q")
-			// for m in dims['s']:
-			//    s[ind : ind+m*m : m+1] += a
-			//    ind += m**2
+			// indexes s[ind:ind+m*m:m+1] (diagonal)
 			for _, m := range dims.At("s") {
-				iset := matrix.MakeIndexSet(ind, ind+m*m, m+1)
-				s.ApplyToIndexes(s, iset, addA)
+				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
 				ind += m*m
+			}
+			for _, k := range is {
+				s.SetIndex(k, a + s.GetIndex(k))
 			}
 		}
 
 		nrmz = Snrm2(z, dims, 0)
-		tz = MaxStep(z, dims, 0, nil)
+		tz,_ = MaxStep(z, dims, 0, nil)
 		if tz >= -1e-8 * math.Max(nrmz, 1.0) {
-			addA := func(v float64)float64 {
-				return v+1.0+tz
-			}
-			// z[:dims['l']] += a
-			z.ApplyToIndexes(z, matrix.MakeIndexSet(0, dims.At("l")[0], 1), addA)
-			// z[indq[:-1]] += a
-			z.ApplyToIndexes(z, indq[:len(indq)-1], addA)
-			// ind = dims['l'] + sum(dims['q'])
+			a := 1.0 + tz
+			is := make([]int, 0)
+			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			is = append(is, indq[:len(indq)-1]...)
 			ind := dims.Sum("l", "q")
-			// for m in dims['s']:
-			//    z[ind : ind+m*m : m+1] += a
-			//    ind += m**2
 			for _, m := range dims.At("s") {
-				iset := matrix.MakeIndexSet(ind, ind+m*m, m+1)
-				z.ApplyToIndexes(z, iset, addA)
+				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
 				ind += m*m
+			}
+			for _, k := range is {
+				z.SetIndex(k, a + z.GetIndex(k))
 			}
 		}
 
 	} else {
-		setOne := func(v float64)float64 {
-			return 1.0
-		}
-
 		if initvals.X == nil {
 			blas.Copy(initvals.X, x)
 		} else {
@@ -367,15 +390,16 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		if initvals.S == nil {
 			blas.Copy(initvals.S, s)
 		} else {
-			ind := dims.At("l")[0]
-			s.ApplyToIndexes(s, matrix.MakeIndexSet(0, ind, 1), setOne)
-			for _, m := range dims.At("q") {
-				s.SetIndex(ind, 1.0)
-				ind += m
-			}
+			is := make([]int, 0)
+			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			is = append(is, indq[:len(indq)-1]...)
+			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				s.ApplyToIndexes(s, matrix.MakeIndexSet(ind, ind+m*m, m+1), setOne)
+				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
 				ind += m*m
+			}
+			for _, k := range is {
+				s.SetIndex(k, 1.0)
 			}
 		}
 		
@@ -388,15 +412,16 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		if initvals.Z == nil {
 			blas.Copy(initvals.Z, z)
 		} else {
-			ind := dims.At("l")[0]
-			z.ApplyToIndexes(z, matrix.MakeIndexSet(0, ind, 1), setOne)
-			for _, m := range dims.At("q") {
-				z.SetIndex(ind, 1.0)
-				ind += m
-			}
+			is := make([]int, 0)
+			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			is = append(is, indq[:len(indq)-1]...)
+			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				z.ApplyToIndexes(z, matrix.MakeIndexSet(ind, ind+m*m, m+1), setOne)
+				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
 				ind += m*m
+			}
+			for _, k := range is {
+				z.SetIndex(k, 1.0)
 			}
 		}
 	}
@@ -408,15 +433,21 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 	dy = y.Copy()
 	dz = matrix.FloatZeros(cdim, 1)
 	ds = matrix.FloatZeros(cdim, 1)
-	lmbda = matrix.FloatZeros(dims.Sum("l", "q", "s"), 1)
-	lmbdasq = matrix.FloatZeros(dims.Sum("l", "q", "s"), 1)
+	lmbda = matrix.FloatZeros(cdim_diag, 1)
+	lmbdasq = matrix.FloatZeros(cdim_diag, 1)
 	sigs = matrix.FloatZeros(dims.Sum("s"), 1)
 	sigz = matrix.FloatZeros(dims.Sum("s"), 1)
 
 	var WS fClosure
 
 	gap = Sdot(s, z, dims, 0)
+	fmt.Printf("== pre-loop:\n")
+	fmt.Printf("x=\n%v\n", x.ToString("%.17f"))
+	fmt.Printf("y=\n%v\n", y.ToString("%.17f"))
+	fmt.Printf("s=\n%v\n", s.ToString("%.17f"))
+	fmt.Printf("z=\n%v\n", z.ToString("%.17f"))
 	for iter := 0; iter < solopts.MaxIter+1; iter++ {
+		fmt.Printf("== iterations %d:\n", iter)
 
         // f0 = (1/2)*x'*P*x + q'*x + r and  rx = P*x + q + A'*y + G'*z.
         blas.Copy(q, rx)
@@ -454,8 +485,8 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
         pres = math.Max(resy/resy0, resz/resz0)
         dres = resx/resx0 
 		
-		if pres <= FEASTOL && dres <=FEASTOL &&
-			( gap <= ABSTOL || (!math.IsNaN(relgap) && relgap <= RELTOL)) ||
+		if pres <= feasTolerance && dres <= feasTolerance &&
+			( gap <= absTolerance || (!math.IsNaN(relgap) && relgap <= relTolerance)) ||
 			iter == solopts.MaxIter {
 
 			ind := dims.Sum("l", "q")
@@ -464,13 +495,18 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 				Symm(z, m, ind)
 				ind += m*m
 			}
-			ts = MaxStep(s, dims, 0, nil)
-			tz = MaxStep(s, dims, 0, nil)
+			ts,_ = MaxStep(s, dims, 0, nil)
+			tz,_ = MaxStep(z, dims, 0, nil)
 			if iter == solopts.MaxIter {
 				// terminated on max iterations.
+				sol.Status = Unknown
+				err = errors.New("Terminated (maximum iterations reached)")
+				fmt.Printf("Terminated (maximum iterations reached)\n")
 				return
 			}
 			// optimal solution found
+			fmt.Print("Optimal solution.")
+			err = nil
 			sol.X = x
 			sol.Y = y
 			sol.S = s
@@ -496,10 +532,12 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
         // lmbdasq = lambda o lambda.
 		if iter == 0 {
 			W, err = ComputeScaling(s, z, lmbda, dims, 0)
+			fmt.Printf("-- initial lmbda=\n%v\n", lmbda.ConvertToString())
 		}
 		Ssqr(lmbdasq, lmbda, dims, 0)
+		fmt.Printf("lmbdasq=\n%v\n", lmbdasq.ConvertToString())
 
-		f3, err = kktsolver(W, nil, nil)
+		f3, err = kktsolver(W)
 		if err != nil {
 			if iter == 0 {
 				err = errors.New("Rank(A) < p or Rank([P; A; G]) < n")
@@ -511,10 +549,21 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 					Symm(z, m, ind)
 					ind += m*m
 				}
-				ts = MaxStep(s, dims, 0, nil)
-				tz = MaxStep(s, dims, 0, nil)
+				ts,_ = MaxStep(s, dims, 0, nil)
+				tz,_ = MaxStep(z, dims, 0, nil)
 				// terminated (singular KKT matrix)
-				// sol. .....
+				fmt.Printf("Terminated (singular KKT matrix).\n")
+				err = errors.New("Terminated (singular KKT matrix).")
+				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Status = Unknown
+				sol.RelativeGap = relgap
+				sol.PrimalObjective = pcost
+				sol.DualObjective = dcost
+				sol.PrimalInfeasibility = pres
+				sol.DualInfeasibility = dres
+				sol.PrimalSlack = -ts
+				sol.DualSlack = -tz
+				sol.Iterations = iter
 				return
 			}
 		}
@@ -620,16 +669,13 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
             // ds = -lmbdasq + sigma * mu * e  (if i is 0)
             //    = -lmbdasq - dsa o dza + sigma * mu * e  (if i is 1), 
             //    where ds, dz are solution for i is 0.
-			sigmaMu := func(v float64)float64 {
-				return v+sigma*mu
-			}
 			blas.ScalFloat(ds, 0.0)
 			if correction && i == 1 {
 				blas.AxpyFloat(ws3, ds, -1.0)
 			}
 			blas.AxpyFloat(lmbdasq, ds, -1.0, &la_.IOpt{"n", dims.Sum("l", "q")})
 			ind := dims.At("l")[0]
-			ds.ApplyToIndexes(ds, matrix.MakeIndexSet(0, ind, 1), sigmaMu)
+			ds.AddAt(matrix.MakeIndexSet(0, ind, 1), sigma*mu)
 			for _, m := range dims.At("q") {
 				ds.SetIndex(ind, sigma*mu+ds.GetIndex(ind))
 				ind += m
@@ -638,7 +684,7 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 			for _, m := range dims.At("s") {
 				blas.AxpyFloat(lmbdasq, ds, -1.0, &la_.IOpt{"n", m}, &la_.IOpt{"incy", m+1},
 					&la_.IOpt{"offsetx", ind2}, &la_.IOpt{"offsety", ind})
-				ds.ApplyToIndexes(ds, matrix.MakeIndexSet(ind, ind+m*m, m+1), sigmaMu)
+				ds.AddAt(matrix.MakeIndexSet(ind, ind+m*m, m+1), sigma*mu)
 				ind += m*m
 				ind2 += m
 			}
@@ -651,7 +697,17 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 			blas.ScalFloat(dz, 0.0)
 			blas.AxpyFloat(rz, dz, -1.0+eta)
 
+			fmt.Printf("== Calling f4 %d\n", i)
+			fmt.Printf("dx=\n%v\n", dx.ToString("%.17f"))
+			fmt.Printf("ds=\n%v\n", ds.ToString("%.17f"))
+			fmt.Printf("dz=\n%v\n", dz.ToString("%.17f"))
+			fmt.Printf("== Entering f4 %d\n", i)
 			err = f4(dx, dy, dz, ds)
+			fmt.Printf("== Return from f4 %d\n", i)
+			fmt.Printf("dx=\n%v\n", dx.ToString("%.17f"))
+			fmt.Printf("ds=\n%v\n", ds.ToString("%.17f"))
+			fmt.Printf("dz=\n%v\n", dz.ToString("%.17f"))
+			fmt.Printf("== End from f4 %d\n", i)
 			if err != nil {
 				if iter == 0 {
 					err = errors.New("Rank(A) < p or Rank([P; A; G]) < n")
@@ -663,8 +719,8 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 						Symm(z, m, ind)
 						ind += m*m
 					}
-					ts = MaxStep(s, dims, 0, nil)
-					tz = MaxStep(z, dims, 0, nil)
+					ts,_ = MaxStep(s, dims, 0, nil)
+					tz,_ = MaxStep(z, dims, 0, nil)
 					return
 				}
 			}
@@ -683,14 +739,14 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 			Scale2(lmbda, ds, dims, 0, false)
 			Scale2(lmbda, dz, dims, 0, false)
 			if i == 0 {
-				ts = MaxStep(ds, dims, 0, nil)
-				tz = MaxStep(dz, dims, 0, nil)
+				ts,_ = MaxStep(ds, dims, 0, nil)
+				tz,_ = MaxStep(dz, dims, 0, nil)
 			} else {
-				ts = MaxStep(ds, dims, 0, sigs)
-				tz = MaxStep(dz, dims, 0, sigz)
+				ts,_ = MaxStep(ds, dims, 0, sigs)
+				tz,_ = MaxStep(dz, dims, 0, sigz)
 			}
 			t := maxvec([]float64{0.0, ts, tz})
-
+			fmt.Printf("== t=%.17f from %v\n", t, []float64{ts, tz})
 			var step float64
 			if t == 0.0 {
 				step = 1.0
@@ -706,11 +762,17 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 				sigma = math.Pow(math.Min(1.0, m), float64(EXPON))
 				eta = 0.0
 			}
+			fmt.Printf("== step=%.17f sigma=%.17f dsdz=%.17f\n", step, sigma, dsdz)
+
 		}
 
 		blas.AxpyFloat(dx, x, step)
 		blas.AxpyFloat(dy, y, step)
-
+		fmt.Printf("x=\n%v\n", x.ConvertToString())
+		fmt.Printf("y=\n%v\n", y.ConvertToString())
+		fmt.Printf("ds=\n%v\n", ds.ConvertToString())
+		fmt.Printf("dz=\n%v\n", dz.ConvertToString())
+		fmt.Printf("---\n")
         // We will now replace the 'l' and 'q' blocks of ds and dz with 
         // the updated iterates in the current scaling.
         // We also replace the 's' blocks of ds and dz with the factors 
@@ -722,13 +784,15 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		blas.ScalFloat(ds, step, &la_.IOpt{"n", dims.Sum("l", "q")})
 		blas.ScalFloat(dz, step, &la_.IOpt{"n", dims.Sum("l", "q")})
 		ind := dims.At("l")[0]
-		ds.ApplyToIndexes(ds, matrix.MakeIndexSet(0, ind, 1), addOne)
-		dz.ApplyToIndexes(dz, matrix.MakeIndexSet(0, ind, 1), addOne)
+		ds.AddAt(matrix.MakeIndexSet(0, ind, 1), 1.0)
+		dz.AddAt(matrix.MakeIndexSet(0, ind, 1), 1.0)
 		for _, m := range dims.At("q") {
 			ds.SetIndex(ind, 1.0+ds.GetIndex(ind))
 			dz.SetIndex(ind, 1.0+dz.GetIndex(ind))
 			ind += m
 		}
+		fmt.Printf("ds=\n%v\n", ds.ConvertToString())
+		fmt.Printf("dz=\n%v\n", dz.ConvertToString())
 
         // ds := H(lambda)^{-1/2} * ds and dz := H(lambda)^{-1/2} * dz.
         // 
@@ -745,14 +809,14 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
         // sigz := ( e + step*sigz ) ./ lambda for 's' blocks.
         blas.ScalFloat(sigs, step)
         blas.ScalFloat(sigz, step)
-        sigs.Apply(nil, addOne)
-        sigz.Apply(nil, addOne)
+        sigs.Add(1.0)
+        sigz.Add(1.0)
 		sdimsum := dims.Sum("s")
 		qdimsum := dims.Sum("l", "q")
-		blas.TbsvFloat(lmbda, sigs, &la_.IOpt{"n", sdimsum}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
-			&la_.IOpt{"offseta", qdimsum})
-		blas.TbsvFloat(lmbda, sigz, &la_.IOpt{"n", sdimsum}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
-			&la_.IOpt{"offseta", qdimsum})
+		blas.TbsvFloat(lmbda, sigs, &la_.IOpt{"n", sdimsum}, &la_.IOpt{"k", 0},
+			&la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", qdimsum})
+		blas.TbsvFloat(lmbda, sigz, &la_.IOpt{"n", sdimsum}, &la_.IOpt{"k", 0},
+			&la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", qdimsum})
 		
 		ind2 := qdimsum; ind3 := 0
 		sdims := dims.At("s")
@@ -769,9 +833,9 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 			ind3 += m
 		}
 		
-		fmt.Printf("pre update_scaling lmbda=\n%v\nds=\n%v\ndz=\n%v\n", lmbda, ds, dz)
+		//fmt.Printf("pre update_scaling lmbda=\n%v\nds=\n%v\ndz=\n%v\n", lmbda, ds, dz)
 		err = UpdateScaling(W, lmbda, ds, dz)
-		fmt.Printf("post update_scaling lmbda=\n%v\nds=\n%v\ndz=\n%v\n", lmbda, ds, dz)
+		fmt.Printf("== post update_scaling\nlmbda=\n%v\nds=\n%v\ndz=\n%v\n", lmbda.ConvertToString(), ds.ConvertToString(), dz.ConvertToString())
         // Unscale s, z, tau, kappa (unscaled variables are used only to 
         // compute feasibility residuals).
 		ind = dims.Sum("l", "q")
@@ -799,9 +863,11 @@ func ConeQp(P, q, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts
 		Scale(z, W, false, true)
 
 		gap = blas.DotFloat(lmbda, lmbda)
-	}
-	// for compiler ...
-	if dx == nil || dy == nil || ds == nil || dz == nil  {
+		fmt.Printf("== gap = %.17f\n", gap)
 	}
 	return
 }
+
+// Local Variables:
+// tab-width: 4
+// End:

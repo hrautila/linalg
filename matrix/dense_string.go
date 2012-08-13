@@ -17,6 +17,9 @@ import (
 // Convert matrix to row-major string representation. 
 func (A *FloatMatrix) String() string {
 	s := ""
+	if A == nil {
+		return "<nil>"
+	}
 	step := A.LeadingIndex()
 	for i := 0; i < A.Rows(); i++ {
 		if i > 0 {
@@ -25,9 +28,55 @@ func (A *FloatMatrix) String() string {
 		s += "["
 		for j := 0; j < A.Cols(); j++ {
 			if j > 0 {
-				s += " "
+				s += ", "
 			}
 			s += fmt.Sprintf("%9.2e", A.elements[j*step+i])
+		}
+		s += "]"
+	}
+	return s
+}
+
+// Convert matrix to row-major string representation using format as element format. 
+func (A *FloatMatrix) ToString(format string) string {
+	s := ""
+	if A == nil {
+		return "<nil>"
+	}
+	step := A.LeadingIndex()
+	for i := 0; i < A.Rows(); i++ {
+		if i > 0 {
+			s += "\n"
+		}
+		s += "["
+		for j := 0; j < A.Cols(); j++ {
+			if j > 0 {
+				s += ", "
+			}
+			s += fmt.Sprintf(format, A.elements[j*step+i])
+		}
+		s += "]"
+	}
+	return s
+}
+
+// Convert matrix to row-major string representation. 
+func (A *FloatMatrix) ConvertToString() string {
+	s := ""
+	if A == nil {
+		return "<nil>"
+	}
+	step := A.LeadingIndex()
+	for i := 0; i < A.Rows(); i++ {
+		if i > 0 {
+			s += "\n"
+		}
+		s += "["
+		for j := 0; j < A.Cols(); j++ {
+			if j > 0 {
+				s += ", "
+			}
+			s += fmt.Sprintf("%.17f", A.elements[j*step+i])
 		}
 		s += "]"
 	}
@@ -83,11 +132,16 @@ func FloatParsePy(s string) (A *FloatMatrix, err error) {
 	ncols := 0
 	firstRow := true
 	currow := 0
+	hasComma := strings.Index(s, ",") != -1
 rows:
-	for _, row := range rowStrings {
-		if len(row) == 0 { continue rows }
-
-		rowElems := strings.Fields(strings.Trim(row, " \n]["))
+	for _, rowStr := range rowStrings {
+		if len(rowStr) == 0 { continue rows }
+		rowStr := strings.Trim(rowStr, " \n][")
+		if hasComma {
+			// replace commas with ws
+			rowStr = strings.Replace(rowStr, ",", " ", -1)
+		}
+		rowElems := strings.Fields(rowStr)
 		//fmt.Printf("row elems: '%v'\n", rowElems)
 		row := []float64{}
 		collen := 0
@@ -115,6 +169,56 @@ rows:
 	return
 }
 
+// Parse string in format '{nrows ncols [element list]}'
+func FloatParseSpe(s string) (A *FloatMatrix, err error) {
+	err = nil
+	A = nil
+
+	start := strings.Index(s, "{")
+	end := strings.LastIndex(s, "}")
+	if start == -1 || end == -1 {
+		err = errors.New("Unrecognized matrix string")
+		return
+	}
+	dstart := strings.Index(s, "[")
+	dend := strings.Index(s, "]")
+	if dstart == -1 || dend == -1 {
+		err = errors.New("Unrecognized matrix string")
+		return
+	}
+
+	var nrows, ncols int64
+	var val float64
+	sizes := strings.Fields(s[start+1:dstart])
+	nrows, err = strconv.ParseInt(sizes[0], 10, 64)
+	if err != nil {
+		return
+	}
+	ncols, err = strconv.ParseInt(sizes[1], 10, 64)
+	if err != nil {
+		return
+	}
+	if dend - dstart == 1 {
+		// empty matrix; no rows
+		A = FloatZeros(0, 1)
+		return
+	}
+	es := s[dstart+1:dend]
+	if strings.Index(es, ",") != -1 {
+		es = strings.Replace(es, ",", " ", -1)
+	}
+	elems := strings.Fields(es)
+	data := make([]float64, len(elems))
+	for k, elem := range elems {
+		val, err = strconv.ParseFloat(strings.Trim(elem, " "), 64)
+		if err != nil {
+			return
+		}
+		data[k] = val
+	}
+	A = FloatNew(int(nrows), int(ncols), data)
+	return
+}
 
 // Local Variables:
 // tab-width: 4

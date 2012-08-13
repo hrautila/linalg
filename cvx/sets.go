@@ -2,7 +2,6 @@
 package cvx
 
 import (
-	//"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"fmt"
 )
@@ -68,6 +67,15 @@ func (M *FloatMatrixSet) Print() {
 		ms := M.sets[key]
 		for i, m := range ms {
 			fmt.Printf("** %s[%d] **\n%v\n", key, i, m)
+		}
+	}
+}
+
+func (M *FloatMatrixSet) PrintMatrix() {
+	for key := range M.sets {
+		ms := M.sets[key]
+		for i, m := range ms {
+			fmt.Printf("** %s[%d] **\n%s\n", key, i, m.ConvertToString())
 		}
 	}
 }
