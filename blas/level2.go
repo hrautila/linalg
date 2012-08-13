@@ -574,6 +574,10 @@ func Trmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 func Tbmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
+	if ! matrix.EqualTypes(A, X) {
+		err = errors.New("Parameters not of same type")
+		return
+	}
 	params, err = linalg.GetParameters(opts...)
 	if err != nil {
 		return
@@ -583,8 +587,8 @@ func Tbmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
-	if ! matrix.EqualTypes(A, X) {
-		return errors.New("Parameters not of same type")
+	if ind.N == 0 {
+		return
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
@@ -634,6 +638,10 @@ func Tbmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 func Trsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
+	if ! matrix.EqualTypes(A, X) {
+		err = errors.New("Parameters not of same type")
+		return
+	}
 	params, err = linalg.GetParameters(opts...)
 	if err != nil {
 		return
@@ -643,8 +651,8 @@ func Trsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
-	if ! matrix.EqualTypes(A, X) {
-		return errors.New("Parameters not of same type")
+	if ind.N == 0 {
+		return
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
@@ -695,6 +703,10 @@ PURPOSE
 func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
+	if ! matrix.EqualTypes(A, X) {
+		err = errors.New("Parameters not of same type")
+		return
+	}
 	params, err = linalg.GetParameters(opts...)
 	if err != nil {
 		return
@@ -704,8 +716,8 @@ func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
-	if ! matrix.EqualTypes(A, X) {
-		return errors.New("Parameters not of same type")
+	if ind.N == 0 {
+		return
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
@@ -754,6 +766,10 @@ func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 func Ger(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
 	var params *linalg.Parameters
+	if ! matrix.EqualTypes(A, X, Y) {
+		err = errors.New("Parameters not of same type")
+		return
+	}
 	params, err = linalg.GetParameters(opts...)
 	if err != nil {
 		return
@@ -763,8 +779,8 @@ func Ger(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err
 	if err != nil {
 		return
 	}
-	if ! matrix.EqualTypes(A, X, Y) {
-		return errors.New("Parameters not of same type")
+	if ind.N == 0 || ind.M == 0 {
+		return
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
@@ -832,6 +848,9 @@ func Geru(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level2_func(ind, fger, X, Y, A, params)
 	if err != nil {
+		return
+	}
+	if ind.M == 0 || ind.N == 0 {
 		return
 	}
 	if ! matrix.EqualTypes(A, X, Y) {
@@ -903,6 +922,9 @@ func Syr(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
 	if err != nil {
 		return
 	}
+	if ind.N == 0 {
+		return
+	}
 	if ! matrix.EqualTypes(A, X) {
 		return errors.New("Parameters not of same type")
 	}
@@ -961,6 +983,9 @@ func Her(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level2_func(ind, fsyr, X, nil, A, params)
 	if err != nil {
+		return
+	}
+	if ind.N == 0 {
 		return
 	}
 	if ! matrix.EqualTypes(A, X) {

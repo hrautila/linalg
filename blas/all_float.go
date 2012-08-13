@@ -400,6 +400,9 @@ func TrmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
+	if ind.N == 0 {
+		return
+	}
 	Xa := X.FloatArray()
 	Aa := A.FloatArray()
 	uplo := linalg.ParamString(params.Uplo)
@@ -449,6 +452,9 @@ func TbmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	if err != nil {
 		return
 	}
+	if ind.N == 0 {
+		return
+	}
 	Xa := X.FloatArray()
 	Aa := A.FloatArray()
 	uplo := linalg.ParamString(params.Uplo)
@@ -495,6 +501,9 @@ func TrsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level2_func(ind, ftrsv, X, nil, A, params)
 	if err != nil {
+		return
+	}
+	if ind.N == 0 {
 		return
 	}
 	Xa := X.FloatArray()
@@ -645,6 +654,9 @@ func SyrFloat(X, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (e
 	if err != nil {
 		return
 	}
+	if ind.N == 0 {
+		return
+	}
 	Xa := X.FloatArray()
 	Aa := A.FloatArray()
 	uplo := linalg.ParamString(params.Uplo)
@@ -685,6 +697,9 @@ func Syr2Float(X, Y, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level2_func(ind, fsyr2, X, Y, A, params)
 	if err != nil {
+		return
+	}
+	if ind.N == 0 {
 		return
 	}
 	Xa := X.FloatArray()
@@ -886,6 +901,9 @@ func SyrkFloat(A, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt
 	if e != nil || err != nil {
 		return
 	}
+	if ind.N == 0 {
+		return
+	}
 	Aa := A.FloatArray()
 	Ca := C.FloatArray()
 	uplo := linalg.ParamString(params.Uplo)
@@ -1025,6 +1043,9 @@ func TrmmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (
 	if err != nil {
 		return
 	}
+	if ind.M == 0 || ind.N == 0 {
+		return
+	}
 	Aa := A.FloatArray()
 	Ba := B.FloatArray()
 	uplo := linalg.ParamString(params.Uplo)
@@ -1091,6 +1112,9 @@ func TrsmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (
 	ind := linalg.GetIndexOpts(opts...)
 	err = check_level3_func(ind, ftrsm, A, B, nil, params)
 	if err != nil {
+		return
+	}
+	if ind.N == 0 || ind.M == 0 {
 		return
 	}
 	Aa := A.FloatArray()
