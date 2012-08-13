@@ -1,4 +1,11 @@
 
+// Copyright (c) Harri Rautila, 2012
+
+// This file is part of go.opt/cvx package. It is free software, distributed
+// under the terms of GNU Lesser General Public License Version 3, or any later
+// version. See the COPYING tile included in this archive.
+
+
 package cvx
 
 import (
@@ -1105,8 +1112,8 @@ func Ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
 		blas.ScalFloat(x, 2.0*y.GetIndex(ind), &la_.IOpt{"n", m-1}, &la_.IOpt{"offset", ind+1})
 		ind += m
 	}
-	err = blas.Tbmv(y, x, &la_.IOpt{"n", dims.Sum("s")}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1},
-		&la_.IOpt{"offseta", ind}, &la_.IOpt{"offsetx", ind})
+	err = blas.Tbmv(y, x, &la_.IOpt{"n", dims.Sum("s")}, &la_.IOpt{"k", 0},
+		&la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", ind}, &la_.IOpt{"offsetx", ind})
 	return
 }
 

@@ -118,6 +118,16 @@ func TestFMath(t *testing.T) {
 	fmt.Printf("Z = K*X:\n%v\n", Z)
 }
 
+func TestMath2(t *testing.T) {
+	m := FloatOnes(8, 1)
+	iset := make([]int, 0)
+	iset = append(iset, []int{0,1,2}...)
+	m.AddAt(iset, 1.0)
+	iset = make([]int, 0)
+	iset = append(iset, []int{5,6,7}...)
+	m.AddAt(iset, 5.0)
+	fmt.Printf("%v\n", m)
+}
 func TestFuncs(t *testing.T) {
 	fmt.Printf("Test matrix element wise math.\n")
 	A := FloatZeros(2, 3)
@@ -159,7 +169,7 @@ func TestArrayCreate(t *testing.T) {
 }
 
 func TestParseSpe(t *testing.T) {
-	s := "{2 3 [3.666666666666667 3.142857142857143 4.857142857142857 4.000000000000000 5.000000000000000 6.000000000000000]}"
+	s := "{2 3 [3.666666666666667, 3.142857142857143, 4.857142857142857, 4.000000000000000, 5.000000000000000, 6.000000000000000]}"
 	m, err := FloatParseSpe(s)
 	if err != nil {
 		fmt.Printf("parse error: %v\n", err)

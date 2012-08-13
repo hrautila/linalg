@@ -162,7 +162,7 @@ func Dot(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
 		return
 	}
 	if ind.Nx == 0 {
-		return 
+		return matrix.FScalar(0.0)
 	}
 	if ind.Nx != ind.Ny {
 		err = errors.New("arrays have unequal default lengths")

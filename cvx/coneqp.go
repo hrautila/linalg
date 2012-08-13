@@ -1,4 +1,10 @@
 
+// Copyright (c) Harri Rautila, 2012
+
+// This file is part of go.opt/cvx package. It is free software, distributed
+// under the terms of GNU Lesser General Public License Version 3, or any later
+// version. See the COPYING tile included in this archive.
+
 package cvx
 
 import (
@@ -10,9 +16,6 @@ import (
 	"math"
 )
 
-type InitVals struct {
-	X, Y, S, Z *matrix.FloatMatrix
-}
 
 //    Solves a pair of primal and dual convex quadratic cone programs
 //
@@ -40,9 +43,8 @@ type InitVals struct {
 //    The next M cones are positive semidefinite cones of order ms[0], ...,
 //    ms[M-1] >= 0.  
 //
-func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions) (sol *Solution, err error) {
+func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, initvals *FloatMatrixSet) (sol *Solution, err error) {
 
-	var initvals *InitVals = nil
 
 	err = nil
 	EXPON := 3
@@ -233,7 +235,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 	resx0 := math.Max(1.0, math.Sqrt(blas.Dot(q,q).Float()))
 	resy0 := math.Max(1.0, math.Sqrt(blas.Dot(b,b).Float()))
 	resz0 := math.Max(1.0, Snrm2(h, dims, 0))
-	fmt.Printf("resx0: %.9f, resy0: %.9f, resz0: %9.f\n", resx0, resy0, resz0)
+	//fmt.Printf("resx0: %.17f, resy0: %.17f, resz0: %.17f\n", resx0, resy0, resz0)
 
 	var x, y, z, s, dx, dy, ds, dz, rx, ry, rz *matrix.FloatMatrix
 	var lmbda, lmbdasq, sigs, sigz *matrix.FloatMatrix
@@ -381,46 +383,50 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		}
 
 	} else {
-		if initvals.X == nil {
-			blas.Copy(initvals.X, x)
+		ix := initvals.At("x")[0]
+		if ix != nil {
+			blas.Copy(ix, x)
 		} else {
 			blas.ScalFloat(x, 0.0)
 		}
 
-		if initvals.S == nil {
-			blas.Copy(initvals.S, s)
+		is := initvals.At("s")[0]
+		if is != nil {
+			blas.Copy(is, s)
 		} else {
-			is := make([]int, 0)
-			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
-			is = append(is, indq[:len(indq)-1]...)
+			iset := make([]int, 0)
+			iset = append(iset, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			iset = append(iset, indq[:len(indq)-1]...)
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
+				iset = append(iset, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
 				ind += m*m
 			}
-			for _, k := range is {
+			for _, k := range iset {
 				s.SetIndex(k, 1.0)
 			}
 		}
 		
-		if initvals.Y == nil {
-			blas.Copy(initvals.Y, y)
+		iy := initvals.At("y")[0]
+		if iy != nil {
+			blas.Copy(iy, y)
 		} else {
 			blas.ScalFloat(y, 0.0)
 		}
 
-		if initvals.Z == nil {
-			blas.Copy(initvals.Z, z)
+		iz := initvals.At("z")[0]
+		if iz != nil {
+			blas.Copy(iz, z)
 		} else {
-			is := make([]int, 0)
-			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
-			is = append(is, indq[:len(indq)-1]...)
+			iset := make([]int, 0)
+			iset = append(iset, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			iset = append(iset, indq[:len(indq)-1]...)
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
+				iset = append(iset, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
 				ind += m*m
 			}
-			for _, k := range is {
+			for _, k := range iset {
 				z.SetIndex(k, 1.0)
 			}
 		}
@@ -441,13 +447,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 	var WS fClosure
 
 	gap = Sdot(s, z, dims, 0)
-	fmt.Printf("== pre-loop:\n")
-	fmt.Printf("x=\n%v\n", x.ToString("%.17f"))
-	fmt.Printf("y=\n%v\n", y.ToString("%.17f"))
-	fmt.Printf("s=\n%v\n", s.ToString("%.17f"))
-	fmt.Printf("z=\n%v\n", z.ToString("%.17f"))
 	for iter := 0; iter < solopts.MaxIter+1; iter++ {
-		fmt.Printf("== iterations %d:\n", iter)
 
         // f0 = (1/2)*x'*P*x + q'*x + r and  rx = P*x + q + A'*y + G'*z.
         blas.Copy(q, rx)
@@ -467,6 +467,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         blas.AxpyFloat(h, rz, -1.0)
         fG(x, rz, 1.0, 1.0)
         resz = Snrm2(rz, dims, 0)
+		//fmt.Printf("resx: %.17f, resy: %.17f, resz: %.17f\n", resx, resy, resz)
+
         // Statistics for stopping criteria.
 
         // pcost = (1/2)*x'*P*x + q'*x 
@@ -484,6 +486,18 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		}
         pres = math.Max(resy/resy0, resz/resz0)
         dres = resx/resx0 
+
+		if solopts.ShowProgress {
+			if iter == 0 {
+				// show headers of something 
+				fmt.Printf("% 10s% 12s% 10s% 8s% 7s\n",
+					"pcost", "dcost", "gap", "pres", "dres")
+			}
+			// show something
+            fmt.Printf("%2d: % 8.4e % 8.4e % 4.0e% 7.0e% 7.0e\n",
+				iter, pcost, dcost, gap, pres, dres)
+		}
+
 		
 		if pres <= feasTolerance && dres <= feasTolerance &&
 			( gap <= absTolerance || (!math.IsNaN(relgap) && relgap <= relTolerance)) ||
@@ -532,10 +546,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         // lmbdasq = lambda o lambda.
 		if iter == 0 {
 			W, err = ComputeScaling(s, z, lmbda, dims, 0)
-			fmt.Printf("-- initial lmbda=\n%v\n", lmbda.ConvertToString())
 		}
 		Ssqr(lmbdasq, lmbda, dims, 0)
-		fmt.Printf("lmbdasq=\n%v\n", lmbdasq.ConvertToString())
 
 		f3, err = kktsolver(W)
 		if err != nil {
@@ -697,17 +709,12 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			blas.ScalFloat(dz, 0.0)
 			blas.AxpyFloat(rz, dz, -1.0+eta)
 
-			fmt.Printf("== Calling f4 %d\n", i)
-			fmt.Printf("dx=\n%v\n", dx.ToString("%.17f"))
-			fmt.Printf("ds=\n%v\n", ds.ToString("%.17f"))
-			fmt.Printf("dz=\n%v\n", dz.ToString("%.17f"))
-			fmt.Printf("== Entering f4 %d\n", i)
+			//fmt.Printf("== Calling f4 %d\n", i)
+			//fmt.Printf("dx=\n%v\n", dx.ToString("%.17f"))
+			//fmt.Printf("ds=\n%v\n", ds.ToString("%.17f"))
+			//fmt.Printf("dz=\n%v\n", dz.ToString("%.17f"))
+			//fmt.Printf("== Entering f4 %d\n", i)
 			err = f4(dx, dy, dz, ds)
-			fmt.Printf("== Return from f4 %d\n", i)
-			fmt.Printf("dx=\n%v\n", dx.ToString("%.17f"))
-			fmt.Printf("ds=\n%v\n", ds.ToString("%.17f"))
-			fmt.Printf("dz=\n%v\n", dz.ToString("%.17f"))
-			fmt.Printf("== End from f4 %d\n", i)
 			if err != nil {
 				if iter == 0 {
 					err = errors.New("Rank(A) < p or Rank([P; A; G]) < n")
@@ -746,8 +753,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 				tz,_ = MaxStep(dz, dims, 0, sigz)
 			}
 			t := maxvec([]float64{0.0, ts, tz})
-			fmt.Printf("== t=%.17f from %v\n", t, []float64{ts, tz})
-			var step float64
+			//fmt.Printf("== t=%.17f from %v\n", t, []float64{ts, tz})
 			if t == 0.0 {
 				step = 1.0
 			} else {
@@ -762,17 +768,17 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 				sigma = math.Pow(math.Min(1.0, m), float64(EXPON))
 				eta = 0.0
 			}
-			fmt.Printf("== step=%.17f sigma=%.17f dsdz=%.17f\n", step, sigma, dsdz)
+			//fmt.Printf("== step=%.17f sigma=%.17f dsdz=%.17f\n", step, sigma, dsdz)
 
 		}
 
 		blas.AxpyFloat(dx, x, step)
 		blas.AxpyFloat(dy, y, step)
-		fmt.Printf("x=\n%v\n", x.ConvertToString())
-		fmt.Printf("y=\n%v\n", y.ConvertToString())
-		fmt.Printf("ds=\n%v\n", ds.ConvertToString())
-		fmt.Printf("dz=\n%v\n", dz.ConvertToString())
-		fmt.Printf("---\n")
+		//fmt.Printf("x=\n%v\n", x.ConvertToString())
+		//fmt.Printf("y=\n%v\n", y.ConvertToString())
+		//fmt.Printf("ds=\n%v\n", ds.ConvertToString())
+		//fmt.Printf("dz=\n%v\n", dz.ConvertToString())
+
         // We will now replace the 'l' and 'q' blocks of ds and dz with 
         // the updated iterates in the current scaling.
         // We also replace the 's' blocks of ds and dz with the factors 
@@ -784,15 +790,14 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		blas.ScalFloat(ds, step, &la_.IOpt{"n", dims.Sum("l", "q")})
 		blas.ScalFloat(dz, step, &la_.IOpt{"n", dims.Sum("l", "q")})
 		ind := dims.At("l")[0]
-		ds.AddAt(matrix.MakeIndexSet(0, ind, 1), 1.0)
-		dz.AddAt(matrix.MakeIndexSet(0, ind, 1), 1.0)
+		is := matrix.MakeIndexSet(0, ind, 1)
+		ds.AddAt(is, 1.0)
+		dz.AddAt(is, 1.0)
 		for _, m := range dims.At("q") {
 			ds.SetIndex(ind, 1.0+ds.GetIndex(ind))
 			dz.SetIndex(ind, 1.0+dz.GetIndex(ind))
 			ind += m
 		}
-		fmt.Printf("ds=\n%v\n", ds.ConvertToString())
-		fmt.Printf("dz=\n%v\n", dz.ConvertToString())
 
         // ds := H(lambda)^{-1/2} * ds and dz := H(lambda)^{-1/2} * dz.
         // 
@@ -833,9 +838,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			ind3 += m
 		}
 		
-		//fmt.Printf("pre update_scaling lmbda=\n%v\nds=\n%v\ndz=\n%v\n", lmbda, ds, dz)
 		err = UpdateScaling(W, lmbda, ds, dz)
-		fmt.Printf("== post update_scaling\nlmbda=\n%v\nds=\n%v\ndz=\n%v\n", lmbda.ConvertToString(), ds.ConvertToString(), dz.ConvertToString())
+
         // Unscale s, z, tau, kappa (unscaled variables are used only to 
         // compute feasibility residuals).
 		ind = dims.Sum("l", "q")
@@ -863,7 +867,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		Scale(z, W, false, true)
 
 		gap = blas.DotFloat(lmbda, lmbda)
-		fmt.Printf("== gap = %.17f\n", gap)
+		//fmt.Printf("== gap = %.17f\n", gap)
 	}
 	return
 }

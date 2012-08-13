@@ -69,12 +69,6 @@ func main() {
 	dims.Set("l", []int{2})
 	dims.Set("q", []int{4, 4})
 	dims.Set("s", []int{3})
-	if b == nil {
-	}
-	if c == nil {
-	}
-	if h == nil || A == nil {
-	}
 	
 
 	var solopts cvx.SolverOptions
