@@ -225,63 +225,40 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	res := func(ux, uy, uz, utau , us, ukappa, vx, vy, vz, vtau, vs, vkappa *matrix.FloatMatrix, W *FloatMatrixSet, dg float64, lmbda *matrix.FloatMatrix) (err error) {
 
 		err = nil
-        //fmt.Printf("res: ut=%.9f, uk=%.9f, vt=%.9f, vk=%.9f\n",
-		// utau.GetIndex(0), ukappa.GetIndex(0), vtau.GetIndex(0), vkappa.GetIndex(0))
-		//fmt.Printf("** start res ...\n")
 		// vx := vx - A'*uy - G'*W^{-1}*uz - c*utau/dg
 		Af(uy, vx, -1.0, 1.0, la.OptTrans)
 		//fmt.Printf("post-Af vx=\n%v\n", vx)
 		blas.Copy(uz, wz3)
 		Scale(wz3, W, false, true)
-		//fmt.Printf("post-Af-scale wz3=\n%v\n", wz3)
 		Gf(wz3, vx, -1.0, 1.0, la.OptTrans)
-		//fmt.Printf("post-Gf vx=\n%v\n", vx)
 		blas.AxpyFloat(c, vx, -utau.Float()/dg)
-		//fmt.Printf("post-Gf-Axpy vx=\n%v\n", vx)
 
 		// vy := vy + A*ux - b*utau/dg
 		Af(ux, vy, 1.0, 1.0)
-		//fmt.Printf("post-Af vy=\n%v\n", vy)
 		blas.AxpyFloat(b, vy, -utau.Float()/dg)
 
 		// vz := vz + G*ux - h*utau/dg + W'*us
 		Gf(ux, vz, 1.0, 1.0)
-		//fmt.Printf("post-Gf vz=\n%v\n", vz.ConvertToString())
 		blas.AxpyFloat(h, vz, -utau.Float()/dg)
-		//fmt.Printf("post-axpy vz=\n%v\n", vz.ConvertToString())
 		blas.Copy(us, ws3)
-		//fmt.Printf("pre-scale ws3=\n%v\n", ws3.ConvertToString())
-		//W.PrintMatrix()
 		Scale(ws3, W, true, false)
-		//fmt.Printf("post-scale ws3=\n%v\n", ws3.ConvertToString())
-		//fmt.Printf("pre-scale-apxy vz=\n%v\n", vz)
-		//fmt.Printf("9: %.16f + %.16f\n", ws3.GetIndex(9), vz.GetIndex(9))
 		blas.AxpyFloat(ws3, vz, 1.0)
-		//fmt.Printf("post-scale-apxy vz=\n%v\n", vz)
 		
 		// vtau := vtau + c'*ux + b'*uy + h'*W^{-1}*uz + dg*ukappa
 		var vtauplus float64 = dg*ukappa.Float() + blas.DotFloat(c, ux) +
 			blas.DotFloat(b, uy) + Sdot(h, wz3, dims, 0) 
 		vtau.SetValue(vtau.Float()+vtauplus)
-        //fmt.Printf( "res: vt=%.9f, vtplus=%.9f\n", vtau.GetIndex(0), vtauplus)
 
 		// vs := vs + lmbda o (uz + us)
 		blas.Copy(us, ws3)
 		blas.AxpyFloat(uz, ws3, 1.0)
-		//fmt.Printf("pre-sprod ws3=\n%v\n", ws3)
 		Sprod(ws3, lmbda, dims, 0, &la.SOpt{"diag", "D"})
-		//fmt.Printf("post-sprod ws3=\n%v\n", ws3)
 		blas.AxpyFloat(ws3, vs, 1.0)
-		//fmt.Printf("post-sprod-apxy vs=\n%v\n", vs)
 
 		// vkappa += vkappa + lmbdag * (utau + ukappa)
 		lscale := lmbda.GetIndex(lmbda.NumElements()-1)
 		var vkplus float64 = lscale * (utau.Float() + ukappa.Float())
 		vkappa.SetValue(vkappa.Float()+vkplus)
-        //fmt.Printf("res-end: ut=%.9f, uk=%.9f, vt=%.9f, vk=%.9f\n",
-		//	utau.GetIndex(0), ukappa.GetIndex(0), vtau.GetIndex(0), vkappa.GetIndex(0))
-		//fmt.Printf("-- res result:\nvz=\n%v\nvs=\n%v\n", vz, vs)
-		//fmt.Printf("** end res ...\n")
 		return 
 	}
 
@@ -763,12 +740,10 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			dg = math.Sqrt(kappa.Float()/tau.Float())
 			dgi = math.Sqrt(float64(tau.Float()/kappa.Float()))
 			lmbda.SetIndex(-1, math.Sqrt(float64(tau.Float()*kappa.Float())))
-			//fmt.Printf("lmbda=\n%v\n", lmbda)
 		}
 		// lmbdasq := lmbda o lmbda 
 		Ssqr(lmbdasq, lmbda, dims, 0)
 		lmbdasq.SetIndex(-1, lmbda.GetIndex(-1)*lmbda.GetIndex(-1))
-		//fmt.Printf("lmbdasq=\n%v\n", lmbdasq.ConvertToString())
 
 		// f3(x, y, z) solves    
 		//
@@ -881,10 +856,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
             // [ A  0  0    ] [ uy        ] = [ -by                    ]
             // [ G  0 -W'*W ] [ W^{-1}*uz ]   [ -bz + W'*(lmbda o\ bs) ]
 
-			//fmt.Printf("== start of f6-no-ir ..\n")
-			//fmt.Printf("f6-no-ir: x=\n%v\n", x)
-			//fmt.Printf("f6-no-ir: z=\n%v\n", z)
-			//fmt.Printf("f6-no-ir: s=\n%v\n", s.ConvertToString())
 			err = nil
             // y := -y = -by
 			blas.ScalFloat(y, -1.0)
@@ -899,14 +870,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			blas.AxpyFloat(ws3, z, 1.0)
 			blas.ScalFloat(z, -1.0)
 
-			//fmt.Printf("f6_no_ir: pre-f3 z=\n%v\n", z)
-			//fmt.Printf("== calling f3 ...\n")
 			err = f3(x, y, z)
-			//fmt.Printf("== return from f3 ...\n")
-			//fmt.Printf("x=\n%v\n", x.ConvertToString())
-			//fmt.Printf("z=\n%v\n", z.ConvertToString())
-			//fmt.Printf("== data from f3 ...\n")
-			//fmt.Printf("f6_no_ir: post-f3=%v\n", err)
 
             // Combine with solution of 
             // 
@@ -939,9 +903,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 			blas.AxpyFloat(z, s, -1.0)
 			kap_ = kap_ - tau_
-            //fmt.Printf("f6-no-ir end: t[0] %.17f, k[0] %.17f\n", tau_, kap_)
 			kappa.SetValue(kap_)
-			//fmt.Printf("== end of f6-no-ir ..\n")
 			return
 		}
 
@@ -979,12 +941,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				WS.wkappa.SetValue(kappa.Float())
 			}
 			err = f6_no_ir(x, y, z, tau, s, kappa)
-			//fmt.Printf("post-f6-no-ir: tau=%.17f, kappa=%.17f\n", tau.GetIndex(0), kappa.GetIndex(0))
-			//fmt.Printf("== return from f6-no-ir ...\n")
-			//fmt.Printf("x=\n%v\n", x)
-			//fmt.Printf("z=\n%v\n", z.ConvertToString())
-			//fmt.Printf("s=\n%v\n", s.ConvertToString())
-			//fmt.Printf("== data from f6-no-ir ...\n")
 			for i := 0; i < refinement; i++ {
 				blas.Copy(WS.wx, WS.wx2)
 				blas.Copy(WS.wy, WS.wy2)
@@ -994,18 +950,12 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				WS.wkappa2.SetValue(WS.wkappa.Float())
 				err = res(x, y, z, tau, s, kappa, WS.wx2, WS.wy2, WS.wz2, WS.wtau2, WS.ws2, WS.wkappa2, W, dg, lmbda)
 				err = f6_no_ir(WS.wx2, WS.wy2, WS.wz2, WS.wtau2, WS.ws2, WS.wkappa2)
-				//fmt.Printf("== return from f6-no-ir [*]...\n")
-				//fmt.Printf("wx2=\n%v\n", WS.wx2)
-				//fmt.Printf("wz2=\n%v\n", WS.wz2)
-				//fmt.Printf("ws2=\n%v\n", WS.ws2)
-				//fmt.Printf("== data from f6-no-ir [*]...\n")
 				blas.AxpyFloat(WS.wx2, x, 1.0)
 				blas.AxpyFloat(WS.wy2, y, 1.0)
 				blas.AxpyFloat(WS.wz2, z, 1.0)
 				blas.AxpyFloat(WS.ws2, s, 1.0)
 				tau.SetValue(tau.Float() + WS.wtau2.Float())
 				kappa.SetValue(kappa.Float() + WS.wkappa2.Float())
-				//fmt.Printf("refinement: tau=%.17f, kappa=%.17f\n", tau.GetIndex(0), kappa.GetIndex(0))
 			}
 			if solopts.Debug {
 				res(x, y, z, tau, s, kappa, WS.wx, WS.wy, WS.wz, WS.wtau, WS.ws, WS.wkappa, W, dg, lmbda)
@@ -1052,10 +1002,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			// dkappa[0] = lmbdasq[-1]
 			dkappa.SetValue(lmbdasq.GetIndex(-1))
 
-		    //fmt.Printf("dkappa[0] = %.17f\n", dkappa.GetIndex(0))
-
 			if i == 1 {
-				//fmt.Printf("** scaling with sigma*mu (%.17f, %.17f)\n", sigma, mu)
 				blas.AxpyFloat(ws3, ds, 1.0)
 				ind = dims.Sum("l", "q")
 				is := make([]int, 0) 
@@ -1071,7 +1018,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				dk_ := dkappa.Float()
 				wk_ := wkappa3.Float()
 				dkappa.SetValue(dk_ + wk_ - sigma*mu)
-				//fmt.Printf("dtau=%.17f, dkappa=%.17f\n", dtau.Float(), dkappa.Float())
 			}
             // (dx, dy, dz, dtau) = (1-sigma)*(rx, ry, rz, rt)
 			blas.Copy(rx, dx)
@@ -1082,18 +1028,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			blas.ScalFloat(dz, 1.0-sigma)
             // dtau[0] = (1.0 - sigma) * rt 
 			dtau.SetValue((1.0-sigma)*rt)
-			//fmt.Printf("setting: dtau=%.17f, sigma=%.17f, rt=%.17f\n", dtau.GetIndex(0), sigma, rt)
 
-			//fmt.Printf("== calling f6[%d] ==\n", i)
-			//fmt.Printf("dx=\n%v\ndz=\n%v\nds=\n%v\n",
-			//	dx.ConvertToString(), dz.ConvertToString(), ds.ConvertToString())
-			//fmt.Printf("dtau=%f, dkappa=%f\n", dtau.Float(), dkappa.Float())
-			//fmt.Printf("== entering f6[%d] ==\n", i)
 			err = f6(dx, dy, dz, dtau, ds, dkappa)
-			//fmt.Printf("== return from f6[%d] ==\n", i)
-			//fmt.Printf("dx=\n%v\ndz=\n%v\nds=\n%v\n", dx, dz.ConvertToString(), ds.ConvertToString())
-			//fmt.Printf("== data from f6[%d] ==\n", i)
-			//fmt.Printf("post-f6: dtau=%.17f, dkappa=%.17f\n", dtau.GetIndex(0), dkappa.GetIndex(0))
 
 			// Save ds o dz and dkappa * dtau for Mehrotra correction
 			if i == 0 {
@@ -1123,7 +1059,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			tt = -dt_ / lmbda.GetIndex(-1)
 			tk = -dk_ / lmbda.GetIndex(-1)
 			t := maxvec([]float64{0.0, ts, tz, tt, tk})
-			//fmt.Printf("-- max t=%.17f from %v\n", t, []float64{0.0, ts, tz, tt, tk})
 			if t == 0.0 {
 				step = 1.0
 			} else {
@@ -1140,14 +1075,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			}
 		}
 		//fmt.Printf("** tau = %.17f, kappa = %.17f\n", tau.Float(), kappa.Float())
-		fmt.Printf("** step = %.17f, sigma = %.17f\n", step, sigma)
-		//fmt.Printf("dx=\n%v\ndy=\n%v\n", dx.ConvertToString(), dy.ConvertToString())
-		//fmt.Printf("ds=\n%v\ndz=\n%v\n", ds.ConvertToString(), dz.ConvertToString())
-		//fmt.Printf("sigs=\n%v\nsigz=\n%v\n", sigs.ConvertToString(), sigz.ConvertToString())
+		//fmt.Printf("** step = %.17f, sigma = %.17f\n", step, sigma)
+
 		// Update x, y
 		blas.AxpyFloat(dx, x, step)
 		blas.AxpyFloat(dy, y, step)
-		//fmt.Printf("update x=\n%v\ny=\n%v\n", x.ConvertToString(), y.ConvertToString())
 
         // Replace 'l' and 'q' blocks of ds and dz with the updated 
         // variables in the current scaling.
@@ -1159,7 +1091,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
         // dz := e + step*dz for 'l' and 'q' blocks.
 		blas.ScalFloat(ds, step, &la.IOpt{"n", dims.Sum("l", "q")})
 		blas.ScalFloat(dz, step, &la.IOpt{"n", dims.Sum("l", "q")})
-		//fmt.Printf("scal 0 ds=\n%v\ndz=\n%v\n", ds.ConvertToString(), dz.ConvertToString())
 
 		is := make([]int, 0)
 		is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
@@ -1216,7 +1147,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
         //
         //     lmbda[-1] := sqrt((tau + step*dtau) * (kappa + step*dkappa))
         //                = lmbda[-1] * sqrt(( 1 - step*tt) * (1 - step*tk))
-        //fmt.Printf("-- dg=%.9f, dgi=%.9ff\n", dg, dgi)
 		dg *= math.Sqrt(1.0-step*tk) / math.Sqrt(1.0-step*tt)
 		dgi = 1.0/dg
 		a :=  math.Sqrt(1.0-step*tk) * math.Sqrt(1.0-step*tt)
@@ -1235,7 +1165,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			ind2 += m*m
 		}
 		Scale(s, W, true, false)
-		//fmt.Printf("unscaled s=\n%v\n", s.ConvertToString())
 		
 		ind = dims.Sum("l", "q")
 		ind2 = ind
@@ -1248,7 +1177,6 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			ind2 += m*m
 		}
 		Scale(z, W, false, true)
-		//fmt.Printf("unscaled z=\n%v\n", z.ConvertToString())
 		
 		kappa.SetValue(lmbda.GetIndex(-1)/dgi)
 		tau.SetValue(lmbda.GetIndex(-1)*dgi)
