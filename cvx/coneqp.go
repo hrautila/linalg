@@ -16,6 +16,22 @@ import (
 	"math"
 )
 
+func checkConeQpDimensions(dims *DimensionSet) error {
+	if dims.At("l")[0] < 0 {
+		return errors.New("dimension 'l' must be nonnegative integer")
+	}
+	for _, m := range dims.At("q") {
+		if m < 1 {
+			return errors.New("dimension 'q' must be list of positive integers")
+		}
+	}
+	for _, m := range dims.At("s") {
+		if m < 0 {
+			return errors.New("dimension 's' must be list of nonnegative integers")
+		}
+	}
+	return nil
+}
 
 //    Solves a pair of primal and dual convex quadratic cone programs
 //
@@ -106,6 +122,11 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 	if dims == nil {
 		dims = DSetNew("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
+	}
+
+	err = checkConeQpDimensions(dims)
+	if err != nil {
+		return
 	}
 
 	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
