@@ -6,10 +6,17 @@
 
 from cvxopt import matrix, solvers
 from cvxopt import misc, blas
-import localmisc
-import localcones
 
-
+def str2(m, fmt='%.17f'):
+    s = ''
+    for i in xrange(m.size[0]):
+        s += "["
+        for j in xrange(m.size[1]):
+            if j != 0:
+                s += ", "
+            s += fmt % m[i, j]
+        s += "]\n"
+    return s
 
 def solve(opts):
     c = matrix([-6., -4., -5.])
@@ -27,12 +34,13 @@ def solve(opts):
     b = matrix(0.0, (0, 1))
 
     dims = {'l': 2, 'q': [4, 4], 's': [3]}
-    sol = localcones.conelp(c, G, h, dims, kktsolver='ldl', options=opts)
+    solvers.options.update(opts)
+    sol = solvers.conelp(c, G, h, dims, kktsolver='ldl')
     print("\nStatus: " + sol['status'])
     if sol['status'] == 'optimal':
-        print "x=\n", localmisc.strMat(sol['x'])
-        print "s=\n", localmisc.strMat(sol['s'])
-        print "z=\n", localmisc.strMat(sol['z'])
+        print "x=\n", str2(sol['x'])
+        print "s=\n", str2(sol['s'])
+        print "z=\n", str2(sol['z'])
 
 
 solve({'maxiters': 30})

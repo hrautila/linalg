@@ -7,8 +7,17 @@
 
 from cvxopt import matrix, solvers
 from cvxopt import misc, blas
-import localmisc
-import localcones 
+
+def str2(m, fmt='%.17f'):
+    s = ''
+    for i in xrange(m.size[0]):
+        s += "["
+        for j in xrange(m.size[1]):
+            if j != 0:
+                s += ", "
+            s += fmt % m[i, j]
+        s += "]\n"
+    return s
 
 def testqp(opts):
     A = matrix([ [ .3, -.4,  -.2,  -.4,  1.3 ], 
@@ -24,11 +33,16 @@ def testqp(opts):
     dims = {'l': n, 'q': [n+1], 's': []}
     P = A.T*A
     q = -A.T*b
-    sol = localcones.coneqp(P, q, G, h, dims, kktsolver='ldl', options=opts)
+
+    print "P=\n", str2(P, "%.17f")
+    print "q=\n", str2(q, "%.17f")
+
+    solvers.options.update(opts)
+    sol = solvers.coneqp(P, q, G, h, dims, kktsolver='ldl')
     if sol['status'] == 'optimal':
-        print "x=\n", localmisc.strMat(sol['x'])
-        print "s=\n", localmisc.strMat(sol['s'])
-        print "z=\n", localmisc.strMat(sol['z'])
+        print "x=\n", str2(sol['x'])
+        print "s=\n", str(sol['s'])
+        print "z=\n", str2(sol['z'])
 
 testqp({'maxiters': 10})
 
