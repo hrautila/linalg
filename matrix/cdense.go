@@ -73,9 +73,9 @@ func ComplexRandomSymmetric(n int, nonNeg bool) *ComplexMatrix {
 
 // Create a column-major matrix from a array of arrays. Parameter rowOrder
 // indicates if data is array of rows or array of columns.
-func ComplexMatrixStacked(data [][]complex128, rowOrder bool) *ComplexMatrix {
+func ComplexMatrixStacked(data [][]complex128, order DataOrder) *ComplexMatrix {
 	var rows, cols int
-	if rowOrder {
+	if order == RowOrder {
 		rows = len(data)
 		cols = len(data[0])
 	} else {
@@ -83,7 +83,7 @@ func ComplexMatrixStacked(data [][]complex128, rowOrder bool) *ComplexMatrix {
 		rows = len(data[0])
 	}
 	elements := make([]complex128, rows*cols)
-	if rowOrder {
+	if order == RowOrder {
 		for i := 0; i < cols; i++ {
 			for j := 0; j < rows; j++ {
 				elements[i*rows+j] = data[j][i]
