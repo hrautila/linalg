@@ -70,7 +70,7 @@ func ComplexParse(s string) (A *ComplexMatrix, err error) {
 		}
 		arrays = append(arrays, row)
 	}
-	A = ComplexMatrixStacked(arrays, true)
+	A = ComplexMatrixStacked(arrays, RowOrder)
 	return
 }
 
