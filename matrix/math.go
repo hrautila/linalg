@@ -135,7 +135,7 @@ func Inv(A Matrix) Matrix {
 	C := A.MakeCopy()
 	applyFunc(C,
 		func(v float64)float64 {return 1.0/v},
-		func(v complex128)complex128 {return complex128(1.0/real(v), 1.0/imag(v))} )
+		func(v complex128)complex128 {return complex(1.0/real(v), 1.0/imag(v))} )
 	return C
 }
 
