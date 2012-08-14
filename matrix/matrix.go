@@ -57,9 +57,7 @@ func (self FScalar) Float() float64        { return float64(self) }
 // Return complex(self, 0)
 func (self FScalar) Complex() complex128   { return complex(float64(self), 0) }
 func (self FScalar) Add(a float64) FScalar { return FScalar(float64(self)+a) }
-func (self FScalar) Sub(a float64) FScalar { return FScalar(float64(self)-a) }
-func (self FScalar) Div(a float64) FScalar { return FScalar(float64(self)/a) }
-func (self FScalar) Mult(a float64) FScalar{ return FScalar(float64(self)*a) }
+func (self FScalar) Scale(a float64) FScalar{ return FScalar(float64(self)*a) }
 func (self FScalar) Inv() FScalar          { return FScalar(1.0/float64(self)) }
 
 // Return real(self).
@@ -67,6 +65,16 @@ type CScalar complex128
 func (self CScalar) Float() float64 { return float64(real(self)) }
 // Return self.
 func (self CScalar) Complex() complex128  { return complex128(self) }
+
+// Stacking direction for matrix constructor.
+type Stacking int
+const StackDown = Stacking(0)
+const StackRight = Stacking(1)
+
+// Matrix constructor data order
+type DataOrder int
+const RowOrder = DataOrder(0)
+const ColumnOrder = DataOrder(1)
 
 // Matrix dimensions, rows, cols and leading index. For column major matrices 
 // leading index is equal to row count.
