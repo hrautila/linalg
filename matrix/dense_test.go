@@ -186,6 +186,27 @@ func TestParseSpe(t *testing.T) {
 	}
 }
 
+func TestCombined(t *testing.T) {
+	a := FloatZeros(3,3)
+	b := FloatOnes(3,3)
+	fmt.Printf("stack down=\n%v\n", FloatMatrixCombined(StackDown, a, b).ToString("%.2f"))
+	fmt.Printf("stack right=\n%v\n", FloatMatrixCombined(StackRight, a, b).ToString("%.2f"))
+}
+
+func TestStacked(t *testing.T) {
+	data := [][]float64{
+		[]float64{1, 2, 3},
+		[]float64{4, 5, 6},
+		[]float64{7, 8, 9}}
+
+	a := FloatMatrixStacked(data, RowOrder)
+	b := FloatMatrixStacked(data, ColumnOrder)
+	fmt.Printf("a=\n%v\n", a.ToString("%.2f"))
+	fmt.Printf("b=\n%v\n", b.ToString("%.2f"))
+	fmt.Printf("b == a:   %v\n", b.Equal(a))
+	fmt.Printf("b == a.T: %v\n", b.Equal(a.Transpose()))
+}
+
 // Local Variables:
 // tab-width: 4
 // End:
