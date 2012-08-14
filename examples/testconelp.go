@@ -3,8 +3,6 @@ package main
 
 import (
 	"github.com/hrautila/go.opt/matrix"
-	"github.com/hrautila/go.opt/linalg/blas"
-	//"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/cvx"
 	"fmt"
 )
@@ -62,8 +60,8 @@ func main() {
 	c,_ := matrix.FloatParsePy(sc)
 	G,_ := matrix.FloatParsePy(sG)
 	h,_ := matrix.FloatParsePy(sh)
-	A := matrix.FloatZeros(0, c.Rows())
-	b := matrix.FloatZeros(0, 1)
+	//A := matrix.FloatZeros(0, c.Rows())
+	//b := matrix.FloatZeros(0, 1)
 
 	dims := cvx.DSetNew("l", "q", "s")
 	dims.Set("l", []int{2})
