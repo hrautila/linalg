@@ -8,7 +8,7 @@
 package cvx
 
 import (
-	la_ "github.com/hrautila/go.opt/linalg"
+	la "github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
@@ -136,7 +136,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		err = errors.New(estr)
 		return 
 	}
-	fG := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la_.Option) error{
+	fG := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la.Option) error{
 		return Sgemv(G, x, y, alpha, beta, dims, opts...)
 	}
 
@@ -151,7 +151,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		return 
 	}
 
-	fA := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la_.Option) error {
+	fA := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la.Option) error {
 		return blas.GemvFloat(A, x, y, alpha, beta, opts...)
 	}
 
@@ -211,10 +211,10 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 
         // vx := vx - P*ux - A'*uy - G'*W^{-1}*uz
 		fP(ux, vx, -1.0, 1.0)
-		fA(uy, vx, -1.0, 1.0, la_.OptTrans)
+		fA(uy, vx, -1.0, 1.0, la.OptTrans)
 		blas.Copy(uz, wz3)
 		Scale(wz3, W, true, false)
-		fG(wz3, vx, -1.0, 1.0, la_.OptTrans)
+		fG(wz3, vx, -1.0, 1.0, la.OptTrans)
         // vy := vy - A*ux
         fA(ux, vy, -1.0, 1.0)
 
@@ -227,7 +227,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         // vs := vs - lmbda o (uz + us)
         blas.Copy(us, ws3)
         blas.AxpyFloat(uz, ws3, 1.0)
-        Sprod(ws3, lmbda, dims, 0, la_.OptDiag)
+        Sprod(ws3, lmbda, dims, 0, la.OptDiag)
         blas.AxpyFloat(ws3, vs, -1.0)
 		return 
 	}
@@ -268,7 +268,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		rx = q.Copy()
 		fP(x, rx, 1.0, 1.0)
 		pcost = 0.5 *( blas.DotFloat(x, rx) + blas.DotFloat(x, q))
-		fA(y, rx, 1.0, 1.0, la_.OptTrans)
+		fA(y, rx, 1.0, 1.0, la.OptTrans)
 		dres = math.Sqrt(blas.DotFloat(rx, rx)/resx0)
 		
 		ry = b.Copy()
@@ -453,8 +453,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         blas.Copy(q, rx)
         fP(x, rx, 1.0, 1.0)
         f0 = 0.5 * (blas.DotFloat(x, rx) + blas.DotFloat(x, q))
-        fA(y, rx, 1.0, 1.0, la_.OptTrans)
-        fG(z, rx, 1.0, 1.0, la_.OptTrans)
+        fA(y, rx, 1.0, 1.0, la.OptTrans)
+        fG(z, rx, 1.0, 1.0, la.OptTrans)
         resx = math.Sqrt(blas.DotFloat(rx, rx))
            
         // ry = A*x - b
@@ -685,7 +685,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			if correction && i == 1 {
 				blas.AxpyFloat(ws3, ds, -1.0)
 			}
-			blas.AxpyFloat(lmbdasq, ds, -1.0, &la_.IOpt{"n", dims.Sum("l", "q")})
+			blas.AxpyFloat(lmbdasq, ds, -1.0, &la.IOpt{"n", dims.Sum("l", "q")})
 			ind := dims.At("l")[0]
 			ds.AddAt(matrix.MakeIndexSet(0, ind, 1), sigma*mu)
 			for _, m := range dims.At("q") {
@@ -694,8 +694,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			}
 			ind2 := ind
 			for _, m := range dims.At("s") {
-				blas.AxpyFloat(lmbdasq, ds, -1.0, &la_.IOpt{"n", m}, &la_.IOpt{"incy", m+1},
-					&la_.IOpt{"offsetx", ind2}, &la_.IOpt{"offsety", ind})
+				blas.AxpyFloat(lmbdasq, ds, -1.0, &la.IOpt{"n", m}, &la.IOpt{"incy", m+1},
+					&la.IOpt{"offsetx", ind2}, &la.IOpt{"offsety", ind})
 				ds.AddAt(matrix.MakeIndexSet(ind, ind+m*m, m+1), sigma*mu)
 				ind += m*m
 				ind2 += m
@@ -787,8 +787,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 
         // ds := e + step*ds for nonlinear, 'l' and 'q' blocks.
         // dz := e + step*dz for nonlinear, 'l' and 'q' blocks.
-		blas.ScalFloat(ds, step, &la_.IOpt{"n", dims.Sum("l", "q")})
-		blas.ScalFloat(dz, step, &la_.IOpt{"n", dims.Sum("l", "q")})
+		blas.ScalFloat(ds, step, &la.IOpt{"n", dims.Sum("l", "q")})
+		blas.ScalFloat(dz, step, &la.IOpt{"n", dims.Sum("l", "q")})
 		ind := dims.At("l")[0]
 		is := matrix.MakeIndexSet(0, ind, 1)
 		ds.AddAt(is, 1.0)
@@ -818,10 +818,10 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         sigz.Add(1.0)
 		sdimsum := dims.Sum("s")
 		qdimsum := dims.Sum("l", "q")
-		blas.TbsvFloat(lmbda, sigs, &la_.IOpt{"n", sdimsum}, &la_.IOpt{"k", 0},
-			&la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", qdimsum})
-		blas.TbsvFloat(lmbda, sigz, &la_.IOpt{"n", sdimsum}, &la_.IOpt{"k", 0},
-			&la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", qdimsum})
+		blas.TbsvFloat(lmbda, sigs, &la.IOpt{"n", sdimsum}, &la.IOpt{"k", 0},
+			&la.IOpt{"lda", 1}, &la.IOpt{"offseta", qdimsum})
+		blas.TbsvFloat(lmbda, sigz, &la.IOpt{"n", sdimsum}, &la.IOpt{"k", 0},
+			&la.IOpt{"lda", 1}, &la.IOpt{"offseta", qdimsum})
 		
 		ind2 := qdimsum; ind3 := 0
 		sdims := dims.At("s")
@@ -830,9 +830,9 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			m := sdims[k]
 			for i := 0; i < m; i++ {
 				a := math.Sqrt(sigs.GetIndex(ind3+i))
-				blas.ScalFloat(ds, a, &la_.IOpt{"offset", ind2+m*i}, &la_.IOpt{"n", m})
+				blas.ScalFloat(ds, a, &la.IOpt{"offset", ind2+m*i}, &la.IOpt{"n", m})
 				a = math.Sqrt(sigz.GetIndex(ind3+i))
-				blas.ScalFloat(dz, a, &la_.IOpt{"offset", ind2+m*i}, &la_.IOpt{"n", m})
+				blas.ScalFloat(dz, a, &la.IOpt{"offset", ind2+m*i}, &la.IOpt{"n", m})
 			}
 			ind2 += m*m
 			ind3 += m
@@ -844,11 +844,11 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         // compute feasibility residuals).
 		ind = dims.Sum("l", "q")
 		ind2 = ind
-		blas.Copy(lmbda, s, &la_.IOpt{"n", ind})
+		blas.Copy(lmbda, s, &la.IOpt{"n", ind})
 		for _, m := range dims.At("s") {
-			blas.ScalFloat(s, 0.0, &la_.IOpt{"offset", ind2})
-			blas.Copy(lmbda, s, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"offsety", ind2},
-				&la_.IOpt{"n", m}, &la_.IOpt{"incy", m+1})
+			blas.ScalFloat(s, 0.0, &la.IOpt{"offset", ind2})
+			blas.Copy(lmbda, s, &la.IOpt{"offsetx", ind}, &la.IOpt{"offsety", ind2},
+				&la.IOpt{"n", m}, &la.IOpt{"incy", m+1})
 			ind += m
 			ind2 += m*m
 		}
@@ -856,11 +856,11 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		
 		ind = dims.Sum("l", "q")
 		ind2 = ind
-		blas.Copy(lmbda, z, &la_.IOpt{"n", ind})
+		blas.Copy(lmbda, z, &la.IOpt{"n", ind})
 		for _, m := range dims.At("s") {
-			blas.ScalFloat(z, 0.0, &la_.IOpt{"offset", ind2})
-			blas.Copy(lmbda, z, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"offsety", ind2},
-				&la_.IOpt{"n", m}, &la_.IOpt{"incy", m+1})
+			blas.ScalFloat(z, 0.0, &la.IOpt{"offset", ind2})
+			blas.Copy(lmbda, z, &la.IOpt{"offsetx", ind}, &la.IOpt{"offsety", ind2},
+				&la.IOpt{"n", m}, &la.IOpt{"incy", m+1})
 			ind += m
 			ind2 += m*m
 		}
