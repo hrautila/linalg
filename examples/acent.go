@@ -52,7 +52,7 @@ func Acent(A, b *matrix.FloatMatrix, niters int) (*matrix.FloatMatrix, []float64
 		// Gradient is g = A^T * (1.0/(b - A*x)). d = 1.0/(b - A*x)
 		// d is m*1 matrix, g is n*1 matrix
 		d := b.Minus(A.Times(x))
-		d.Apply(nil, func(a float64)float64 { return 1.0/a })
+		d.Apply(d, func(a float64)float64 {return 1.0/a})
 		g := A.Transpose().Times(d)
 
         // Hessian is H = A^T * diag(1./(b-A*x))^2 * A.
