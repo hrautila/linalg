@@ -71,11 +71,11 @@ func FloatRandomSymmetric(n int, nonNeg bool) *FloatMatrix {
 	return A
 }
 
-// Create a column-major matrix from a array of arrays. Parameter rowOrder
-// indicates if data is array of rows (true) or array of columns (false).
-func FloatMatrixStacked(data [][]float64, rowOrder bool) *FloatMatrix {
+// Create a column-major matrix from a array of arrays. Parameter order
+// indicates if data is array of rows (RowOrder) or array of columns (ColumnOrder).
+func FloatMatrixStacked(data [][]float64, order DataOrder) *FloatMatrix {
 	var rows, cols int
-	if rowOrder {
+	if order == RowOrder {
 		rows = len(data)
 		cols = len(data[0])
 	} else {
@@ -83,7 +83,7 @@ func FloatMatrixStacked(data [][]float64, rowOrder bool) *FloatMatrix {
 		rows = len(data[0])
 	}
 	elements := make([]float64, rows*cols)
-	if rowOrder {
+	if order == RowOrder {
 		for i := 0; i < cols; i++ {
 			for j := 0; j < rows; j++ {
 				elements[i*rows+j] = data[j][i]
@@ -100,13 +100,15 @@ func FloatMatrixStacked(data [][]float64, rowOrder bool) *FloatMatrix {
 // Create a new matrix from a list of matrices. New matrix has dimension (N, colmax),
 // where N is sum of row counts of argument matrices and colmax is the largest column
 // count of matrices.
-func FloatCombined(mlist... *FloatMatrix) *FloatMatrix {
+func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) *FloatMatrix {
 	maxc := 0
 	maxr := 0
 	N := 0
+	M := 0
 	for _, m := range mlist {
 		m, n := m.Size()
-		N += m
+		M += m
+		N += n
 		if m > maxr {
 			maxr = m
 		}
@@ -114,13 +116,23 @@ func FloatCombined(mlist... *FloatMatrix) *FloatMatrix {
 			maxc = n
 		}
 	}
-	M := FloatZeros(N, maxc)
-	row := 0
-	for _, m := range mlist {
-		M.SetSubMatrix(row, 0, m)
-		row += m.Rows()
+	var mat *FloatMatrix
+	if direction == StackDown {
+		mat = FloatZeros(M, maxc)
+		row := 0
+		for _, m := range mlist {
+			mat.SetSubMatrix(row, 0, m)
+			row += m.Rows()
+		}
+	} else {
+		mat = FloatZeros(maxr, N)
+		col := 0
+		for _, m := range mlist {
+			mat.SetSubMatrix(0, col, m)
+			col += m.Cols()
+		}
 	}
-	return M
+	return mat
 }
 
 // Create new zero filled matrix.
