@@ -15,43 +15,42 @@ import (
 
 	
 // BLAS/LAPACK matrix parameter constants.
-type ParamValue uint32
 const (
 	// BLAS/LAPACK parameters. Chosen values match corresponding
 	// parameters in CBLAS implementation.
-	RowMajor = ParamValue(101)			// Atlas row-major
-	ColumnMajor = ParamValue(102)		// Atlas column major
-	PNoTrans = ParamValue(111)			// 'N'
-	PTrans = ParamValue(112)			// 'T'
-	PConjTrans = ParamValue(113)		// 'C'
-	PUpper = ParamValue(121)			// 'U'
-	PLower = ParamValue(122)			// 'L'
-	PNonUnit = ParamValue(131)			// 'N'
-	PUnit = ParamValue(132)				// 'U'
-	PDiag = ParamValue(133)				// 'D'
-	PLeft = ParamValue(141)				// 'L'
-	PRight = ParamValue(142)			// 'R'
+	RowMajor = 101			// Atlas row-major
+	ColumnMajor = 102		// Atlas column major
+	PNoTrans = 111			// 'N'
+	PTrans = 112			// 'T'
+	PConjTrans = 113		// 'C'
+	PUpper = 121			// 'U'
+	PLower = 122			// 'L'
+	PNonUnit = 131			// 'N'
+	PUnit = 132				// 'U'
+	PDiag = 133				// 'D'
+	PLeft = 141				// 'L'
+	PRight = 142			// 'R'
 	// These for LAPACK only
-	PJobNo = ParamValue(151)			// 'N'
-	PJobValue = ParamValue(152)			// 'V'
-	PJobAll = ParamValue(153)			// 'A'
-	PJobS = ParamValue(154)				// 'S'
-	PJobO = ParamValue(155)				// 'O'
-	PRangeAll = ParamValue(161)			// 'A'
-	PRangeValue = ParamValue(162)		// 'V'
-	PRangeInt = ParamValue(163)			// 'I'
+	PJobNo = 151			// 'N'
+	PJobValue = 152			// 'V'
+	PJobAll = 153			// 'A'
+	PJobS = 154				// 'S'
+	PJobO = 155				// 'O'
+	PRangeAll = 161			// 'A'
+	PRangeValue = 162		// 'V'
+	PRangeInt = 163			// 'I'
 )
 
 // Structure for BLAS/LAPACK function parameters.
 type Parameters struct {
-	Trans, TransA, TransB ParamValue
-	Uplo ParamValue
-	Diag ParamValue
-	Side ParamValue
-	Jobz ParamValue
-	Jobu ParamValue
-	Jobvt ParamValue
-	Range ParamValue
+	Trans, TransA, TransB int
+	Uplo int
+	Diag int
+	Side int
+	Jobz int
+	Jobu int
+	Jobvt int
+	Range int
 }
 
 func GetParam(name string, params ...Option) (val int) {
@@ -86,7 +85,7 @@ Loop:
 		if _, ok := o.(*IOpt); ! ok {
 			continue Loop
 		}
-		pval := ParamValue(o.Int())
+		pval := o.Int()
 		switch {
 		case strings.EqualFold(o.Name(), "trans"):
 			if pval == PNoTrans || pval == PTrans || pval == PConjTrans {
@@ -168,48 +167,48 @@ Loop:
 // Matrix parameter option variables.
 var (
 	// trans: No Transpose
-	OptNoTrans = &IOpt{"trans", int(PNoTrans)}
-	OptNoTransA = &IOpt{"transA", int(PNoTrans)}
-	OptNoTransB = &IOpt{"transB", int(PNoTrans)}
+	OptNoTrans = &IOpt{"trans", PNoTrans}
+	OptNoTransA = &IOpt{"transA", PNoTrans}
+	OptNoTransB = &IOpt{"transB", PNoTrans}
 	// trans: Transpose
-	OptTrans = &IOpt{"trans", int(PTrans)}
-	OptTransA = &IOpt{"transA", int(PTrans)}
-	OptTransB = &IOpt{"transB", int(PTrans)}
+	OptTrans = &IOpt{"trans", PTrans}
+	OptTransA = &IOpt{"transA", PTrans}
+	OptTransB = &IOpt{"transB", PTrans}
 	// trans: Conjugate Transpose
-	OptConjTrans = &IOpt{"trans", int(PConjTrans)}
-	OptConjTransA = &IOpt{"transA", int(PConjTrans)}
-	OptConjTransB = &IOpt{"transB", int(PConjTrans)}
+	OptConjTrans = &IOpt{"trans", PConjTrans}
+	OptConjTransA = &IOpt{"transA", PConjTrans}
+	OptConjTransB = &IOpt{"transB", PConjTrans}
 	// uplo: Upper Triangular
-	OptUpper = &IOpt{"uplo", int(PUpper)}
+	OptUpper = &IOpt{"uplo", PUpper}
 	// uplo: Lower Triangular
-	OptLower = &IOpt{"uplo", int(PLower)}
+	OptLower = &IOpt{"uplo", PLower}
 	// side parameter
-	OptLeft = &IOpt{"side", int(PLeft)}
-	OptRight = &IOpt{"side", int(PRight)}
+	OptLeft = &IOpt{"side", PLeft}
+	OptRight = &IOpt{"side", PRight}
 	// diag parameter
-	OptUnit =  &IOpt{"diag", int(PUnit)}
-	OptNonUnit =  &IOpt{"diag", int(PNonUnit)}
-	OptDiag =  &IOpt{"diag", int(PDiag)}
+	OptUnit =  &IOpt{"diag", PUnit}
+	OptNonUnit =  &IOpt{"diag", PNonUnit}
+	OptDiag =  &IOpt{"diag", PDiag}
 	// Lapack jobz 
-	OptJobZNo =  &IOpt{"jobz", int(PJobNo)}
-	OptJobZValue =  &IOpt{"jobz", int(PJobValue)}
+	OptJobZNo =  &IOpt{"jobz", PJobNo}
+	OptJobZValue =  &IOpt{"jobz", PJobValue}
 	// Lapack jobu
-	OptJobuNo =  &IOpt{"jobu", int(PJobNo)}
-	OptJobuAll =  &IOpt{"jobu", int(PJobAll)}
-	OptJobuS =  &IOpt{"jobu", int(PJobS)}
-	OptJobuO =  &IOpt{"jobu", int(PJobO)}
+	OptJobuNo =  &IOpt{"jobu", PJobNo}
+	OptJobuAll =  &IOpt{"jobu", PJobAll}
+	OptJobuS =  &IOpt{"jobu", PJobS}
+	OptJobuO =  &IOpt{"jobu", PJobO}
 	// Lapack jobvt
-	OptJobvtNo =  &IOpt{"jobvt", int(PJobNo)}
-	OptJobvtAll =  &IOpt{"jobvt", int(PJobAll)}
-	OptJobvtS =  &IOpt{"jobvt", int(PJobS)}
-	OptJobvtO =  &IOpt{"jobvt", int(PJobO)}
+	OptJobvtNo =  &IOpt{"jobvt", PJobNo}
+	OptJobvtAll =  &IOpt{"jobvt", PJobAll}
+	OptJobvtS =  &IOpt{"jobvt", PJobS}
+	OptJobvtO =  &IOpt{"jobvt", PJobO}
 	// Lapack range
-	OptRangeAll =  &IOpt{"range", int(PRangeAll)}
-	OptRangeValue =  &IOpt{"range", int(PRangeValue)}
-	OptRangeInt =  &IOpt{"range", int(PRangeInt)}
+	OptRangeAll =  &IOpt{"range", PRangeAll}
+	OptRangeValue =  &IOpt{"range", PRangeValue}
+	OptRangeInt =  &IOpt{"range", PRangeInt}
 )
 
-var paramString map[ParamValue]string = map[ParamValue]string{
+var paramString map[int]string = map[int]string{
 	PNoTrans: "N",
 	PTrans: "T",
 	PConjTrans: "C",
@@ -231,7 +230,7 @@ var paramString map[ParamValue]string = map[ParamValue]string{
 	
 // Map parameter value to name string that can be used when calling Fortran
 // library functions.
-func ParamString(p ParamValue) string {
+func ParamString(p int) string {
 	v, ok := paramString[p]
 	if ok {
 		return v
