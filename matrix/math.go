@@ -130,6 +130,15 @@ func Pow(A Matrix, y Scalar) Matrix {
 	return C
 }
 
+// Return copy of A with each element as 1/A[i,j].
+func Inv(A Matrix) Matrix {
+	C := A.MakeCopy()
+	applyFunc(C,
+		func(v float64)float64 {return 1.0/v},
+		func(v complex128)complex128 {return complex128(1.0/real(v), 1.0/imag(v))} )
+	return C
+}
+
 // Return new matrix which is element wise division A / B.
 // A and B matrices must be of same type and have equal number of elements.
 func Div(A, B Matrix) (Matrix, error) {
