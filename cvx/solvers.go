@@ -68,6 +68,78 @@ func Lp(c, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, primalstart, 
 	return ConeLp(c, G, h, A, b, dims, solopts, primalstart, dualstart)
 }
 
+//    Solves a quadratic program
+//
+//        minimize    (1/2)*x'*P*x + q'*x 
+//        subject to  G*x <= h      
+//                    A*x = b.
+//
+//
+//    Input arguments.
+//
+//        P is a n x n float matrix with the lower triangular part of P stored
+//        in the lower triangle.  Must be positive semidefinite.
+//
+//        q is an n x 1 matrix.
+//
+//        G is an m x n matrix or nil.
+//
+//        h is an m x 1 matrix or nil.
+//
+//        A is a p x n matrix or nil.
+//
+//        b is a p x 1 matrix or nil.
+//
+//        The default values for G, h, A and b are empty matrices with zero rows.
+//
+//
+func Qp(P, q, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, initvals *FloatMatrixSet) (sol *Solution, err error) {
+
+	sol = nil
+	if P == nil || P.Rows() != P.Cols() {
+		err = errors.New("'P' must a non-nil square matrix")
+		return
+	}
+	if q == nil {
+		err = errors.New("'q' must a non-nil matrix")
+		return
+	}
+	if q.Rows() != P.Rows() || q.Cols() > 1 {
+		err = errors.New(fmt.Sprintf("'q' must be matrix of size (%d,1)", P.Rows()))
+		return
+	}
+	if G == nil {
+		G = matrix.FloatZeros(0, P.Rows())
+	}
+	if G.Cols() != P.Rows() {
+		err = errors.New(fmt.Sprintf("'G' must be matrix of %d columns", P.Rows()))
+		return
+	}
+	if h == nil {
+		h = matrix.FloatZeros(G.Rows(), 1)
+	}
+	if h.Rows() != G.Rows() || h.Cols() > 1 {
+		err = errors.New(fmt.Sprintf("'h' must be matrix of size (%d,1)", G.Rows()))
+		return
+	}
+	if A == nil {
+		A = matrix.FloatZeros(0, P.Rows())
+	}
+	if A.Cols() != P.Rows() {
+		err = errors.New(fmt.Sprintf("'A' must be matrix of %d columns", P.Rows()))
+		return
+	}
+	if b == nil {
+		b = matrix.FloatZeros(A.Rows(), 1)
+	}
+	if b.Rows() != A.Rows() {
+		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", A.Rows()))
+		return
+	}
+	return ConeQp(P, q, G, h, A, b, nil, solopts, initvals)
+}
+
+
 
 //    Solves a pair of primal and dual SOCPs
 //
@@ -157,14 +229,68 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 	dims := DSetNew("l", "q", "s")
 	dims.Set("l", []int{ml})
 	dims.Set("q", mq)
-	N := dims.Sum("l", "q")
+	//N := dims.Sum("l", "q")
 
-	h := matrix.FloatZeros(N, 1)
-	G := matrix.FloatZeros(N, n)
-	h.SetIndexes(matrix.MakeIndexSet(0, ml, 1), hl.FloatArray())
-	G.SetSubMatrix(0, 0, Gl)
-	//ind := ml
-	sol, err = ConeLp(c, G, h, A, b, dims, solopts, nil, nil)
+	hargs := make([]*matrix.FloatMatrix, 0, len(hqset)+1)
+	hargs = append(hargs, hl)
+	hargs = append(hargs, hqset...)
+	h := matrix.FloatMatrixCombined(matrix.StackDown, hargs...)
+
+	Gargs := make([]*matrix.FloatMatrix, 0, len(Gqset)+1)
+	Gargs = append(Gargs, Gl)
+	Gargs = append(Gargs, Gqset...)
+	G := matrix.FloatMatrixCombined(matrix.StackDown, Gargs...)
+
+	var pstart, dstart *FloatMatrixSet = nil, nil
+	if primalstart != nil {
+		pstart = FloatSetNew("x", "s")
+		pstart.Set("x", primalstart.At("x")[0])
+		slset := primalstart.At("sl")
+		margs := make([]*matrix.FloatMatrix, 0, len(slset)+1)
+		margs = append(margs, primalstart.At("s")[0])
+		margs = append(margs, slset...)
+		sl := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		pstart.Set("s", sl)
+	}
+
+	if dualstart != nil {
+		dstart = FloatSetNew("y", "z")
+		dstart.Set("y", dualstart.At("y")[0])
+		zlset := primalstart.At("zl")
+		margs := make([]*matrix.FloatMatrix, 0, len(zlset)+1)
+		margs = append(margs, dualstart.At("z")[0])
+		margs = append(margs, zlset...)
+		zl := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		dstart.Set("z", zl)
+	}
+		
+	sol, err = ConeLp(c, G, h, A, b, dims, solopts, primalstart, dualstart)
+	// unpack sol.S and sol.Z (to be done)
+	return
+}
+
+//    Solves a pair of primal and dual SDPs
+//
+//        minimize    c'*x             
+//        subject to  Gl*x + sl = hl      
+//                    mat(Gs[k]*x) + ss[k] = hs[k], k = 0, ..., N-1
+//                    A*x = b                      
+//                    sl >= 0,  ss[k] >= 0, k = 0, ..., N-1
+//
+//        maximize    -hl'*z - sum_k trace(hs[k]*zs[k]) - b'*y
+//        subject to  Gl'*zl + sum_k Gs[k]'*vec(zs[k]) + A'*y + c = 0
+//                    zl >= 0,  zs[k] >= 0, k = 0, ..., N-1.
+//
+//    The inequalities sl >= 0 and zl >= 0 are elementwise vector 
+//    inequalities.  The inequalities ss[k] >= 0, zs[k] >= 0 are matrix 
+//    inequalities, i.e., the symmetric matrices ss[k] and zs[k] must be
+//    positive semidefinite.  mat(Gs[k]*x) is the symmetric matrix X with 
+//    X[:] = Gs[k]*x.  For a symmetric matrix, zs[k], vec(zs[k]) is the 
+//    vector zs[k][:].
+//    
+func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *FloatMatrixSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+	sol = nil
+	err = errors.New("Not implemented yet")
 	return
 }
 
