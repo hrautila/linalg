@@ -57,6 +57,7 @@ type Solution struct {
 	S *matrix.FloatMatrix
 	Z *matrix.FloatMatrix
 	Y *matrix.FloatMatrix
+	Result *FloatMatrixSet
 	PrimalObjective float64
 	DualObjective float64
 	Gap float64

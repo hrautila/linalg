@@ -234,12 +234,12 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 	hargs := make([]*matrix.FloatMatrix, 0, len(hqset)+1)
 	hargs = append(hargs, hl)
 	hargs = append(hargs, hqset...)
-	h := matrix.FloatMatrixCombined(matrix.StackDown, hargs...)
+	h, indh:= matrix.FloatMatrixCombined(matrix.StackDown, hargs...)
 
 	Gargs := make([]*matrix.FloatMatrix, 0, len(Gqset)+1)
 	Gargs = append(Gargs, Gl)
 	Gargs = append(Gargs, Gqset...)
-	G := matrix.FloatMatrixCombined(matrix.StackDown, Gargs...)
+	G, indg := matrix.FloatMatrixCombined(matrix.StackDown, Gargs...)
 
 	var pstart, dstart *FloatMatrixSet = nil, nil
 	if primalstart != nil {
@@ -265,7 +265,31 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 	}
 		
 	sol, err = ConeLp(c, G, h, A, b, dims, solopts, primalstart, dualstart)
-	// unpack sol.S and sol.Z (to be done)
+	// unpack sol.Result
+	if err == nil {
+		s := sol.Result.At("s")[0]
+		sl := matrix.FloatVector(s.FloatArray()[:ml])
+		sol.Result.Append("sl", sl)
+		ind := ml
+		for i, k := range indh {
+			sk := matrix.FloatVector(s.FloatArray()[ind:ind+k])
+			sol.Result.Append("sq", sk)
+			ind += k
+		}
+
+		z := sol.Result.At("z")[0]
+		zl := matrix.FloatVector(s.FloatArray()[:ml])
+		sol.Result.Append("zl", zl)
+		ind := ml
+		for i, k := range indh {
+			zk := matrix.FloatVector(s.FloatArray()[ind:ind+k])
+			sol.Result.Append("zq", zk)
+			ind += k
+		}
+	}
+	sol.Result.Remove("s")
+	sol.Result.Remove("z")
+	
 	return
 }
 

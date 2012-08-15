@@ -74,7 +74,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	const STEP = 0.99
 
 	sol = &Solution{Unknown,
-		nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, 
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
@@ -433,6 +433,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			hz := Sdot(h, z, dims, 0)
 
 			sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+			sol.Result = FloatSetNew("x", "y", "s", "x")
+			sol.Result.Append("x", x)
+			sol.Result.Append("y", y)
+			sol.Result.Append("s", s)
+			sol.Result.Append("z", z)
 			sol.Status = Optimal
 			sol.Gap = gap; sol.RelativeGap = relgap
 			sol.PrimalObjective = cx
@@ -634,6 +639,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				}
 				err = errors.New("No solution. Max iterations exceeded")
 				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Result = FloatSetNew("x", "y", "s", "x")
+				sol.Result.Append("x", x)
+				sol.Result.Append("y", y)
+				sol.Result.Append("s", s)
+				sol.Result.Append("z", z)
 				sol.Status = Unknown
 				sol.Gap = gap; sol.RelativeGap = relgap
 				sol.PrimalObjective = pcost
@@ -653,6 +663,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				}
 				err = nil
 				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Result = FloatSetNew("x", "y", "s", "x")
+				sol.Result.Append("x", x)
+				sol.Result.Append("y", y)
+				sol.Result.Append("s", s)
+				sol.Result.Append("z", z)
 				sol.Status = Optimal
 				sol.Gap = gap; sol.RelativeGap = relgap
 				sol.PrimalObjective = pcost
@@ -682,6 +697,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			}
 			tz, _ = MaxStep(z, dims, 0, nil)
 			sol.Status = PrimalInfeasible
+			sol.Result = FloatSetNew("x", "y", "s", "x")
+			sol.Result.Append("x", nil)
+			sol.Result.Append("y", nil)
+			sol.Result.Append("s", nil)
+			sol.Result.Append("z", nil)
 			sol.Gap = math.NaN()
 			sol.RelativeGap = math.NaN()
 			sol.PrimalObjective = math.NaN()
@@ -710,6 +730,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			}
 			ts, _ = MaxStep(s, dims, 0, nil)
 			sol.Status = PrimalInfeasible
+			sol.Result = FloatSetNew("x", "y", "s", "x")
+			sol.Result.Append("x", nil)
+			sol.Result.Append("y", nil)
+			sol.Result.Append("s", nil)
+			sol.Result.Append("z", nil)
 			sol.Gap = math.NaN()
 			sol.RelativeGap = math.NaN()
 			sol.PrimalObjective = 1.0
@@ -800,6 +825,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				tz,_ = MaxStep(z, dims, 0, nil)
 				err = errors.New("Terminated (singular KKT matrix).")
 				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Result = FloatSetNew("x", "y", "s", "x")
+				sol.Result.Append("x", x)
+				sol.Result.Append("y", y)
+				sol.Result.Append("s", s)
+				sol.Result.Append("z", z)
 				sol.Status = Unknown
 				sol.RelativeGap = relgap
 				sol.PrimalObjective = pcost

@@ -97,10 +97,13 @@ func FloatMatrixStacked(data [][]float64, order DataOrder) *FloatMatrix {
 	return makeFloatMatrix(rows, cols, elements)
 }
 
-// Create a new matrix from a list of matrices. New matrix has dimension (N, colmax),
-// where N is sum of row counts of argument matrices and colmax is the largest column
-// count of matrices.
-func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) *FloatMatrix {
+// Create a new matrix from a list of matrices. New matrix has dimension (M, colmax)
+// if direction is StackDown, and (rowmax, N) if direction is StackRight. 
+// M is sum of row counts of argument matrices and N is sum of column counts of arguments.
+// Colmax is the largest column count of matrices and rowmax is the largest row count.
+// Return  new matrix and array of indexes to submatrix locations, row numbers if direction
+// StackDown, and column numbers if direction is StackRight.
+func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) (*FloatMatrix, []int) {
 	maxc := 0
 	maxr := 0
 	N := 0
@@ -117,11 +120,13 @@ func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) *FloatMatrix
 		}
 	}
 	var mat *FloatMatrix
+	indexes := make([]int, 0)
 	if direction == StackDown {
 		mat = FloatZeros(M, maxc)
 		row := 0
 		for _, m := range mlist {
 			mat.SetSubMatrix(row, 0, m)
+			indexes = append(indexes, row)
 			row += m.Rows()
 		}
 	} else {
@@ -129,10 +134,11 @@ func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) *FloatMatrix
 		col := 0
 		for _, m := range mlist {
 			mat.SetSubMatrix(0, col, m)
+			indexes = append(indexes, col)
 			col += m.Cols()
 		}
 	}
-	return mat
+	return mat, indexes
 }
 
 // Create new zero filled matrix.

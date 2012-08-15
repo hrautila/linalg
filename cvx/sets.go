@@ -61,6 +61,11 @@ func (M *FloatMatrixSet) Append(key string, ms ...*matrix.FloatMatrix) {
 	M.sets[key] = mset
 }
 
+// Remove set.
+func (M *FloatMatrixSet) Remove(key string) {
+	delete(M.sets, key)
+}
+
 func (M *FloatMatrixSet) Keys() []string {
 	s := make([]string, len(M.sets))
 	for key := range M.sets {
