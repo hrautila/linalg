@@ -52,7 +52,7 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 	ipiv := make([]int32, ldK)
 	u := matrix.FloatZeros(ldK, 1)
 	g := matrix.FloatZeros(mnl+G.Rows(), 1)
-	
+
 	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (kktFunc, error) {
 		var err error = nil
 		// Zero K for each call.
@@ -62,7 +62,6 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 		}
 		K.SetSubMatrix(n, 0, A)
 		//fmt.Printf("G=\n%v\n", G)
-		//fmt.Printf("K=\n%v\n", K)
 		for k := 0; k < n; k++ {
 			// g is (mnl + G.Rows(), 1) matrix, Df is (mnl, n), G is (N, n)
 			if mnl > 0 {
@@ -80,8 +79,8 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 		setDiagonal(K, n+p, n+n, ldK, ldK, -1.0)
 		//fmt.Printf("K=\n%v\n", K)
 		err = lapack.Sytrf(K, ipiv)
-		if err != nil { return nil, err }
 		//fmt.Printf("sytrf: K=\n%v\n", K)
+		if err != nil { return nil, err }
 
 		solve := func(x, y, z *matrix.FloatMatrix) (err error) {
             // Solve
@@ -111,7 +110,7 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			if err != nil { return }
 
 			err = lapack.Sytrs(K, u, ipiv)
-			if err != nil { return }
+			if err != nil {	return }
 
 			blas.Copy(u, x, &la_.IOpt{"n", n})
 			blas.Copy(u, y, &la_.IOpt{"n", p}, &la_.IOpt{"offsetx", n})

@@ -193,6 +193,13 @@ func (ds *DimensionSet) SumPacked(keys ...string) int {
 	return sz
 }
 
+func (ds *DimensionSet) Printf() {
+	for key := range ds.sets {
+		fmt.Printf("set '%s': %v\n", key, ds.sets[key])
+	}
+}
+
+
 // Local Variables:
 // tab-width: 4
 // End:
