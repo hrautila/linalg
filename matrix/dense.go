@@ -101,8 +101,8 @@ func FloatMatrixStacked(data [][]float64, order DataOrder) *FloatMatrix {
 // if direction is StackDown, and (rowmax, N) if direction is StackRight. 
 // M is sum of row counts of argument matrices and N is sum of column counts of arguments.
 // Colmax is the largest column count of matrices and rowmax is the largest row count.
-// Return  new matrix and array of indexes to submatrix locations, row numbers if direction
-// StackDown, and column numbers if direction is StackRight.
+// Return  new matrix and array of submatrix sizes, row counts for StackDown and column
+// counts for StackRight
 func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) (*FloatMatrix, []int) {
 	maxc := 0
 	maxr := 0
@@ -126,7 +126,7 @@ func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) (*FloatMatri
 		row := 0
 		for _, m := range mlist {
 			mat.SetSubMatrix(row, 0, m)
-			indexes = append(indexes, row)
+			indexes = append(indexes, m.Rows())
 			row += m.Rows()
 		}
 	} else {
@@ -134,7 +134,7 @@ func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) (*FloatMatri
 		col := 0
 		for _, m := range mlist {
 			mat.SetSubMatrix(0, col, m)
-			indexes = append(indexes, col)
+			indexes = append(indexes, m.Cols())
 			col += m.Cols()
 		}
 	}

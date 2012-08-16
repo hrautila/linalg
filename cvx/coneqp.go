@@ -67,7 +67,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 	STEP := 0.99
 
 	sol = &Solution{Unknown,
-		nil, nil, nil, nil,
+		nil, nil, nil, nil, nil,
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 

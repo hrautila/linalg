@@ -34,7 +34,7 @@ def testsdp(opts):
     print "zs[1] = \n", str2(sol['zs'][1], "%.9f")
 
 
-testsdp({'maxiters': 10})
+testsdp({'maxiters': 20})
 
     
 

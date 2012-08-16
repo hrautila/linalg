@@ -12,7 +12,7 @@ import (
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
 	"fmt"
-	//"math"
+	"math"
 )
 
 
@@ -204,7 +204,7 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 		return
 	}
 	for i, hq := range hqset {
-		if ! hq.SizeMatch(Gqset[i].Size()) {
+		if ! hq.SizeMatch(Gqset[i].Rows(), 1) {
 			s := fmt.Sprintf("hq[%d] has size (%d,%d). Expected size is (%d,1)",
 				i, hq.Rows(), hq.Cols(), Gqset[i].Rows())
 			err = errors.New(s)
@@ -249,7 +249,7 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 		margs := make([]*matrix.FloatMatrix, 0, len(slset)+1)
 		margs = append(margs, primalstart.At("s")[0])
 		margs = append(margs, slset...)
-		sl := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		sl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
 		pstart.Set("s", sl)
 	}
 
@@ -260,29 +260,29 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 		margs := make([]*matrix.FloatMatrix, 0, len(zlset)+1)
 		margs = append(margs, dualstart.At("z")[0])
 		margs = append(margs, zlset...)
-		zl := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		zl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
 		dstart.Set("z", zl)
 	}
 		
-	sol, err = ConeLp(c, G, h, A, b, dims, solopts, primalstart, dualstart)
+	sol, err = ConeLp(c, G, h, A, b, dims, solopts, pstart, dstart)
 	// unpack sol.Result
 	if err == nil {
 		s := sol.Result.At("s")[0]
 		sl := matrix.FloatVector(s.FloatArray()[:ml])
 		sol.Result.Append("sl", sl)
 		ind := ml
-		for i, k := range indh {
+		for _, k := range indh[1:] {
 			sk := matrix.FloatVector(s.FloatArray()[ind:ind+k])
 			sol.Result.Append("sq", sk)
 			ind += k
 		}
 
 		z := sol.Result.At("z")[0]
-		zl := matrix.FloatVector(s.FloatArray()[:ml])
+		zl := matrix.FloatVector(z.FloatArray()[:ml])
 		sol.Result.Append("zl", zl)
-		ind := ml
-		for i, k := range indh {
-			zk := matrix.FloatVector(s.FloatArray()[ind:ind+k])
+		ind = ml
+		for _, k := range indg[1:] {
+			zk := matrix.FloatVector(z.FloatArray()[ind:ind+k])
 			sol.Result.Append("zq", zk)
 			ind += k
 		}
@@ -313,9 +313,143 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 //    vector zs[k][:].
 //    
 func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *FloatMatrixSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
-	sol = nil
-	err = errors.New("Not implemented yet")
+	if c == nil {
+		err = errors.New("'c' must a column matrix")
+		return
+	}
+	n := c.Rows()
+	if n < 1 {
+		err = errors.New("Number of variables must be at least 1")
+		return
+	}
+	if Gl == nil {
+		Gl = matrix.FloatZeros(0, n)
+	}
+	if Gl.Cols() != n {
+		err = errors.New(fmt.Sprintf("'G' must be matrix with %d columns", n))
+		return
+	}
+	ml := Gl.Rows()
+	if hl == nil {
+		hl = matrix.FloatZeros(0, 1)
+	}
+	if ! hl.SizeMatch(ml, 1) {
+		err = errors.New(fmt.Sprintf("'hl' must be matrix of size (%d,1)", ml))
+		return
+	}
+	Gsset := Ghs.At("Gs")
+	ms := make([]int, 0)
+	for i, Gs := range Gsset {
+		if Gs.Cols() != n {
+			err = errors.New(fmt.Sprintf("'Gs' must be list of matrices with %d columns", n))
+			return
+		}
+		sz := int(math.Sqrt(float64(Gs.Rows())))
+		if Gs.Rows() != sz*sz {
+			err = errors.New(fmt.Sprintf("the squareroot of the number of rows of 'Gq[%d]' is not an integer", i))
+			return
+		}
+		ms = append(ms, sz)
+	}
+
+	hsset := Ghs.At("hs")
+	if len(Gsset) != len(hsset) {
+		err = errors.New(fmt.Sprintf("'hs' must be a list of %d matrices", len(Gsset)))
+		return
+	}
+	for i, hs := range hsset {
+		if ! hs.SizeMatch(ms[i], ms[i]) {
+			s := fmt.Sprintf("hq[%d] has size (%d,%d). Expected size is (%d,%d)",
+				i, hs.Rows(), hs.Cols(), ms[i], ms[i])
+			err = errors.New(s)
+			return
+		}
+	}
+	if A == nil {
+		A = matrix.FloatZeros(0, n)
+	}
+	if A.Cols() != n {
+		err = errors.New(fmt.Sprintf("'A' must be matrix with %d columns", n))
+		return
+	}
+	p := A.Rows()
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if ! b.SizeMatch(p, 1) {
+		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", p))
+		return
+	}
+	dims := DSetNew("l", "q", "s")
+	dims.Set("l", []int{ml})
+	dims.Set("s", ms)
+	N := dims.Sum("l") + dims.SumSquared("s")
+
+	// Map hs matrices to h vector
+	h := matrix.FloatZeros(N, 1)
+	h.SetIndexes(matrix.MakeIndexSet(0, ml, 1), hl.FloatArray()[:ml])
+	ind := ml
+	for k, hs := range hsset {
+		h.SetIndexes(matrix.MakeIndexSet(ind, ind+ms[k]*ms[k], 1), hs.FloatArray())
+		ind += ms[k]*ms[k]
+	}
+
+	Gargs := make([]*matrix.FloatMatrix, 0)
+	Gargs = append(Gargs, Gl)
+	Gargs = append(Gargs, Gsset...)
+	G, sizeg := matrix.FloatMatrixCombined(matrix.StackDown, Gargs...)
+
+	var pstart, dstart *FloatMatrixSet = nil, nil
+	if primalstart != nil {
+		pstart = FloatSetNew("x", "s")
+		pstart.Set("x", primalstart.At("x")[0])
+		slset := primalstart.At("sl")
+		margs := make([]*matrix.FloatMatrix, 0, len(slset)+1)
+		margs = append(margs, primalstart.At("s")[0])
+		margs = append(margs, slset...)
+		sl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		pstart.Set("s", sl)
+	}
+
+	if dualstart != nil {
+		dstart = FloatSetNew("y", "z")
+		dstart.Set("y", dualstart.At("y")[0])
+		zlset := primalstart.At("zl")
+		margs := make([]*matrix.FloatMatrix, 0, len(zlset)+1)
+		margs = append(margs, dualstart.At("z")[0])
+		margs = append(margs, zlset...)
+		zl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		dstart.Set("z", zl)
+	}
+
+	sol, err = ConeLp(c, G, h, A, b, dims, solopts, pstart, dstart)
+	// unpack sol.Result
+	if err == nil {
+		s := sol.Result.At("s")[0]
+		sl := matrix.FloatVector(s.FloatArray()[:ml])
+		sol.Result.Append("sl", sl)
+		ind := ml
+		for _, m := range ms {
+			sk := matrix.FloatNew(m, m, s.FloatArray()[ind:ind+m*m])
+			sol.Result.Append("ss", sk)
+			ind += m*m
+		}
+
+		z := sol.Result.At("z")[0]
+		zl := matrix.FloatVector(s.FloatArray()[:ml])
+		sol.Result.Append("zl", zl)
+		ind = ml
+		for i, k := range sizeg[1:] {
+			zk := matrix.FloatNew(ms[i], ms[i], z.FloatArray()[ind:ind+k])
+			sol.Result.Append("zs", zk)
+			ind += k
+		}
+	}
+	sol.Result.Remove("s")
+	sol.Result.Remove("z")
+	
 	return
+
 }
 
 

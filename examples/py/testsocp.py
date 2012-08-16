@@ -39,6 +39,6 @@ def testsocp(opts):
     print "zq[1] = \n", str2(sol['zq'][1], "%.9f")
 
 
-testsocp({'maxiters': 10})
+testsocp({'maxiters': 10, 'kktsolver': 'ldl'})
 
     
