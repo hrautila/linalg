@@ -199,7 +199,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 	var factor kktFactor
 	if kkt, ok := solvers[solvername]; ok {
 		if b.Rows() > q.Rows()  {
-			err = errors.New("Rank(A) < p or Rank[G; A] < n")
+			err = errors.New("1: Rank(A) < p or Rank[G; A] < n")
 			return
 		}
 		if kkt == nil {
@@ -208,6 +208,9 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		}
 		// kkt function returns us problem spesific factor function.
 		factor, err = kkt(G, dims, A, 0)
+		if err != nil {
+			fmt.Printf("error on factoring: %s\n", err)
+		}
 		// solver is 
 		kktsolver = func(W *FloatMatrixSet) (kktFunc, error) {
 			return factor(W, P, nil)
@@ -277,7 +280,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		Wtmp.Set("di", matrix.FloatZeros(0, 1))
 		f3, err = kktsolver(Wtmp)
 		if err != nil {
-			err = errors.New("Rank(A) < p or Rank(([P; A; G;]) < n")
+			s := fmt.Sprintf("kkt error: %s", err)
+			err = errors.New("2: Rank(A) < p or Rank(([P; A; G;]) < n : "+s)
 			return
 		}
 		x = q.Copy()
@@ -301,10 +305,11 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			relgap = math.NaN()
 		}
 
-		sol.X = x
-		sol.Y = y
-		sol.S = matrix.FloatZeros(0, 1)
-		sol.Z = matrix.FloatZeros(0, 1)
+		sol.Result = FloatSetNew("x", "y", "s", "z")
+		sol.Result.Set("x", x)
+		sol.Result.Set("y", y)
+		sol.Result.Set("s", matrix.FloatZeros(0,1))
+		sol.Result.Set("z", matrix.FloatZeros(0,1))
 		sol.Status = Optimal
 		sol.Gap = 0.0; sol.RelativeGap = relgap
 		sol.PrimalObjective = pcost
@@ -345,7 +350,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		}
 		f, err = kktsolver(W)
 		if err != nil {
-			err = errors.New("Rank(A) < p or Rank([P; G; A]) < n")
+			s := fmt.Sprintf("kkt error: %s", err)
+			err = errors.New("3: Rank(A) < p or Rank([P; G; A]) < n : "+s)
 			return 
 		}
 		// Solve
@@ -359,7 +365,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		z = h.Copy()
 		err = f(x, y, z)
 		if err != nil {
-			err = errors.New("Rank(A) < p or Rank([P; G; A]) < n")
+			s := fmt.Sprintf("kkt error: %s", err)
+			err = errors.New("4: Rank(A) < p or Rank([P; G; A]) < n : "+s)
 			return 
 		}
 		s = z.Copy()
@@ -540,12 +547,13 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 				return
 			}
 			// optimal solution found
-			fmt.Print("Optimal solution.")
+			//fmt.Print("Optimal solution.\n")
 			err = nil
-			sol.X = x
-			sol.Y = y
-			sol.S = s
-			sol.Z = z
+			sol.Result = FloatSetNew("x", "y", "s", "z")
+			sol.Result.Set("x", x)
+			sol.Result.Set("y", y)
+			sol.Result.Set("s", s)
+			sol.Result.Set("z", z)
 			sol.Status = Optimal
 			sol.Gap = gap; sol.RelativeGap = relgap
 			sol.PrimalObjective = pcost
@@ -573,7 +581,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		f3, err = kktsolver(W)
 		if err != nil {
 			if iter == 0 {
-				err = errors.New("Rank(A) < p or Rank([P; A; G]) < n")
+				s := fmt.Sprintf("kkt error: %s", err)
+				err = errors.New("5: Rank(A) < p or Rank([P; A; G]) < n : "+s)
 				return
 			} else {
 				ind := dims.Sum("l", "q")
@@ -587,7 +596,11 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 				// terminated (singular KKT matrix)
 				fmt.Printf("Terminated (singular KKT matrix).\n")
 				err = errors.New("Terminated (singular KKT matrix).")
-				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Result = FloatSetNew("x", "y", "s", "z")
+				sol.Result.Set("x", x)
+				sol.Result.Set("y", y)
+				sol.Result.Set("s", s)
+				sol.Result.Set("z", z)
 				sol.Status = Unknown
 				sol.RelativeGap = relgap
 				sol.PrimalObjective = pcost
@@ -738,7 +751,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			err = f4(dx, dy, dz, ds)
 			if err != nil {
 				if iter == 0 {
-					err = errors.New("Rank(A) < p or Rank([P; A; G]) < n")
+					s := fmt.Sprintf("kkt error: %s", err)
+					err = errors.New("6: Rank(A) < p or Rank([P; A; G]) < n : "+s)
 					return
 				} else {
 					ind = dims.Sum("l", "q")
