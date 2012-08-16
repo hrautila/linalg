@@ -73,25 +73,29 @@ func FloatRandomSymmetric(n int, nonNeg bool) *FloatMatrix {
 
 // Create a column-major matrix from a array of arrays. Parameter order
 // indicates if data is array of rows (RowOrder) or array of columns (ColumnOrder).
-func FloatMatrixStacked(data [][]float64, order DataOrder) *FloatMatrix {
+func FloatMatrixStacked(data [][]float64, order... DataOrder) *FloatMatrix {
 	var rows, cols int
-	if order == RowOrder {
-		rows = len(data)
-		cols = len(data[0])
-	} else {
+	if len(order) == 0 || order[0] == ColumnOrder {
 		cols = len(data)
 		rows = len(data[0])
+	} else {
+		rows = len(data)
+		cols = len(data[0])
+	}
+
+	if rows*cols == 0 {
+		return FloatZeros(rows, cols)
 	}
 	elements := make([]float64, rows*cols)
-	if order == RowOrder {
+	if len(order) == 0 || order[0] == ColumnOrder {
+		for i := 0; i < cols; i++ {
+			copy(elements[i*rows:], data[i][0:])
+		}
+	} else {
 		for i := 0; i < cols; i++ {
 			for j := 0; j < rows; j++ {
 				elements[i*rows+j] = data[j][i]
 			}
-		}
-	} else {
-		for i := 0; i < cols; i++ {
-			copy(elements[i*rows:], data[i][0:])
 		}
 	}
 	return makeFloatMatrix(rows, cols, elements)
