@@ -61,7 +61,7 @@ func TestCCopy(t *testing.T) {
 	fmt.Printf("A:\n%v\n", A)
 	C := A.Copy()
 	fmt.Printf("C:\n%v\n", C)
-	C.Set(0, 1, C.Get(0, 1)*10)
+	C.SetAt(10.0*C.GetAt(0, 1), 0, 1)
 	B := FloatNew(3, 2, []float64{1,2,3,4,5,6})
 	fmt.Printf("B:\n%v\n", B)
 }
@@ -88,7 +88,7 @@ func TestFMath(t *testing.T) {
 	fmt.Printf("A += 1.0\n%v\n", A)
 	A.Scale(9.0)
 	fmt.Printf("A *= 9.0\n%v\n", A)
-	A.Sub(1.0)
+	A.Add(-1.0)
 	fmt.Printf("A -= 1.0\n%v\n", A)
 	B := A.Mul(A)
 	fmt.Printf("B = A .* A\n%v\n", B)
@@ -112,7 +112,7 @@ func TestFMath(t *testing.T) {
 	fmt.Printf("H:\n%v\n", H)
 	K := G.Times(H)
 	fmt.Printf("K = G*H:\n%v\n", K)
-	X := FloatNumbers(K.Cols(), 1, 2.0)
+	X := FloatWithValue(K.Cols(), 1, 2.0)
 	fmt.Printf("X:\n%v\n", X)
 	Z := K.Times(X)
 	fmt.Printf("Z = K*X:\n%v\n", Z)
@@ -122,10 +122,10 @@ func TestMath2(t *testing.T) {
 	m := FloatOnes(8, 1)
 	iset := make([]int, 0)
 	iset = append(iset, []int{0,1,2}...)
-	m.AddAt(iset, 1.0)
+	m.Add(1.0, iset...)
 	iset = make([]int, 0)
 	iset = append(iset, []int{5,6,7}...)
-	m.AddAt(iset, 5.0)
+	m.Add(5.0, iset...)
 	fmt.Printf("%v\n", m)
 }
 func TestFuncs(t *testing.T) {
@@ -189,8 +189,10 @@ func TestParseSpe(t *testing.T) {
 func TestCombined(t *testing.T) {
 	a := FloatZeros(3,3)
 	b := FloatOnes(3,3)
-	fmt.Printf("stack down=\n%v\n", FloatMatrixCombined(StackDown, a, b).ToString("%.2f"))
-	fmt.Printf("stack right=\n%v\n", FloatMatrixCombined(StackRight, a, b).ToString("%.2f"))
+	m0,_ := FloatMatrixCombined(StackDown, a, b)
+	m1,_ := FloatMatrixCombined(StackRight, a, b)
+	fmt.Printf("stack down=\n%v\n", m0.ToString("%.2f"))
+	fmt.Printf("stack right=\n%v\n", m1.ToString("%.2f"))
 }
 
 func TestStacked(t *testing.T) {

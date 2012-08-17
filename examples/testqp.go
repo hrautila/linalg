@@ -22,7 +22,7 @@ func main() {
 	n := pbar.Rows()
 	G := matrix.FloatDiagonal(n, -1.0)
 	h := matrix.FloatZeros(n, 1)
-	A := matrix.FloatNumbers(1, n, 1.0)
+	A := matrix.FloatWithValue(1, n, 1.0)
 	b := matrix.FloatNew(1,1, []float64{1.0})
 
 	//fmt.Printf("G=\n%v\n", G.ToString("%.2f"))
@@ -34,7 +34,7 @@ func main() {
 
 	mu := 1.0
 	Smu := S.Copy().Scale(mu)
-	pbarNeg := pbar.Copy().Neg()
+	pbarNeg := pbar.Copy().Scale(-1.0)
 	fmt.Printf("Smu=\n%v\n", Smu.String())
 	fmt.Printf("-pbar=\n%v\n", pbarNeg.String())
 

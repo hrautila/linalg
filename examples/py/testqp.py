@@ -3,7 +3,6 @@ from math import sqrt
 from cvxopt import matrix
 from cvxopt.blas import dot 
 from cvxopt.solvers import qp, options 
-#from localcones import qp, options
 
 S = matrix( [[ 4e-2,  6e-3, -4e-3,   0.0 ], 
              [ 6e-3,  1e-2,  0.0,    0.0 ],
@@ -43,5 +42,5 @@ def testone(mu, opts={}):
     print "ret=%.3f, risk=%.3f" % (ret, risk)
     print "x=\n", x
 
-testone(1.0, {'show_progress': True})
+testone(1.0, {'show_progress': True })
 

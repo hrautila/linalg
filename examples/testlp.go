@@ -26,9 +26,9 @@ func main() {
 	sol, err := cvx.Lp(c, G, h, nil, nil, &solopts, nil, nil)
 	fmt.Printf("status: %v\n", err)
 	if sol != nil && sol.Status == cvx.Optimal {
-		fmt.Printf("x=\n%v\n", sol.X.ToString("%.9f"))
-		fmt.Printf("s=\n%v\n", sol.S.ToString("%.9f"))
-		fmt.Printf("z=\n%v\n", sol.Z.ToString("%.9f"))
+		fmt.Printf("x=\n%v\n", sol.Result.At("x")[0].ToString("%.9f"))
+		fmt.Printf("s=\n%v\n", sol.Result.At("s")[0].ToString("%.9f"))
+		fmt.Printf("z=\n%v\n", sol.Result.At("z")[0].ToString("%.9f"))
 	}
 }
 

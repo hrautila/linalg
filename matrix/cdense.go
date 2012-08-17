@@ -61,9 +61,9 @@ func ComplexRandomSymmetric(n int, nonNeg bool) *ComplexMatrix {
 			re := uniformFloat64(nonNeg)
 			im := uniformFloat64(nonNeg)
 			val := complex(re, im)
-			A.Set(i, j, val)
+			A.SetAt(val, i, j)
 			if i != j {
-				A.Set(j, i, val)
+				A.SetAt(val, j, i)
 			}
 		}
 	}
@@ -173,10 +173,21 @@ loop:
 }
 
 // Get the element in the i'th row and j'th column.
-func (A *ComplexMatrix) Get(i int, j int) (val complex128) {
+func (A *ComplexMatrix) GetAt(i int, j int) (val complex128) {
 	step := A.LeadingIndex()
 	val = A.elements[j*step:j*step+A.Cols()][i]
 	return
+}
+
+// Get elements from column-major indexes. Return new array.
+func (A *ComplexMatrix) Get(indexes... int) []complex128 {
+	vals := make([]complex128, 0)
+	N := A.NumElements()
+	for _, k := range indexes {
+		k = (N + k) % N
+		vals = append(vals, A.elements[k])
+	}
+	return vals
 }
 
 // Get i'th element in column-major ordering
@@ -202,7 +213,7 @@ func (A *ComplexMatrix) GetIndexes(indexes []int) []complex128 {
 }
 
 // Get copy of i'th row.
-func (A *ComplexMatrix) GetRow(i int, vals []complex128) []complex128 {
+func (A *ComplexMatrix) GetRowArray(i int, vals []complex128) []complex128 {
 	if cap(vals) < A.Cols() {
 		vals = make([]complex128, A.Cols())
 	}
@@ -214,7 +225,7 @@ func (A *ComplexMatrix) GetRow(i int, vals []complex128) []complex128 {
 }
 
 // Get copy of i'th column.
-func (A *ComplexMatrix) GetColumn(i int, vals []complex128) []complex128 {
+func (A *ComplexMatrix) GetColumnArray(i int, vals []complex128) []complex128 {
 	if cap(vals) < A.Rows() {
 		vals = make([]complex128, A.Rows())
 	}
@@ -227,7 +238,7 @@ func (A *ComplexMatrix) GetColumn(i int, vals []complex128) []complex128 {
 
 // Get copy of i'th row. Return parameter matrix. If vec is too small 
 // reallocate new vector and return it.
-func (A *ComplexMatrix) GetRowMatrix(i int, vec *ComplexMatrix) *ComplexMatrix {
+func (A *ComplexMatrix) GetRow(i int, vec *ComplexMatrix) *ComplexMatrix {
 	if vec == nil || vec.NumElements() < A.Cols() {
 		vec = ComplexZeros(A.Cols(), 1)
 	}
@@ -240,7 +251,7 @@ func (A *ComplexMatrix) GetRowMatrix(i int, vec *ComplexMatrix) *ComplexMatrix {
 }
 
 // Get copy of i'th column. See GetRow.
-func (A *ComplexMatrix) GetColumnMatrix(i int, vec *ComplexMatrix) *ComplexMatrix {
+func (A *ComplexMatrix) GetColumn(i int, vec *ComplexMatrix) *ComplexMatrix {
 	if vec == nil || vec.NumElements() < A.Rows() {
 		vec = ComplexZeros(A.Rows(), 1)
 	}
@@ -265,7 +276,7 @@ func (A *ComplexMatrix) GetSlice(start, end int) []complex128 {
 }
 
 // Set the element in the i'th row and j'th column to val.
-func (A *ComplexMatrix) Set(i int, j int, val complex128) {
+func (A *ComplexMatrix) SetAt(val complex128, i int, j int) {
 	step := A.LeadingIndex()
 	if i < 0 {
 		i = A.NumElements() + i
@@ -288,13 +299,12 @@ func (A *ComplexMatrix) SetIndexes(indexes []int, values []complex128) {
 		if k < 0 {
 			k = A.NumElements() + i
 		}
-		k %= A.NumElements()
 		A.elements[k] = values[i]
 	}
 }
 
 // Set values of i'th row.
-func (A *ComplexMatrix) SetRow(i int, vals []complex128) {
+func (A *ComplexMatrix) SetRowArray(i int, vals []complex128) {
 	step := A.LeadingIndex()
 	for j := 0; j < A.Cols(); j++ {
 		A.elements[j*step+i] = vals[j]
@@ -302,7 +312,7 @@ func (A *ComplexMatrix) SetRow(i int, vals []complex128) {
 }
 
 // Set values of i'th column.
-func (A *ComplexMatrix) SetColumn(i int, vals []complex128) {
+func (A *ComplexMatrix) SetColumnArray(i int, vals []complex128) {
 	step := A.LeadingIndex()
 	for j := 0; j < A.Rows(); j++ {
 		A.elements[i*step+j] = vals[j]

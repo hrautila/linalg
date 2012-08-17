@@ -149,11 +149,8 @@ func MakeIndexSet(start, end, step int) []int {
 	if step < 0 {
 		step = 1
 	}
-	sz := (end-start)/step + 1
-	inds := make([]int, 0, sz)
-	//for i, _ := range inds {
-		//inds[i] = start + i*step
-	//}
+	//sz := (end-start)/step + 1
+	inds := make([]int, 0)
 	for k := start; k < end; k += step {
 		inds = append(inds, k)
 	}
@@ -171,6 +168,34 @@ func MakeDiagonalSet(rows, cols int) []int {
 		inds[i] = i*rows + i
 	}
 	return inds
+}
+
+// Create index set for a row in matrix M. 
+func RowIndexes(m Matrix, row int) []int {
+	nrows, N := m.Size()
+	if row > nrows {
+		return []int{}
+	}
+	iset := make([]int, N)
+	for i := 0; i < N; i++ {
+		k := (row + i) * m.Cols()
+		iset[i] = k
+	}
+	return iset
+}
+
+// Create index set for a column in matrix M. 
+func ColumnIndexes(m Matrix, col int) []int {
+	N, ncols := m.Size()
+	if col > ncols {
+		return []int{}
+	}
+	iset := make([]int, N)
+	for i := 0; i < N; i++ {
+		k := col * N + i
+		iset[i] = k
+	}
+	return iset
 }
 
 // Local Variables:

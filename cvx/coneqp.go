@@ -721,7 +721,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			}
 			blas.AxpyFloat(lmbdasq, ds, -1.0, &la.IOpt{"n", dims.Sum("l", "q")})
 			ind := dims.At("l")[0]
-			ds.AddAt(matrix.MakeIndexSet(0, ind, 1), sigma*mu)
+			ds.Add(sigma*mu, matrix.MakeIndexSet(0, ind, 1)...) 
 			for _, m := range dims.At("q") {
 				ds.SetIndex(ind, sigma*mu+ds.GetIndex(ind))
 				ind += m
@@ -730,7 +730,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			for _, m := range dims.At("s") {
 				blas.AxpyFloat(lmbdasq, ds, -1.0, &la.IOpt{"n", m}, &la.IOpt{"incy", m+1},
 					&la.IOpt{"offsetx", ind2}, &la.IOpt{"offsety", ind})
-				ds.AddAt(matrix.MakeIndexSet(ind, ind+m*m, m+1), sigma*mu)
+				ds.Add(sigma*mu, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
 				ind += m*m
 				ind2 += m
 			}
@@ -826,8 +826,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		blas.ScalFloat(dz, step, &la.IOpt{"n", dims.Sum("l", "q")})
 		ind := dims.At("l")[0]
 		is := matrix.MakeIndexSet(0, ind, 1)
-		ds.AddAt(is, 1.0)
-		dz.AddAt(is, 1.0)
+		ds.Add(1.0, is...)
+		dz.Add(1.0, is...)
 		for _, m := range dims.At("q") {
 			ds.SetIndex(ind, 1.0+ds.GetIndex(ind))
 			dz.SetIndex(ind, 1.0+dz.GetIndex(ind))

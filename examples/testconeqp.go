@@ -31,11 +31,11 @@ func main() {
 
 	I0 := matrix.FloatDiagonal(n, -1.0)
 	I1 := matrix.FloatIdentity(n)
-	G := matrix.FloatMatrixCombined(matrix.StackDown, I0, matrix.FloatZeros(1, n), I1)
+	G, _ := matrix.FloatMatrixCombined(matrix.StackDown, I0, matrix.FloatZeros(1, n), I1)
 
 	At := A.Transpose()
 	P := At.Times(A)
-	q := At.Times(b).Neg()
+	q := At.Times(b).Scale(-1.0)
 
 	dims := cvx.DSetNew("l", "q", "s")
 	dims.Set("l", []int{n})
@@ -50,9 +50,9 @@ func main() {
 	sol, err := cvx.ConeQp(P, q, G, h, nil, nil, dims, &solopts, nil)
 	if err == nil {
 		fmt.Printf("Optimal\n")
-		fmt.Printf("x=\n%v\n", sol.X.ConvertToString())
-		fmt.Printf("s=\n%v\n", sol.S.ConvertToString())
-		fmt.Printf("z=\n%v\n", sol.Z.ConvertToString())
+		fmt.Printf("x=\n%v\n", sol.Result.At("x")[0])
+		fmt.Printf("s=\n%v\n", sol.Result.At("s")[0])
+		fmt.Printf("z=\n%v\n", sol.Result.At("z")[0])
 	}
 
 	// Reference data from python program. A.T*A and -b.T*A printed with 17decimals
@@ -71,9 +71,9 @@ func main() {
 	sol, err = cvx.ConeQp(Pt, qt, G, h, nil, nil, dims, &solopts, nil)
 	if err == nil {
 		fmt.Printf("Optimal\n")
-		fmt.Printf("x=\n%v\n", sol.X.ConvertToString())
-		fmt.Printf("s=\n%v\n", sol.S.ConvertToString())
-		fmt.Printf("z=\n%v\n", sol.Z.ConvertToString())
+		fmt.Printf("x=\n%v\n", sol.Result.At("x")[0])
+		fmt.Printf("s=\n%v\n", sol.Result.At("s")[0])
+		fmt.Printf("z=\n%v\n", sol.Result.At("z")[0])
 	}
 }
 

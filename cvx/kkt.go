@@ -20,7 +20,7 @@ import (
 func setDiagonal(M *matrix.FloatMatrix, srow, scol, erow, ecol int, val float64) {
 	for i := srow; i < erow; i++ {
 		if i < ecol {
-			M.Set(i, i, val)
+			M.SetAt(val, i, i)
 		}
 	}
 }
@@ -66,10 +66,10 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			// g is (mnl + G.Rows(), 1) matrix, Df is (mnl, n), G is (N, n)
 			if mnl > 0 {
 				// set values g[0:mnl] = Df[,k]
-				g.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), Df.GetColumn(k, nil))
+				g.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), Df.GetColumnArray(k, nil))
 			}
 			// set values g[mnl:] = G[,k]
-			g.SetIndexes(matrix.MakeIndexSet(mnl, mnl+g.Rows(), 1), G.GetColumn(k, nil))
+			g.SetIndexes(matrix.MakeIndexSet(mnl, mnl+g.Rows(), 1), G.GetColumnArray(k, nil))
 			Scale(g, W, true, true)
 			if err != nil {
 				fmt.Printf("scale error: %s\n", err)

@@ -142,7 +142,6 @@ rows:
 			rowStr = strings.Replace(rowStr, ",", " ", -1)
 		}
 		rowElems := strings.Fields(rowStr)
-		//fmt.Printf("row elems: '%v'\n", rowElems)
 		row := []float64{}
 		collen := 0
 		for _, valString := range rowElems {
@@ -189,7 +188,7 @@ func FloatParseSpe(s string) (A *FloatMatrix, err error) {
 
 	var nrows, ncols int64
 	var val float64
-	sizes := strings.Fields(s[start+1:dstart])
+	sizes := strings.Fields(strings.Replace(s[start+1:dstart], ",", " ", -1))
 	nrows, err = strconv.ParseInt(sizes[0], 10, 64)
 	if err != nil {
 		return

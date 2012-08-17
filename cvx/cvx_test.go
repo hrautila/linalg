@@ -43,8 +43,8 @@ func makeMatrixSet(dims *DimensionSet) *FloatMatrixSet {
 		W.Append("v", vm)
 	}
 	for _, n := range dims.At("s") {
-		W.Append("r", matrix.FloatIdentity(n, n))
-		W.Append("rti", matrix.FloatIdentity(n, n))
+		W.Append("r", matrix.FloatIdentity(n))
+		W.Append("rti", matrix.FloatIdentity(n))
 	}
 	return W
 }

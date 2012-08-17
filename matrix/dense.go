@@ -62,9 +62,9 @@ func FloatRandomSymmetric(n int, nonNeg bool) *FloatMatrix {
 	for i := 0; i < n; i++ {
 		for j := i; j < n; j++ {
 			val := uniformFloat64(nonNeg)
-			A.Set(i, j, val)
+			A.SetAt(val, i, j)
 			if i != j {
-				A.Set(j, i, val)
+				A.SetAt(val, j, i)
 			}
 		}
 	}
@@ -153,11 +153,11 @@ func FloatZeros(rows, cols int) *FloatMatrix {
 
 // Create new matrix initialized to one.
 func FloatOnes(rows, cols int) *FloatMatrix {
-	return FloatNumbers(rows, cols, 1.0)
+	return FloatWithValue(rows, cols, 1.0)
 }
 
 // Create new matrix initialized to value.
-func FloatNumbers(rows, cols int, value float64) *FloatMatrix {
+func FloatWithValue(rows, cols int, value float64) *FloatMatrix {
 	A := FloatZeros(rows, cols)
 	for k, _ := range A.elements {
 		A.elements[k] = value
@@ -230,43 +230,39 @@ loop:
 }
 
 // Get the element in the i'th row and j'th column.
-func (A *FloatMatrix) Get(i int, j int) (val float64) {
+func (A *FloatMatrix) GetAt(i int, j int) (val float64) {
 	step := A.LeadingIndex()
 	//val = A.elements[j*step:j*step+A.Cols()][i]
 	val = A.elements[j*step+i]
 	return
 }
 
-// Get i'th element in column-major ordering
-func (A *FloatMatrix) GetAt(i int) float64 {
-	if i < 0 {
-		i = A.NumElements() + i
+// Get elements from column-major indexes. Return new array.
+func (A *FloatMatrix) Get(indexes... int) []float64 {
+	vals := make([]float64, 0)
+	N := A.NumElements()
+	for _, k := range indexes {
+		if k < 0 {
+			k = N + k
+		}
+		vals = append(vals, A.elements[k])
 	}
-	i %= A.NumElements()
-	return A.elements[i]
+	return vals
 }
 
 func (A *FloatMatrix) GetIndex(i int) float64 {
-	return A.GetAt(i)
+	return A.Get(i)[0]
 }
 
 // Get values for indexed elements. 
 func (A *FloatMatrix) GetIndexes(indexes []int) []float64 {
-	vals := make([]float64, len(indexes))
-	for i, k := range indexes {
-		if k < 0 {
-			k = A.NumElements() + k
-		}
-		k %= A.NumElements()
-		vals[i] = A.elements[k]
-	}
-	return vals
+	return A.Get(indexes...)
 }
 
 // Get copy of i'th row. Row elements are copied to vals array. 
 // Returns the array. If vals array is too small new slice is allocated and 
 // returned with row elements.
-func (A *FloatMatrix) GetRow(i int, vals []float64) []float64 {
+func (A *FloatMatrix) GetRowArray(i int, vals []float64) []float64 {
 	if cap(vals) < A.Cols() {
 		vals = make([]float64, A.Cols())
 	}
@@ -279,7 +275,7 @@ func (A *FloatMatrix) GetRow(i int, vals []float64) []float64 {
 
 // Get copy of i'th row. Return parameter matrix. If vec is too small 
 // reallocate new vector and return it.
-func (A *FloatMatrix) GetRowMatrix(i int, vec *FloatMatrix) *FloatMatrix {
+func (A *FloatMatrix) GetRow(i int, vec *FloatMatrix) *FloatMatrix {
 	if vec == nil || vec.NumElements() < A.Cols() {
 		vec = FloatZeros(A.Cols(), 1)
 	}
@@ -292,7 +288,7 @@ func (A *FloatMatrix) GetRowMatrix(i int, vec *FloatMatrix) *FloatMatrix {
 }
 
 // Get copy of i'th column. See GetRow.
-func (A *FloatMatrix) GetColumnMatrix(i int, vec *FloatMatrix) *FloatMatrix {
+func (A *FloatMatrix) GetColumn(i int, vec *FloatMatrix) *FloatMatrix {
 	if vec == nil || vec.NumElements() < A.Rows() {
 		vec = FloatZeros(A.Rows(), 1)
 	}
@@ -305,7 +301,7 @@ func (A *FloatMatrix) GetColumnMatrix(i int, vec *FloatMatrix) *FloatMatrix {
 }
 
 // Get copy of i'th column. See GetRow.
-func (A *FloatMatrix) GetColumn(i int, vec []float64) []float64 {
+func (A *FloatMatrix) GetColumnArray(i int, vec []float64) []float64 {
 	if cap(vec) < A.Rows() {
 		vec = make([]float64, A.Rows())
 	}
@@ -329,7 +325,7 @@ func (A *FloatMatrix) GetSlice(start, end int) []float64 {
 }
 
 // Set the element in the i'th row and j'th column to val.
-func (A *FloatMatrix) Set(i int, j int, val float64) {
+func (A *FloatMatrix) SetAt(val float64, i int, j int) {
 	step := A.LeadingIndex()
 	if i < 0 {
 		i = A.Rows() + i
@@ -337,8 +333,6 @@ func (A *FloatMatrix) Set(i int, j int, val float64) {
 	if j < 0 {
 		j = A.Cols() + j
 	}
-	i %= A.Rows()
-	j %= A.Cols()
 	A.elements[j*step+i] = val
 }
 
@@ -347,18 +341,21 @@ func (A *FloatMatrix) SetValue(val float64) {
 	A.elements[0] = val
 }
 
-// Set i'th element in column-major ordering. If i < 0 then i = A.NumElements() + i.
-// Last element of 
-func (A *FloatMatrix) SetAt(i int, v float64) {
-	if i < 0 {
-		i = A.NumElements() + i
+// Set element values in column-major ordering. Negative indexes are relative 
+// to the last element of the matrix.
+func (A *FloatMatrix) Set(val float64, indexes... int) {
+	N := A.NumElements()
+	for _, i := range indexes {
+		if i < 0 {
+			i = N + i
+		}
+		A.elements[i] = val
 	}
-	i %= A.NumElements()
-	A.elements[i] = v
 }
 
-func (A *FloatMatrix) SetIndex(i int, v float64) {
-	A.SetAt(i, v)
+// Set value of i'th element. 
+func (A *FloatMatrix) SetIndex(i int, val float64) {
+	A.Set(val, i)
 }
 
 // Set values of indexed elements. 
@@ -370,30 +367,27 @@ func (A *FloatMatrix) SetIndexes(indexes []int, values []float64) {
 		if k < 0 {
 			k = A.NumElements() + k
 		}
-		k %= A.NumElements()
 		A.elements[k] = values[i]
 	}
 }
 
 // Set values of i'th row.
-func (A *FloatMatrix) SetRow(i int, vals []float64) {
+func (A *FloatMatrix) SetRowArray(i int, vals []float64) {
 	step := A.LeadingIndex()
 	if i < 0 {
 		i = A.Rows() + i
 	}
-	i %= A.Rows()
 	for j := 0; j < A.Cols(); j++ {
 		A.elements[j*step+i] = vals[j]
 	}
 }
 
 // Set values of i'th row. Matrix vals is either (A.Cols(), 1) or (1, A.Cols()) matrix.
-func (A *FloatMatrix) SetRowMatrix(i int, vals *FloatMatrix) {
+func (A *FloatMatrix) SetRow(i int, vals *FloatMatrix) {
 	step := A.LeadingIndex()
 	if i < 0 {
 		i = A.Rows() + i
 	}
-	i %= A.Rows()
 	for j := 0; j < A.Cols(); j++ {
 		A.elements[j*step+i] = vals.elements[j]
 	}
@@ -401,24 +395,22 @@ func (A *FloatMatrix) SetRowMatrix(i int, vals *FloatMatrix) {
 
 
 // Set values of i'th column.
-func (A *FloatMatrix) SetColumn(i int, vals []float64) {
+func (A *FloatMatrix) SetColumnArray(i int, vals []float64) {
 	step := A.LeadingIndex()
 	if i < 0 {
 		i = A.Cols() + i
 	}
-	i %= A.Cols()
 	for j := 0; j < A.Rows(); j++ {
 		A.elements[i*step+j] = vals[j]
 	}
 }
 
 // Set values of i'th column. Matrix vals is either (A.Rows(), 1) or (1, A.Rows()) matrix.
-func (A *FloatMatrix) SetColumnMatrix(i int, vals *FloatMatrix) {
+func (A *FloatMatrix) SetColumn(i int, vals *FloatMatrix) {
 	step := A.LeadingIndex()
 	if i < 0 {
 		i = A.Cols() + i
 	}
-	i %= A.Cols()
 	for j := 0; j < A.Rows(); j++ {
 		A.elements[i*step+j] = vals.elements[j]
 	}
@@ -435,7 +427,7 @@ func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) error {
 	}
 	for i := 0; i < r; i++  {
 		for j := 0; j < c; j++ {
-			A.Set(row+i, col+j, mat.Get(i, j))
+			A.SetAt(mat.GetAt(i, j), row+i, col+j)
 		}
 	}
 	return nil

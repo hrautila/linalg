@@ -60,8 +60,6 @@ func main() {
 	c,_ := matrix.FloatParsePy(sc)
 	G,_ := matrix.FloatParsePy(sG)
 	h,_ := matrix.FloatParsePy(sh)
-	//A := matrix.FloatZeros(0, c.Rows())
-	//b := matrix.FloatZeros(0, 1)
 
 	dims := cvx.DSetNew("l", "q", "s")
 	dims.Set("l", []int{2})
@@ -75,9 +73,9 @@ func main() {
 	sol, err := cvx.ConeLp(c, G, h, nil, nil, dims, &solopts, nil, nil)
 	if err == nil {
 		fmt.Printf("Optimal\n")
-		fmt.Printf("x=\n%v\n", sol.X.ConvertToString())
-		fmt.Printf("s=\n%v\n", sol.S.ConvertToString())
-		fmt.Printf("z=\n%v\n", sol.Z.ConvertToString())
+		fmt.Printf("x=\n%v\n", sol.Result.At("x")[0])
+		fmt.Printf("s=\n%v\n", sol.Result.At("s")[0])
+		fmt.Printf("z=\n%v\n", sol.Result.At("s")[0])
 	}
 }
 

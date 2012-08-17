@@ -81,8 +81,8 @@ func (A *ComplexMatrix) Times(B *ComplexMatrix) *ComplexMatrix {
 	bcol := make([]complex128, B.Rows())
 	for i := 0; i < A.Rows(); i++ {
 		for j := 0; j < B.Cols(); j++ {
-			arow = A.GetRow(i, arow)
-			bcol = B.GetColumn(j, bcol)
+			arow = A.GetRowArray(i, arow)
+			bcol = B.GetColumnArray(j, bcol)
 			for k, _ := range arow {
 				C.elements[i*A.Rows()+j] += arow[k]*bcol[k]
 			}
