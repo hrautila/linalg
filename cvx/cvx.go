@@ -10,7 +10,6 @@ package cvx
 
 import (
 	"github.com/hrautila/go.opt/matrix"
-	la "github.com/hrautila/go.opt/linalg"
 	"errors"
 )
 
