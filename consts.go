@@ -166,45 +166,55 @@ Loop:
 
 // Matrix parameter option variables.
 var (
-	// trans: No Transpose
+	// trans: No Transpose 'N'
 	OptNoTrans = &IOpt{"trans", PNoTrans}
 	OptNoTransA = &IOpt{"transA", PNoTrans}
 	OptNoTransB = &IOpt{"transB", PNoTrans}
-	// trans: Transpose
+	// trans: Transpose 'T'
 	OptTrans = &IOpt{"trans", PTrans}
 	OptTransA = &IOpt{"transA", PTrans}
 	OptTransB = &IOpt{"transB", PTrans}
-	// trans: Conjugate Transpose
+	// trans: Conjugate Transpose 'C'
 	OptConjTrans = &IOpt{"trans", PConjTrans}
 	OptConjTransA = &IOpt{"transA", PConjTrans}
 	OptConjTransB = &IOpt{"transB", PConjTrans}
-	// uplo: Upper Triangular
+	// uplo: Upper Triangular 'U'
 	OptUpper = &IOpt{"uplo", PUpper}
-	// uplo: Lower Triangular
+	// uplo: Lower Triangular 'L'
 	OptLower = &IOpt{"uplo", PLower}
-	// side parameter
+	// side parameter 'L', 'R'
 	OptLeft = &IOpt{"side", PLeft}
 	OptRight = &IOpt{"side", PRight}
-	// diag parameter
+	// diag parameter 'U'
 	OptUnit =  &IOpt{"diag", PUnit}
+	// diag parameter 'N'
 	OptNonUnit =  &IOpt{"diag", PNonUnit}
 	OptDiag =  &IOpt{"diag", PDiag}
-	// Lapack jobz 
+	// Lapack jobz  'N'
 	OptJobZNo =  &IOpt{"jobz", PJobNo}
+	// Lapack jobz   'V'
 	OptJobZValue =  &IOpt{"jobz", PJobValue}
-	// Lapack jobu
+	// Lapack jobu 'N'
 	OptJobuNo =  &IOpt{"jobu", PJobNo}
+	// Lapack jobu 'A'
 	OptJobuAll =  &IOpt{"jobu", PJobAll}
+	// Lapack jobu 'S'
 	OptJobuS =  &IOpt{"jobu", PJobS}
+	// Lapack jobu 'O'
 	OptJobuO =  &IOpt{"jobu", PJobO}
-	// Lapack jobvt
+	// Lapack jobvt 'N',
 	OptJobvtNo =  &IOpt{"jobvt", PJobNo}
+	// Lapack jobvt 'A',
 	OptJobvtAll =  &IOpt{"jobvt", PJobAll}
+	// Lapack jobvt 'S',
 	OptJobvtS =  &IOpt{"jobvt", PJobS}
+	// Lapack jobvt 'O',
 	OptJobvtO =  &IOpt{"jobvt", PJobO}
-	// Lapack range
+	// Lapack range 'A'
 	OptRangeAll =  &IOpt{"range", PRangeAll}
+	// Lapack range 'V'
 	OptRangeValue =  &IOpt{"range", PRangeValue}
+	// Lapack range 'I'
 	OptRangeInt =  &IOpt{"range", PRangeInt}
 )
 
