@@ -4,17 +4,7 @@
 #
 
 from cvxopt import matrix, solvers
-
-def str2(m, fmt='%.17f'):
-    s = ''
-    for i in xrange(m.size[0]):
-        s += "["
-        for j in xrange(m.size[1]):
-            if j != 0:
-                s += ", "
-            s += fmt % m[i, j]
-        s += "]\n"
-    return s
+import helpers
 
 
 def testsocp(opts):
@@ -35,8 +25,8 @@ def testsocp(opts):
     sol = solvers.socp(c, Gq = G, hq = h)  
     
     print "x = \n", str2(sol['x'], "%.9f")
-    print "zq[0] = \n", str2(sol['zq'][0], "%.9f")
-    print "zq[1] = \n", str2(sol['zq'][1], "%.9f")
+    print "zq[0] = \n", helpers.str2(sol['zq'][0], "%.9f")
+    print "zq[1] = \n", helpers.str2(sol['zq'][1], "%.9f")
 
 
 testsocp({'maxiters': 10, 'kktsolver': 'ldl'})

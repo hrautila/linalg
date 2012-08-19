@@ -3,11 +3,50 @@ package main
 
 import (
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
 	"fmt"
+	"flag"
+	"math"
 )
 
+var xVal, sVal, zVal string
+
+func init() {
+	flag.StringVar(&xVal, "x", "", "Reference value for X")
+	flag.StringVar(&sVal, "s", "", "Reference value for S")
+	flag.StringVar(&zVal, "z", "", "Reference value for Z")
+}
+	
+func error(ref, val *matrix.FloatMatrix) (dot, nrm float64, diff *matrix.FloatMatrix) {
+	diff = ref.Minus(val)
+	dot = math.Sqrt(blas.Dot(diff, diff).Float())
+	nrm = blas.Nrm2(diff).Float()
+	return
+}
+
+func check(x, s, z *matrix.FloatMatrix) {
+	var xref, sref, zref *matrix.FloatMatrix = nil, nil, nil
+
+	if len(xVal) > 0 {
+		xref, _ = matrix.FloatParseSpe(xVal)
+		dot, nrm, diff := error(xref, x)
+		fmt.Printf("x: dot=%.9f, nrm=%.9f\n%v\n", dot, nrm, diff.ToString("%.12f"))
+	}
+
+	if len(sVal) > 0 {
+		sref, _ = matrix.FloatParseSpe(sVal)
+		fmt.Printf("sref=\n%v\n", sref.ToString("%.2f"))
+	}
+	if len(zVal) > 0 {
+		zref, _ = matrix.FloatParseSpe(zVal)
+		fmt.Printf("zref=\n%v\n", zref.ToString("%.2f"))
+	}
+}
+
 func main() {
+	flag.Parse()
+	reftest := flag.NFlag() > 0
 
 	gdata := [][]float64{
 		[]float64{ 2.0, 1.0, -1.0,  0.0 },
@@ -22,9 +61,15 @@ func main() {
 	solopts.ShowProgress = true
 	sol, err := cvx.Lp(c, G, h, nil, nil, &solopts, nil, nil)
 	if sol != nil && sol.Status == cvx.Optimal {
-		fmt.Printf("x=\n%v\n", sol.Result.At("x")[0].ToString("%.9f"))
-		fmt.Printf("s=\n%v\n", sol.Result.At("s")[0].ToString("%.9f"))
-		fmt.Printf("z=\n%v\n", sol.Result.At("z")[0].ToString("%.9f"))
+		x := sol.Result.At("x")[0]
+		s := sol.Result.At("s")[0]
+		z := sol.Result.At("z")[0]
+		fmt.Printf("x=\n%v\n", x.ToString("%.9f"))
+		fmt.Printf("s=\n%v\n", s.ToString("%.9f"))
+		fmt.Printf("z=\n%v\n", z.ToString("%.9f"))
+		if reftest {
+			check(x, s, z)
+		}
 	} else {
 		fmt.Printf("status: %v\n", err)
 	}
