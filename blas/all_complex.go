@@ -10,7 +10,7 @@ package blas
 import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
-	"errors"
+	//"errors"
 )
 
 // Calculate norm2(X) for ComplexMatrix. Valid options are: offset, inc, N.
