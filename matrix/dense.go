@@ -62,9 +62,9 @@ func FloatRandomSymmetric(n int, nonNeg bool) *FloatMatrix {
 	for i := 0; i < n; i++ {
 		for j := i; j < n; j++ {
 			val := uniformFloat64(nonNeg)
-			A.SetAt(val, i, j)
+			A.SetAt(i, j, val)
 			if i != j {
-				A.SetAt(val, j, i)
+				A.SetAt(j, i, val)
 			}
 		}
 	}
@@ -167,19 +167,24 @@ func FloatWithValue(rows, cols int, value float64) *FloatMatrix {
 
 // Create new identity matrix. Row count must equal column count.
 func FloatIdentity(rows int) *FloatMatrix {
-	A := FloatZeros(rows, rows)
-	step := A.LeadingIndex()
-	for k := 0; k < rows; k++ {
-		A.elements[k*step+k] = 1.0
-	}
-	return A
+	return FloatDiagonal(rows, 1.0)
 }
 
-func FloatDiagonal(rows int, val float64) *FloatMatrix {
+// Make a square matrix with diagonal set to values. If len(values) is one
+// then all entries on diagonal is set to values[0]. If len(values) is
+// greater than one then diagonals are set from the list values starting
+// from (0,0) until the diagonal is full or values are exhausted.
+func FloatDiagonal(rows int, values ...float64) *FloatMatrix {
 	A := FloatZeros(rows, rows)
 	step := A.LeadingIndex()
-	for k := 0; k < rows; k++ {
-		A.elements[k*step+k] = val
+	if len(values) == 1 {
+		for k := 0; k < rows; k++ {
+			A.elements[k*step+k] = values[0]
+		}
+	} else {
+		for k:= 0; k < rows && k < len(values); k++ {
+			A.elements[k*step+k] = values[k]
+		}
 	}
 	return A
 }
@@ -233,6 +238,12 @@ loop:
 func (A *FloatMatrix) GetAt(i int, j int) (val float64) {
 	step := A.LeadingIndex()
 	//val = A.elements[j*step:j*step+A.Cols()][i]
+	if i < 0 {
+		i += A.Rows()
+	}
+	if j < 0 {
+		j += A.Cols()
+	}
 	val = A.elements[j*step+i]
 	return
 }
@@ -243,7 +254,7 @@ func (A *FloatMatrix) Get(indexes... int) []float64 {
 	N := A.NumElements()
 	for _, k := range indexes {
 		if k < 0 {
-			k = N + k
+			k += N
 		}
 		vals = append(vals, A.elements[k])
 	}
@@ -267,6 +278,9 @@ func (A *FloatMatrix) GetRowArray(i int, vals []float64) []float64 {
 		vals = make([]float64, A.Cols())
 	}
 	step := A.LeadingIndex()
+	if i < 0 {
+		i += A.Rows()
+	}
 	for j := 0; j < A.Cols(); j++ {
 		vals[j] = A.elements[j*step+i]
 	}
@@ -277,10 +291,13 @@ func (A *FloatMatrix) GetRowArray(i int, vals []float64) []float64 {
 // reallocate new vector and return it.
 func (A *FloatMatrix) GetRow(i int, vec *FloatMatrix) *FloatMatrix {
 	if vec == nil || vec.NumElements() < A.Cols() {
-		vec = FloatZeros(A.Cols(), 1)
+		vec = FloatZeros(1, A.Cols())
 	}
 	step := A.LeadingIndex()
 	ar := vec.FloatArray()
+	if i < 0 {
+		i += A.Rows()
+	}
 	for j := 0; j < A.Cols(); j++ {
 		ar[j] = A.elements[j*step+i]
 	}
@@ -294,6 +311,9 @@ func (A *FloatMatrix) GetColumn(i int, vec *FloatMatrix) *FloatMatrix {
 	}
 	step := A.LeadingIndex()
 	ar := vec.FloatArray()
+	if i < 0 {
+		i += A.Cols()
+	}
 	for j := 0; j < A.Rows(); j++ {
 		ar[j] = A.elements[i*step+j]
 	}
@@ -306,6 +326,9 @@ func (A *FloatMatrix) GetColumnArray(i int, vec []float64) []float64 {
 		vec = make([]float64, A.Rows())
 	}
 	step := A.LeadingIndex()
+	if i < 0 {
+		i += A.Cols()
+	}
 	for j := 0; j < A.Rows(); j++ {
 		vec[j] = A.elements[i*step+j]
 	}
@@ -325,7 +348,7 @@ func (A *FloatMatrix) GetSlice(start, end int) []float64 {
 }
 
 // Set the element in the i'th row and j'th column to val.
-func (A *FloatMatrix) SetAt(val float64, i int, j int) {
+func (A *FloatMatrix) SetAt(i, j int, val float64) {
 	step := A.LeadingIndex()
 	if i < 0 {
 		i = A.Rows() + i
@@ -347,7 +370,7 @@ func (A *FloatMatrix) Set(val float64, indexes... int) {
 	N := A.NumElements()
 	for _, i := range indexes {
 		if i < 0 {
-			i = N + i
+			i += N
 		}
 		A.elements[i] = val
 	}
@@ -365,7 +388,7 @@ func (A *FloatMatrix) SetIndexes(indexes []int, values []float64) {
 			break
 		}
 		if k < 0 {
-			k = A.NumElements() + k
+			k += A.NumElements()
 		}
 		A.elements[k] = values[i]
 	}
@@ -382,6 +405,21 @@ func (A *FloatMatrix) SetRowArray(i int, vals []float64) {
 	}
 }
 
+// Set values on i'th row  of columns pointed with cols array. 
+// For all j in indexes: A[i,j] = vals[k] where k is j's index in indexes array.
+func (A *FloatMatrix) SetAtRowArray(i int, cols []int, vals []float64) {
+	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Rows() + i
+	}
+	for k, j := range cols {
+		if j < 0 {
+			j += A.Cols()
+		}
+		A.elements[j*step+i] = vals[k]
+	}
+}
+
 // Set values of i'th row. Matrix vals is either (A.Cols(), 1) or (1, A.Cols()) matrix.
 func (A *FloatMatrix) SetRow(i int, vals *FloatMatrix) {
 	step := A.LeadingIndex()
@@ -389,6 +427,23 @@ func (A *FloatMatrix) SetRow(i int, vals *FloatMatrix) {
 		i = A.Rows() + i
 	}
 	for j := 0; j < A.Cols(); j++ {
+		A.elements[j*step+i] = vals.elements[j]
+	}
+}
+
+
+// Set values  on i'th row of columns pointed with cols array. 
+// For all j in indexes: A[i,j] = vals[j]. Matrix vals is either (A.Cols(),1) or
+// (1, A.Cols()) matrix.
+func (A *FloatMatrix) SetAtRow(i int, cols []int, vals *FloatMatrix) {
+	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Rows() + i
+	}
+	for _, j := range cols {
+		if j < 0 {
+			j += A.Cols()
+		}
 		A.elements[j*step+i] = vals.elements[j]
 	}
 }
@@ -405,6 +460,21 @@ func (A *FloatMatrix) SetColumnArray(i int, vals []float64) {
 	}
 }
 
+// Set values on i'th column of rows pointed by rows array. It assumes
+// that len(rows) <= len(vals).
+func (A *FloatMatrix) SetAtColumnArray(i int, rows []int, vals []float64) {
+	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Cols() + i
+	}
+	for k, j := range rows {
+		if j < 0 {
+			j += A.Rows()
+		}
+		A.elements[i*step+j] = vals[k]
+	}
+}
+
 // Set values of i'th column. Matrix vals is either (A.Rows(), 1) or (1, A.Rows()) matrix.
 func (A *FloatMatrix) SetColumn(i int, vals *FloatMatrix) {
 	step := A.LeadingIndex()
@@ -412,6 +482,21 @@ func (A *FloatMatrix) SetColumn(i int, vals *FloatMatrix) {
 		i = A.Cols() + i
 	}
 	for j := 0; j < A.Rows(); j++ {
+		A.elements[i*step+j] = vals.elements[j]
+	}
+}
+
+// Set values on i'th column of rows pointer by rows array. It assumes
+// that  max(rows) < vals.NumElements(). 
+func (A *FloatMatrix) SetAtColumn(i int, rows []int, vals *FloatMatrix) {
+	step := A.LeadingIndex()
+	if i < 0 {
+		i = A.Cols() + i
+	}
+	for _, j := range rows {
+		if j < 0 {
+			j += A.Rows()
+		}
 		A.elements[i*step+j] = vals.elements[j]
 	}
 }
@@ -427,7 +512,7 @@ func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) error {
 	}
 	for i := 0; i < r; i++  {
 		for j := 0; j < c; j++ {
-			A.SetAt(mat.GetAt(i, j), row+i, col+j)
+			A.SetAt(row+i, col+j, mat.GetAt(i, j))
 		}
 	}
 	return nil
