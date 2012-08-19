@@ -112,10 +112,6 @@ func Dotu(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
 	if ind.Nx == 0 {
 		return 
 	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
-	}
 	sameType := matrix.EqualTypes(X, Y)
 	if ! sameType {
 		err = errors.New("arrays not of same type")
@@ -163,10 +159,6 @@ func Dot(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
 	}
 	if ind.Nx == 0 {
 		return matrix.FScalar(0.0)
-	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
 	}
 	sameType := matrix.EqualTypes(X, Y)
 	if ! sameType {
@@ -262,10 +254,6 @@ func Copy(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	if ind.Nx == 0 {
 		return
 	}
-	//if ind.Nx != ind.Ny {
-	//	err = errors.New("arrays have unequal default lengths")
-	//	return
-	//}
 	sameType := matrix.EqualTypes(X, Y)
 	if ! sameType {
 		err = errors.New("arrays not same type")
@@ -356,10 +344,6 @@ func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 		return
 	}
 	if ind.Nx == 0 {
-		return
-	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
 		return
 	}
 	sameType := matrix.EqualTypes(X, Y)

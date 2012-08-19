@@ -10,7 +10,7 @@ package blas
 import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
-	"errors"
+	//"errors"
 	"math"
 )
 
@@ -61,10 +61,6 @@ func DotFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (v float64) {
 		v = 0.0
 		return 
 	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
-	}
 	Xa := X.FloatArray()
 	Ya := Y.FloatArray()
 	v = ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
@@ -81,10 +77,6 @@ func SwapFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 	if ind.Nx == 0 {
 		return
 	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
-	}
 	Xa := X.FloatArray()
 	Ya := Y.FloatArray()
 	dswap(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
@@ -99,10 +91,6 @@ func CopyFloat(X, Y *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 		return
 	}
 	if ind.Nx == 0 {
-		return
-	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
 		return
 	}
 	Xa := X.FloatArray()
@@ -137,10 +125,6 @@ func AxpyFloat(X, Y *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (
 		return
 	}
 	if ind.Nx == 0 {
-		return
-	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
 		return
 	}
 	Xa := X.FloatArray()

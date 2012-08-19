@@ -63,10 +63,6 @@ func DotuComplex(X, Y *matrix.ComplexMatrix, opts ...linalg.Option) (v complex12
 	if ind.Nx == 0 {
 		return 
 	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
-	}
 	Xa := X.ComplexArray()
 	Ya := Y.ComplexArray()
 	v = zdotu(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
@@ -85,10 +81,6 @@ func DotcComplex(X, Y *matrix.ComplexMatrix, opts ...linalg.Option) (v complex12
 	}
 	if ind.Nx == 0 {
 		return 
-	}
-	if ind.Nx != ind.Ny {
-		err = errors.New("arrays have unequal default lengths")
-		return
 	}
 	Xa := X.ComplexArray()
 	Ya := Y.ComplexArray()
