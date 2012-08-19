@@ -74,7 +74,7 @@ func minvec(vec []float64) float64 {
     The 'dnl' and 'dnli' entries are optional, and only present when the 
     function is called from the nonlinear solver.
 */
-func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err error) {
+func scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err error) {
 	/*DEBUGGED*/
 	var wl []*matrix.FloatMatrix
 	var w *matrix.FloatMatrix
@@ -238,7 +238,7 @@ func Scale(x *matrix.FloatMatrix, W *FloatMatrixSet, trans, inverse bool) (err e
     H is the Hessian of the logarithmic barrier.
 
 */
-func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse bool) (err error) {
+func scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse bool) (err error) {
 	err = nil
 
 	// For the nonlinear and 'l' blocks, 
@@ -267,9 +267,9 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
     // a = sqrt(lambda_k' * J * lambda_k), l = lambda_k / a.
 	for _, m := range dims.At("q") {
 		var lx, a, c, x0 float64
-		a = Jnrm2(lmbda, m, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
+		a = jnrm2(lmbda, m, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
 		if ! inverse {
-			lx = Jdot(lmbda, x, m, ind, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
+			lx = jdot(lmbda, x, m, ind, ind) //&la_.IOpt{"n", m}, &la_.IOpt{"offsetx", ind},
 				//&la_.IOpt{"offsety", ind})
 			lx /= a
 		} else {
@@ -339,7 +339,7 @@ func Scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
 
  */
 
-func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err error) {
+func updateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err error) {
 	err = nil
 	var stmp, ztmp *matrix.FloatMatrix
 	/*
@@ -430,16 +430,16 @@ func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err erro
 		m = v.NumElements()
 
         // ln = sqrt( lambda_k' * J * lambda_k ) !! NOT USED!!
-		Jnrm2(lmbda, m, ind) // ?? NOT USED ??
+		jnrm2(lmbda, m, ind) // ?? NOT USED ??
 
         // a = sqrt( sk' * J * sk ) = sqrt( st' * J * st ) 
         // s := s / a = st / a
-		aa := Jnrm2(s, m, ind)
+		aa := jnrm2(s, m, ind)
 		blas.ScalFloat(s, 1.0/aa, &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
 
         // b = sqrt( zk' * J * zk ) = sqrt( zt' * J * zt )
         // z := z / a = zt / b
-		bb := Jnrm2(z, m, ind)
+		bb := jnrm2(z, m, ind)
 		blas.ScalFloat(z, 1.0/bb, &la_.IOpt{"n", m}, &la_.IOpt{"offset", ind})
 
         // c = sqrt( ( 1 + (st'*zt) / (a*b) ) / 2 )
@@ -451,7 +451,7 @@ func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err erro
 		vs := blas.DotFloat(v, s, &la_.IOpt{"offsety", ind}, &la_.IOpt{"n", m})
 
 		// vz = v' * J *zt / b
-		vz := Jdot(v, z, m, 0, ind)
+		vz := jdot(v, z, m, 0, ind)
 
 		// vq = v' * q where q = (st/a + J * zt/b) / (2 * c)
 		vq := (vs + vz) / 2.0/ cc
@@ -614,7 +614,7 @@ func UpdateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err erro
       of r[k].
 
  */
-func ComputeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int) (W *FloatMatrixSet, err error) {
+func computeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int) (W *FloatMatrixSet, err error) {
 	/*DEBUGGED*/
 	err = nil
 	W = FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
@@ -669,7 +669,8 @@ func ComputeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
 	W.Set("di", di)
 	lmd = stmp.Mul(ztmp)
 	lmd.Apply(lmd, math.Sqrt)
-	lmbda.SetIndexes(matrix.MakeIndexSet(mnl, mnl+m, 1), lmd.FloatArray()[mnl:mnl+m])
+	// lmd has indexes mnl:mnl+m and length of m
+	lmbda.SetIndexes(matrix.MakeIndexSet(mnl, mnl+m, 1), lmd.FloatArray())
 	//fmt.Printf("after l:\n%v\n", lmbda)
 
 	/*
@@ -702,9 +703,9 @@ func ComputeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
 	for k, m := range dims.At("q") {
 		v := vset[k]
         // a = sqrt( sk' * J * sk )  where J = [1, 0; 0, -I]
-		aa := Jnrm2(s, m, ind)
+		aa := jnrm2(s, m, ind)
 		// b = sqrt( zk' * J * zk )
-		bb := Jnrm2(z, m, ind)
+		bb := jnrm2(z, m, ind)
         // beta[k] = ( a / b )**1/2
 		beta.SetIndex(k, math.Sqrt(aa/bb))
         // c = sqrt( (sk/a)' * (zk/b) + 1 ) / sqrt(2)    
@@ -818,7 +819,7 @@ func ComputeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
 }
 
 // Inner product of two vectors in S.
-func Sdot(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
+func sdot(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
 	/*DEBUGGED*/
 	ind := mnl + dims.At("l")[0] + dims.Sum("q")
 	a := blas.DotFloat(x, y, &la_.IOpt{"n", ind})
@@ -835,15 +836,15 @@ func Sdot(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
 }
 
 // Returns the norm of a vector in S
-func Snrm2(x *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
+func snrm2(x *matrix.FloatMatrix, dims *DimensionSet, mnl int) float64 {
 	/*DEBUGGED*/
-	return math.Sqrt(Sdot(x, x, dims, mnl))
+	return math.Sqrt(sdot(x, x, dims, mnl))
 }
 
 // Converts lower triangular matrix to symmetric.  
 // Fills in the upper triangular part of the symmetric matrix stored in 
 // x[offset : offset+n*n] using 'L' storage.
-func Symm(x *matrix.FloatMatrix, n, offset int) (err error) {
+func symm(x *matrix.FloatMatrix, n, offset int) (err error) {
 	/*DEBUGGED*/
 	err = nil
 	if n <= 1 {
@@ -881,7 +882,7 @@ func Symm(x *matrix.FloatMatrix, n, offset int) (err error) {
     
     The 's' components in S are stored in unpacked 'L' storage.
 */
-func Sgemv(A, x, y *matrix.FloatMatrix, alpha, beta float64, dims *DimensionSet, opts ...la_.Option) error {
+func sgemv(A, x, y *matrix.FloatMatrix, alpha, beta float64, dims *DimensionSet, opts ...la_.Option) error {
 
 	m := dims.Sum("l", "q") + dims.SumSquared("s")
 	n := la_.GetIntOpt("n", -1, opts...)
@@ -894,7 +895,7 @@ func Sgemv(A, x, y *matrix.FloatMatrix, alpha, beta float64, dims *DimensionSet,
 	offsetA := la_.GetIntOpt("offseta", 0, opts...)
 
 	if trans == int(la_.PTrans) && alpha != 0.0 {
-		Trisc(x, dims,  offsetX)
+		trisc(x, dims,  offsetX)
 		//fmt.Printf("trisc x=\n%v\n", x.ConvertToString())
 	}
 	//fmt.Printf("alpha=%.4f beta=%.4f m=%d n=%d\n", alpha, beta, m, n)
@@ -905,7 +906,7 @@ func Sgemv(A, x, y *matrix.FloatMatrix, alpha, beta float64, dims *DimensionSet,
 	//fmt.Printf("gemv y=\n%v\n", y.ConvertToString())
 
 	if trans == int(la_.PTrans) && alpha != 0.0 {
-		Triusc(x, dims,  offsetX)
+		triusc(x, dims,  offsetX)
 	}
 	return err
 }
@@ -915,7 +916,7 @@ func Sgemv(A, x, y *matrix.FloatMatrix, alpha, beta float64, dims *DimensionSet,
  diagonal.
 */
 
-func Sinv(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
+func sinv(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
 	/*DEBUGGED*/
 
 	err = nil
@@ -975,7 +976,7 @@ func Sinv(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
     Sets upper triangular part of the 's' components of x equal to zero
     and scales the strictly lower triangular part by 2.0.
  */
-func Trisc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
+func trisc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
 
 	//m := dims.Sum("l", "q") + dims.SumSquared("s")
 	ind := offset + dims.Sum("l", "q")
@@ -996,7 +997,7 @@ func Trisc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
     by 0.5.
 
  */
-func Triusc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
+func triusc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
 
 	//m := dims.Sum("l", "q") + dims.SumSquared("s")
 	ind := offset + dims.Sum("l", "q")
@@ -1015,7 +1016,7 @@ func Triusc(x *matrix.FloatMatrix, dims *DimensionSet, offset int) error {
 
 // The product x := (y o x).  If diag is 'D', the 's' part of y is 
 // diagonal and only the diagonal is stored.
-func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Option) (err error){
+func sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Option) (err error){
 
 	err = nil
 	diag := la_.GetStringOpt("diag", "N", opts...)
@@ -1063,8 +1064,8 @@ func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Op
 		for _, m := range dims.At("s") {
 			blas.Copy(x, A, &la_.IOpt{"offsetx", ind}, &la_.IOpt{"n", m*m})
 			for i := 0; i < m-1; i++ { // i < m-1 --> i < m
-				Symm(A, m, 0)
-				Symm(y, m, ind)
+				symm(A, m, 0)
+				symm(y, m, ind)
 			}
 			err = blas.Syr2kFloat(A, y, x, 0.5, 0.0, &la_.IOpt{"n", m}, &la_.IOpt{"k", m},
 				&la_.IOpt{"lda", m}, &la_.IOpt{"ldb", m}, &la_.IOpt{"ldc", m},
@@ -1099,7 +1100,7 @@ func Sprod(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int, opts ...la_.Op
 
 // The product x := y o y.   The 's' components of y are diagonal and
 // only the diagonals of x and y are stored.     
-func Ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
+func ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
 	/*DEBUGGED*/
 	blas.Copy(y, x)
 	ind := mnl+dims.At("l")[0]
@@ -1125,7 +1126,7 @@ func Ssqr(x, y *matrix.FloatMatrix, dims *DimensionSet, mnl int) (err error) {
 //    
 // When called with the argument sigma, also returns the eigenvalues 
 // (in sigma) and the eigenvectors (in x) of the 's' components of x.
-func MaxStep(x *matrix.FloatMatrix, dims *DimensionSet, mnl int, sigma *matrix.FloatMatrix) (rval float64, err error) {
+func maxStep(x *matrix.FloatMatrix, dims *DimensionSet, mnl int, sigma *matrix.FloatMatrix) (rval float64, err error) {
 	/*DEBUGGED*/
 
 	rval = 0.0
@@ -1185,7 +1186,7 @@ func MaxStep(x *matrix.FloatMatrix, dims *DimensionSet, mnl int, sigma *matrix.F
      stored in packed storage and the off-diagonal entries scaled by 
      sqrt(2).
  */
-func Pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err error) {
+func pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err error) {
 	/*DEBUGGED*/
 	err = nil
 	mnl := la_.GetIntOpt("mnl", 0, opts...)
@@ -1218,7 +1219,7 @@ func Pack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err
      unpacked storage.
 
  */
-func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err error) {
+func unpack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (err error) {
 	/*DEBUGGED*/
 	err = nil
 	mnl := la_.GetIntOpt("mnl", 0, opts...)
@@ -1255,7 +1256,7 @@ func UnPack(x, y *matrix.FloatMatrix, dims *DimensionSet, opts ...la_.Option) (e
 /*
     Returns x' * J * y, where J = [1, 0; 0, -I].
  */
-func Jdot(x, y *matrix.FloatMatrix, n, offsetx, offsety int) float64 {
+func jdot(x, y *matrix.FloatMatrix, n, offsetx, offsety int) float64 {
 	if n <= 0 {
 		n = x.NumElements()
 	}
@@ -1268,7 +1269,7 @@ func Jdot(x, y *matrix.FloatMatrix, n, offsetx, offsety int) float64 {
     Returns sqrt(x' * J * x) where J = [1, 0; 0, -I], for a vector
     x in a second order cone. 
  */
-func Jnrm2(x *matrix.FloatMatrix, n, offset int) float64 {
+func jnrm2(x *matrix.FloatMatrix, n, offset int) float64 {
 	/*DEBUGGED*/
 	if n <= 0 {
 		n = x.NumElements()

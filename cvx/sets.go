@@ -42,10 +42,8 @@ func (M *FloatMatrixSet) At(name string) []*matrix.FloatMatrix {
 
 // Set the contents of matrix set.
 func (M *FloatMatrixSet) Set(key string, ms ...*matrix.FloatMatrix) {
-	mset := make([]*matrix.FloatMatrix, 0, 2*len(ms))
-	for _, v := range ms {
-		mset = append(mset, v)
-	}
+	mset := make([]*matrix.FloatMatrix, 0)
+	mset = append(mset, ms...)
 	M.sets[key] = mset
 }
 
@@ -53,11 +51,9 @@ func (M *FloatMatrixSet) Set(key string, ms ...*matrix.FloatMatrix) {
 func (M *FloatMatrixSet) Append(key string, ms ...*matrix.FloatMatrix) {
 	mset, ok := M.sets[key]
 	if ! ok {
-		mset = make([]*matrix.FloatMatrix, 0, 2*len(ms))
+		mset = make([]*matrix.FloatMatrix, 0)
 	}
-	for _, v := range ms {
-		mset = append(mset, v)
-	}
+	mset = append(mset, ms...)
 	M.sets[key] = mset
 }
 
@@ -92,7 +88,6 @@ func (M *FloatMatrixSet) PrintMatrix() {
 	}
 }
 	
-
 
 // DimensionSet is a collection of named sets of sizes.
 type DimensionSet struct {

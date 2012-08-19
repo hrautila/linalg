@@ -157,7 +157,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		return 
 	}
 	Gf := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la.Option) error{
-		return Sgemv(G, x, y, alpha, beta, dims, opts...)
+		return sgemv(G, x, y, alpha, beta, dims, opts...)
 	}
 
 	// Check A and set defaults if it is nil
@@ -229,7 +229,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		Af(uy, vx, -1.0, 1.0, la.OptTrans)
 		//fmt.Printf("post-Af vx=\n%v\n", vx)
 		blas.Copy(uz, wz3)
-		Scale(wz3, W, false, true)
+		scale(wz3, W, false, true)
 		Gf(wz3, vx, -1.0, 1.0, la.OptTrans)
 		blas.AxpyFloat(c, vx, -utau.Float()/dg)
 
@@ -241,18 +241,18 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		Gf(ux, vz, 1.0, 1.0)
 		blas.AxpyFloat(h, vz, -utau.Float()/dg)
 		blas.Copy(us, ws3)
-		Scale(ws3, W, true, false)
+		scale(ws3, W, true, false)
 		blas.AxpyFloat(ws3, vz, 1.0)
 		
 		// vtau := vtau + c'*ux + b'*uy + h'*W^{-1}*uz + dg*ukappa
 		var vtauplus float64 = dg*ukappa.Float() + blas.DotFloat(c, ux) +
-			blas.DotFloat(b, uy) + Sdot(h, wz3, dims, 0) 
+			blas.DotFloat(b, uy) + sdot(h, wz3, dims, 0) 
 		vtau.SetValue(vtau.Float()+vtauplus)
 
 		// vs := vs + lmbda o (uz + us)
 		blas.Copy(us, ws3)
 		blas.AxpyFloat(uz, ws3, 1.0)
-		Sprod(ws3, lmbda, dims, 0, &la.SOpt{"diag", "D"})
+		sprod(ws3, lmbda, dims, 0, &la.SOpt{"diag", "D"})
 		blas.AxpyFloat(ws3, vs, 1.0)
 
 		// vkappa += vkappa + lmbdag * (utau + ukappa)
@@ -264,7 +264,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 	resx0 := math.Max(1.0, math.Sqrt(blas.DotFloat(c,c)))
 	resy0 := math.Max(1.0, math.Sqrt(blas.DotFloat(b,b)))
-	resz0 := math.Max(1.0, Snrm2(h, dims, 0))
+	resz0 := math.Max(1.0, snrm2(h, dims, 0))
 
 	// select initial points
 
@@ -343,7 +343,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	}
 
 	// ts = min{ t | s + t*e >= 0 }
-	ts,_ := MaxStep(s, dims, 0, nil)
+	ts,_ := maxStep(s, dims, 0, nil)
 	if ts >= 0 && primalstart != nil {
 		err = errors.New("initial s is not positive")
 		return 
@@ -374,14 +374,14 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	}
 
 	// ts = min{ t | z + t*e >= 0 }
-	tz,_ := MaxStep(z, dims, 0, nil)
+	tz,_ := maxStep(z, dims, 0, nil)
 	if tz >= 0 && dualstart != nil {
 		err = errors.New("initial z is not positive")
 		return 
 	}
 
-	nrms := Snrm2(s, dims, 0)
-	nrmz := Snrm2(z, dims, 0)
+	nrms := snrm2(s, dims, 0)
+	nrmz := snrm2(z, dims, 0)
 
 	gap := 0.0
 	pcost := 0.0
@@ -389,9 +389,9 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	relgap := 0.0
 
 	if primalstart == nil && dualstart == nil {
-		gap = Sdot(s, z, dims, 0)
+		gap = sdot(s, z, dims, 0)
 		pcost = blas.DotFloat(c, x)
-		dcost = -blas.DotFloat(b, y) - Sdot(h, z, dims, 0)
+		dcost = -blas.DotFloat(b, y) - sdot(h, z, dims, 0)
 		if pcost < 0.0 {
 			relgap = gap / -pcost
 		} else if dcost > 0.0 {
@@ -405,8 +405,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 			ind := dims.At("l")[0] + dims.Sum("q")
 			for _, m := range dims.At("s") {
-				Symm(s, m, ind)
-				Symm(z, m, ind)
+				symm(s, m, ind)
+				symm(z, m, ind)
 				ind += m*m
 			}
 
@@ -424,13 +424,13 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			Gf(x, rz, 1.0, 0.0)
 			blas.AxpyFloat(s, rz, 1.0)
 			blas.AxpyFloat(h, rz, -1.0)
-			resz := Snrm2(rz, dims, 0)
+			resz := snrm2(rz, dims, 0)
 
 			pres := math.Max(resy/resy0, resz/resz0)
 			dres := resx/resx0
 			cx := blas.Dot(c, x).Float()
 			by := blas.Dot(b, y).Float()
-			hz := Sdot(h, z, dims, 0)
+			hz := sdot(h, z, dims, 0)
 
 			sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
 			sol.Result = FloatSetNew("x", "y", "s", "x")
@@ -530,7 +530,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 	lmbda := matrix.FloatZeros(cdim_diag+1, 1)
 	lmbdasq := matrix.FloatZeros(cdim_diag+1, 1)
 
-	gap = Sdot(s, z, dims, 0)
+	gap = sdot(s, z, dims, 0)
 
 	var x1, y1, z1 *matrix.FloatMatrix
 	var dg, dgi float64
@@ -566,19 +566,19 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		// hrz = s + G*x  
 		Gf(x, hrz, 1.0, 0.0)
 		blas.AxpyFloat(s, hrz, 1.0)
-		hresz := Snrm2(hrz, dims, 0) 
+		hresz := snrm2(hrz, dims, 0) 
 
 		// rz = hrz - h*tau 
 		//    = s + G*x - h*tau
 		blas.ScalFloat(rz, 0.0)
 		blas.AxpyFloat(hrz, rz, 1.0)
 		blas.AxpyFloat(h, rz, -tau.Float())
-		resz := Snrm2(rz, dims, 0) / tau.Float()
+		resz := snrm2(rz, dims, 0) / tau.Float()
 
 		// rt = kappa + c'*x + b'*y + h'*z '
 		cx := blas.DotFloat(c, x)
 		by := blas.DotFloat(b, y)
-		hz := Sdot(h, z, dims, 0)
+		hz := sdot(h, z, dims, 0)
 		rt := kappa.Float() + cx + by + hz 
 
 		// Statistics for stopping criteria
@@ -626,12 +626,12 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			blas.ScalFloat(z, 1.0/tau.Float())
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				Symm(s, m, ind)
-				Symm(z, m, ind)
+				symm(s, m, ind)
+				symm(z, m, ind)
 				ind += m*m
 			}
-			ts, _ = MaxStep(s, dims, 0, nil)
-			tz, _ = MaxStep(z, dims, 0, nil)
+			ts, _ = maxStep(s, dims, 0, nil)
+			tz, _ = maxStep(z, dims, 0, nil)
 			if iter == solopts.MaxIter {
 				// MaxIterations exceeded
 				if solopts.ShowProgress {
@@ -692,10 +692,10 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			sol.X = nil; sol.Y = nil; sol.S = nil; sol.Z = nil
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				Symm(z, m, ind)
+				symm(z, m, ind)
 				ind += m*m
 			}
-			tz, _ = MaxStep(z, dims, 0, nil)
+			tz, _ = maxStep(z, dims, 0, nil)
 			sol.Status = PrimalInfeasible
 			sol.Result = FloatSetNew("x", "y", "s", "x")
 			sol.Result.Append("x", nil)
@@ -725,10 +725,10 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			sol.X = nil; sol.Y = nil; sol.S = nil; sol.Z = nil
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				Symm(s, m, ind)
+				symm(s, m, ind)
 				ind += m*m
 			}
-			ts, _ = MaxStep(s, dims, 0, nil)
+			ts, _ = maxStep(s, dims, 0, nil)
 			sol.Status = PrimalInfeasible
 			sol.Result = FloatSetNew("x", "y", "s", "x")
 			sol.Result.Append("x", nil)
@@ -754,7 +754,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		//     W * z = W^{-T} * s = lambda
 		//     dg * tau = 1/dg * kappa = lambdag.
 		if iter == 0 {
-			W, err = ComputeScaling(s, z, lmbda, dims, 0)
+			W, err = computeScaling(s, z, lmbda, dims, 0)
 
 			//     dg = sqrt( kappa / tau )
 			//     dgi = sqrt( tau / kappa )
@@ -767,7 +767,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			lmbda.SetIndex(-1, math.Sqrt(float64(tau.Float()*kappa.Float())))
 		}
 		// lmbdasq := lmbda o lmbda 
-		Ssqr(lmbdasq, lmbda, dims, 0)
+		ssqr(lmbdasq, lmbda, dims, 0)
 		lmbdasq.SetIndex(-1, lmbda.GetIndex(-1)*lmbda.GetIndex(-1))
 
 		// f3(x, y, z) solves    
@@ -817,12 +817,12 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 				blas.ScalFloat(z, t_)
 				ind := dims.Sum("l", "q")
 				for _, m := range dims.At("s") {
-					Symm(s, m, ind)
-					Symm(z, m, ind)
+					symm(s, m, ind)
+					symm(z, m, ind)
 					ind += m*m
 				}
-				ts,_ = MaxStep(s, dims, 0, nil)
-				tz,_ = MaxStep(z, dims, 0, nil)
+				ts,_ = maxStep(s, dims, 0, nil)
+				tz,_ = maxStep(z, dims, 0, nil)
 				err = errors.New("Terminated (singular KKT matrix).")
 				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
 				sol.Result = FloatSetNew("x", "y", "s", "x")
@@ -862,7 +862,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		}
 
 		blas.Copy(h, th)
-		Scale(th, W, true, true)
+		scale(th, W, true, true)
 
 		f6_no_ir := func(x, y, z, tau, s, kappa *matrix.FloatMatrix) (err error) {
             // Solve 
@@ -891,12 +891,12 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			blas.ScalFloat(y, -1.0)
 
             // s := -lmbda o\ s = -lmbda o\ bs
-			err = Sinv(s, lmbda, dims, 0)
+			err = sinv(s, lmbda, dims, 0)
 			blas.ScalFloat(s, -1.0)
 
             // z := -(z + W'*s) = -bz + W'*(lambda o\ bs)
 			blas.Copy(s, ws3)
-			err = Scale(ws3, W, true, false)
+			err = scale(ws3, W, true, false)
 			blas.AxpyFloat(ws3, z, 1.0)
 			blas.ScalFloat(z, -1.0)
 
@@ -921,11 +921,11 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
             //tau[0] = dgi * ( tau[0] + xdot(c,x) + ydot(b,y) + 
             //    misc.sdot(th, z, dims) ) / (1.0 + misc.sdot(z1, z1, dims))
-			//tau_ = tau_ + blas.DotFloat(c, x) + blas.DotFloat(b, y) + Sdot(th, z, dims, 0)
+			//tau_ = tau_ + blas.DotFloat(c, x) + blas.DotFloat(b, y) + sdot(th, z, dims, 0)
 			tau_ += blas.DotFloat(c, x)
 			tau_ += blas.DotFloat(b, y)
-			tau_ += Sdot(th, z, dims, 0)
-			tau_ = dgi * tau_ / (1.0 + Sdot(z1, z1, dims, 0))
+			tau_ += sdot(th, z, dims, 0)
+			tau_ = dgi * tau_ / (1.0 + sdot(z1, z1, dims, 0))
 			tau.SetValue(tau_)
 			blas.AxpyFloat(x1, x, tau_)
 			blas.AxpyFloat(y1, y, tau_)
@@ -1064,7 +1064,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			// Save ds o dz and dkappa * dtau for Mehrotra correction
 			if i == 0 {
 				blas.Copy(ds, ws3)
-				Sprod(ws3, dz, dims, 0)
+				sprod(ws3, dz, dims, 0)
 				wkappa3.SetValue(dtau.Float() * dkappa.Float())
 			}
 
@@ -1075,14 +1075,14 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
             // dsk, dzk.  The eigenvalues are stored in sigs, sigz. 
 			var ts, tz float64
 
-			Scale2(lmbda, ds, dims, 0, false)
-			Scale2(lmbda, dz, dims, 0, false)
+			scale2(lmbda, ds, dims, 0, false)
+			scale2(lmbda, dz, dims, 0, false)
 			if i == 0 {
-				ts,_ = MaxStep(ds, dims, 0, nil)
-				tz,_ = MaxStep(dz, dims, 0, nil)
+				ts,_ = maxStep(ds, dims, 0, nil)
+				tz,_ = maxStep(dz, dims, 0, nil)
 			} else {
-				ts,_ = MaxStep(ds, dims, 0, sigs)
-				tz,_ = MaxStep(dz, dims, 0, sigz)
+				ts,_ = maxStep(ds, dims, 0, sigs)
+				tz,_ = maxStep(dz, dims, 0, sigz)
 			}
 			dt_ := dtau.Float()
 			dk_ := dkappa.Float()
@@ -1138,8 +1138,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
         // 
         // diag(lmbda_k)^{1/2} * Qs * diag(lmbda_k)^{1/2} 
         // diag(lmbda_k)^{1/2} * Qz * diag(lmbda_k)^{1/2} 
-		Scale2(lmbda, ds, dims, 0, true)
-		Scale2(lmbda, dz, dims, 0, true)
+		scale2(lmbda, ds, dims, 0, true)
+		scale2(lmbda, dz, dims, 0, true)
 
         // sigs := ( e + step*sigs ) ./ lambda for 's' blocks.
         // sigz := ( e + step*sigz ) ./ lambda for 's' blocks.
@@ -1168,7 +1168,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			ind3 += m
 		}
 		
-		err = UpdateScaling(W, lmbda, ds, dz)
+		err = updateScaling(W, lmbda, ds, dz)
 
         // For kappa, tau block: 
         //
@@ -1194,7 +1194,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			ind += m
 			ind2 += m*m
 		}
-		Scale(s, W, true, false)
+		scale(s, W, true, false)
 		
 		ind = dims.Sum("l", "q")
 		ind2 = ind
@@ -1206,7 +1206,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 			ind += m
 			ind2 += m*m
 		}
-		Scale(z, W, false, true)
+		scale(z, W, false, true)
 		
 		kappa.SetValue(lmbda.GetIndex(-1)/dgi)
 		tau.SetValue(lmbda.GetIndex(-1)*dgi)
