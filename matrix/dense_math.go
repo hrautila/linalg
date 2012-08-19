@@ -201,7 +201,9 @@ func (A *FloatMatrix) Max(indexes... int) float64 {
 	} else {
 		N := A.NumElements()
 		for _, k := range indexes {
-			k = (N + k) % k
+			if k < 0 {
+				k = N + k
+			}
 			m = math.Max(m, A.elements[k])
 		}
 	}
@@ -218,7 +220,9 @@ func (A *FloatMatrix) Min(indexes... int) float64 {
 	} else {
 		N := A.NumElements()
 		for _, k := range indexes {
-			k = (N + k) % k
+			if k < 0 {
+				k = N + k
+			}
 			m = math.Min(m, A.elements[k])
 		}
 	}
@@ -235,25 +239,34 @@ func (A *FloatMatrix) Sum(indexes... int) float64 {
 	} else {
 		N := A.NumElements()
 		for _, k := range indexes {
-			k = (N + k) % k
+			if k < 0 {
+				k = N + k
+			}
 			m += A.elements[k]
 		}
 	}
 	return m
 }
 
-// Compute C = Exp(A). Returns a new matrix.
+// Compute element-wise C = Exp(A). Returns a new matrix.
 func (A *FloatMatrix) Exp() *FloatMatrix {
 	C := FloatZeros(A.Rows(), A.Cols())
 	return C.Apply(A, math.Exp)
 }
 
-// Compute C = Log(A). Returns a new matrix.
+// Compute element-wise C = Log(A). Returns a new matrix.
 func (A *FloatMatrix) Log() *FloatMatrix {
 	C := FloatZeros(A.Rows(), A.Cols())
 	return C.Apply(A, math.Log)
 }
 		
+// Compute element-wise C = Pow(A). Returns a new matrix.
+func (A *FloatMatrix) Pow(exp float64) *FloatMatrix {
+	C := FloatZeros(A.Rows(), A.Cols())
+	return C.ApplyConst(A, math.Pow, exp)
+}
+		
+
 // Local Variables:
 // tab-width: 4
 // End:
