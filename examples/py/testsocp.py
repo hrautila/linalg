@@ -24,9 +24,14 @@ def testsocp(opts):
     solvers.options.update(opts)
     sol = solvers.socp(c, Gq = G, hq = h)  
     
-    print "x = \n", str2(sol['x'], "%.9f")
+    print "x = \n", helpers.str2(sol['x'], "%.9f")
     print "zq[0] = \n", helpers.str2(sol['zq'][0], "%.9f")
     print "zq[1] = \n", helpers.str2(sol['zq'][1], "%.9f")
+    helpers.run_go_test("../testsocp", {'x': sol['x'],
+                                       'sq0': sol['sq'][0],
+                                       'sq1': sol['sq'][1],
+                                       'zq0': sol['zq'][0],
+                                       'zq1': sol['zq'][1]})
 
 
 testsocp({'maxiters': 10, 'kktsolver': 'ldl'})

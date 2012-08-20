@@ -140,14 +140,15 @@ def floorplan(Amin, opts):
     solvers.options.update(opts)
     sol = solvers.cpl(c, F, G, h)  
     return  sol['x'][0], sol['x'][1], sol['x'][2:7], sol['x'][7:12], \
-        sol['x'][12:17], sol['x'][17:]  
+        sol['x'][12:17], sol['x'][17:], sol['x']  
  
 
 Amin = matrix([100., 100., 100., 100., 100.])  
-W, H, x, y, w, h =  floorplan(Amin, {'maxiters': 50})  
+W, H, x, y, w, h, Xall =  floorplan(Amin, {'maxiters': 50})  
 print "W = %.5f H = %.5f" % (W, H)
 print "x=\n", helpers.str2(x, "%.5f")
 print "y=\n", helpers.str2(y, "%.5f")
 print "w=\n", helpers.str2(w, "%.5f")
 print "h=\n", helpers.str2(h, "%.5f")
+helpers.run_go_test("../testcpl", {'x': Xall})
 

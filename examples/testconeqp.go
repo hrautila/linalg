@@ -112,36 +112,6 @@ func main() {
 		}
 	}
 
-	/*
-	// Reference data from python program. A.T*A and -b.T*A printed with 17decimals
-	pdata := [][]float64{
-		[]float64{ 2.14000000000000012, -0.47000000000000003, -2.33000000000000007},
-		[]float64{-0.47000000000000003,  4.87000000000000011, -0.95999999999999996},
-		[]float64{-2.33000000000000007, -0.95999999999999996,  5.88999999999999968}}
-
-	qdata := []float64{	-0.970000000000000, -2.730000000000000, 0.330000000000000}
-
-	Pt := matrix.FloatMatrixStacked(pdata, matrix.ColumnOrder)
-	qt := matrix.FloatVector(qdata)
-		
-	//fmt.Printf("P=\n%v\n", Pt.ToString("%.15f"))
-	//fmt.Printf("q=\n%v\n", qt.ToString("%.15f"))
-	sol, err = cvx.ConeQp(Pt, qt, G, h, nil, nil, dims, &solopts, nil)
-	if err == nil {
-		x := sol.Result.At("x")[0]
-		s := sol.Result.At("s")[0]
-		z := sol.Result.At("z")[0]
-		fmt.Printf("Optimal\n")
-		fmt.Printf("x=\n%v\n", x.ToString("%.9f"))
-		fmt.Printf("s=\n%v\n", s.ToString("%.9f"))
-		fmt.Printf("z=\n%v\n", z.ToString("%.9f"))
-		if reftest {
-			check(x, s, z)
-		}
-	} else {
-		fmt.Printf("status: %s\n", err)
-	}
-	 */
 }
 
 

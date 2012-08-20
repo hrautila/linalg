@@ -4,9 +4,35 @@ package main
 
 import (
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
 	"fmt"
+	"flag"
 )
+
+var xVal string
+
+func init() {
+	flag.StringVar(&xVal, "x", "", "Reference value for X")
+}
+	
+func errorToRef(ref, val *matrix.FloatMatrix) (nrm float64, diff *matrix.FloatMatrix) {
+	diff = ref.Minus(val)
+	nrm = blas.Nrm2(diff).Float()
+	return
+}
+
+func check(x *matrix.FloatMatrix) {
+	if len(xVal) > 0 {
+		ref, _ := matrix.FloatParseSpe(xVal)
+		nrm, diff := errorToRef(ref, x)
+		fmt.Printf("x: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
+	}
+}
+
 
 // FloorPlan implements interface cvx.ConvexProg.
 type FloorPlan struct {
@@ -59,8 +85,7 @@ func (p *FloorPlan) F2(x, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, e
 	return 
 }
 
-func floorplan(Amin *matrix.FloatMatrix) {
-
+func floorplan(Amin *matrix.FloatMatrix) *matrix.FloatMatrix {
 	rho := 1.0
 	gamma := 5.0
 
@@ -165,7 +190,19 @@ func floorplan(Amin *matrix.FloatMatrix) {
 
 	sol, err := cvx.Cpl(F, c, G, h, nil, nil, dims, &solopts)
 	if err == nil && sol.Status == cvx.Optimal {
-		x := sol.Result.At("x")[0]
+		return sol.Result.At("x")[0]
+	} else {
+		fmt.Printf("result: %v\n", err)
+	}
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	reftest := flag.NFlag() > 0
+
+	x := floorplan(matrix.FloatWithValue(5, 1, 100.0))
+	if x != nil {
 		W := x.Get(0)
 		H := x.Get(1)
 		xs := matrix.FloatVector(x.FloatArray()[2:7])
@@ -177,13 +214,10 @@ func floorplan(Amin *matrix.FloatMatrix) {
 		fmt.Printf("y = \n%v\n", ys.ToString("%.5f"))
 		fmt.Printf("w = \n%v\n", ws.ToString("%.5f"))
 		fmt.Printf("h = \n%v\n", hs.ToString("%.5f"))
-	} else {
-		fmt.Printf("result: %v\n", err)
+		if reftest {
+			check(x)
+		}
 	}
-}
-
-func main() {
-	floorplan(matrix.FloatWithValue(5, 1, 100.0))
 }
 
 // Local Variables:

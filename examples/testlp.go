@@ -7,7 +7,6 @@ import (
 	"github.com/hrautila/go.opt/cvx"
 	"fmt"
 	"flag"
-	"math"
 )
 
 var xVal, sVal, zVal string
@@ -18,29 +17,36 @@ func init() {
 	flag.StringVar(&zVal, "z", "", "Reference value for Z")
 }
 	
-func error(ref, val *matrix.FloatMatrix) (dot, nrm float64, diff *matrix.FloatMatrix) {
+func error(ref, val *matrix.FloatMatrix) (nrm float64, diff *matrix.FloatMatrix) {
 	diff = ref.Minus(val)
-	dot = math.Sqrt(blas.Dot(diff, diff).Float())
 	nrm = blas.Nrm2(diff).Float()
 	return
 }
 
 func check(x, s, z *matrix.FloatMatrix) {
-	var xref, sref, zref *matrix.FloatMatrix = nil, nil, nil
-
 	if len(xVal) > 0 {
-		xref, _ = matrix.FloatParseSpe(xVal)
-		dot, nrm, diff := error(xref, x)
-		fmt.Printf("x: dot=%.9f, nrm=%.9f\n%v\n", dot, nrm, diff.ToString("%.12f"))
+		ref, _ := matrix.FloatParseSpe(xVal)
+		nrm, diff := error(ref, x)
+		fmt.Printf("x: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
 	}
-
 	if len(sVal) > 0 {
-		sref, _ = matrix.FloatParseSpe(sVal)
-		fmt.Printf("sref=\n%v\n", sref.ToString("%.2f"))
+		ref, _ := matrix.FloatParseSpe(sVal)
+		nrm, diff := error(ref, s)
+		fmt.Printf("s: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
 	}
 	if len(zVal) > 0 {
-		zref, _ = matrix.FloatParseSpe(zVal)
-		fmt.Printf("zref=\n%v\n", zref.ToString("%.2f"))
+		ref, _ := matrix.FloatParseSpe(zVal)
+		nrm, diff := error(ref, z)
+		fmt.Printf("z: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
 	}
 }
 
