@@ -61,7 +61,7 @@ func TestCCopy(t *testing.T) {
 	fmt.Printf("A:\n%v\n", A)
 	C := A.Copy()
 	fmt.Printf("C:\n%v\n", C)
-	C.SetAt(10.0*C.GetAt(0, 1), 0, 1)
+	C.SetAt(0, 1, 10.0*C.GetAt(0, 1))
 	B := FloatNew(3, 2, []float64{1,2,3,4,5,6})
 	fmt.Printf("B:\n%v\n", B)
 }

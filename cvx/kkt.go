@@ -20,7 +20,7 @@ import (
 func setDiagonal(M *matrix.FloatMatrix, srow, scol, erow, ecol int, val float64) {
 	for i := srow; i < erow; i++ {
 		if i < ecol {
-			M.SetAt(val, i, i)
+			M.SetAt(i, i, val)
 		}
 	}
 }
@@ -70,11 +70,11 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			}
 			// set values g[mnl:] = G[,k]
 			g.SetIndexes(matrix.MakeIndexSet(mnl, mnl+g.Rows(), 1), G.GetColumnArray(k, nil))
-			Scale(g, W, true, true)
+			scale(g, W, true, true)
 			if err != nil {
 				fmt.Printf("scale error: %s\n", err)
 			}
-			Pack(g, K, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", k*ldK+n+p})
+			pack(g, K, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", k*ldK+n+p})
 		}
 		setDiagonal(K, n+p, n+n, ldK, ldK, -1.0)
 		//fmt.Printf("K=\n%v\n", K)
@@ -101,10 +101,10 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			blas.Copy(y, u, &la_.IOpt{"offsety", n})
 			//fmt.Printf("solving: u=\n%v\n", u.ConvertToString())
 			//W.Print()
-			err = Scale(z, W, true, true)
+			err = scale(z, W, true, true)
 			//fmt.Printf("solving: post-scale z=\n%v\n", z.ConvertToString())
 			if err != nil { return }
-			err = Pack(z, u, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", n+p})
+			err = pack(z, u, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", n+p})
 			//fmt.Printf("solve: post-Pack {mnl=%d, n=%d, p=%d} u=\n%v\n",
 			//	mnl, n, p, u.ConvertToString())
 			if err != nil { return }
@@ -114,7 +114,7 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 
 			blas.Copy(u, x, &la_.IOpt{"n", n})
 			blas.Copy(u, y, &la_.IOpt{"n", p}, &la_.IOpt{"offsetx", n})
-			err = UnPack(u, z, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsetx", n+p})
+			err = unpack(u, z, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsetx", n+p})
 			//fmt.Printf("** end solve **\n")
 			//fmt.Printf("x=\n%v\n", x.ConvertToString())
 			//fmt.Printf("z=\n%v\n", z.ConvertToString())

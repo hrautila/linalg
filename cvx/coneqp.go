@@ -158,7 +158,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		return 
 	}
 	fG := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la.Option) error{
-		return Sgemv(G, x, y, alpha, beta, dims, opts...)
+		return sgemv(G, x, y, alpha, beta, dims, opts...)
 	}
 
 	// Check A and set defaults if it is nil
@@ -237,7 +237,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		fP(ux, vx, -1.0, 1.0)
 		fA(uy, vx, -1.0, 1.0, la.OptTrans)
 		blas.Copy(uz, wz3)
-		Scale(wz3, W, true, false)
+		scale(wz3, W, true, false)
 		fG(wz3, vx, -1.0, 1.0, la.OptTrans)
         // vy := vy - A*ux
         fA(ux, vy, -1.0, 1.0)
@@ -245,20 +245,20 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         // vz := vz - G*ux - W'*us
         fG(ux, vz, -1.0, 1.0)
         blas.Copy(us, ws3)
-        Scale(ws3, W, true, false)
+        scale(ws3, W, true, false)
         blas.AxpyFloat(ws3, vz, -1.0)
  
         // vs := vs - lmbda o (uz + us)
         blas.Copy(us, ws3)
         blas.AxpyFloat(uz, ws3, 1.0)
-        Sprod(ws3, lmbda, dims, 0, la.OptDiag)
+        sprod(ws3, lmbda, dims, 0, la.OptDiag)
         blas.AxpyFloat(ws3, vs, -1.0)
 		return 
 	}
 
 	resx0 := math.Max(1.0, math.Sqrt(blas.Dot(q,q).Float()))
 	resy0 := math.Max(1.0, math.Sqrt(blas.Dot(b,b).Float()))
-	resz0 := math.Max(1.0, Snrm2(h, dims, 0))
+	resz0 := math.Max(1.0, snrm2(h, dims, 0))
 	//fmt.Printf("resx0: %.17f, resy0: %.17f, resz0: %.17f\n", resx0, resy0, resz0)
 
 	var x, y, z, s, dx, dy, ds, dz, rx, ry, rz *matrix.FloatMatrix
@@ -372,8 +372,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		s = z.Copy()
 		blas.ScalFloat(s, -1.0)
 
-		nrms = Snrm2(s, dims, 0)
-		ts,_ = MaxStep(s, dims, 0, nil)
+		nrms = snrm2(s, dims, 0)
+		ts,_ = maxStep(s, dims, 0, nil)
 		if ts >= -1e-8 * math.Max(nrms, 1.0) {
 			// a = 1.0 + ts  
 			a := 1.0 + ts
@@ -393,8 +393,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			}
 		}
 
-		nrmz = Snrm2(z, dims, 0)
-		tz,_ = MaxStep(z, dims, 0, nil)
+		nrmz = snrm2(z, dims, 0)
+		tz,_ = maxStep(z, dims, 0, nil)
 		if tz >= -1e-8 * math.Max(nrmz, 1.0) {
 			a := 1.0 + tz
 			is := make([]int, 0)
@@ -474,7 +474,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 
 	var WS fClosure
 
-	gap = Sdot(s, z, dims, 0)
+	gap = sdot(s, z, dims, 0)
 	for iter := 0; iter < solopts.MaxIter+1; iter++ {
 
         // f0 = (1/2)*x'*P*x + q'*x + r and  rx = P*x + q + A'*y + G'*z.
@@ -494,7 +494,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         blas.Copy(s, rz)
         blas.AxpyFloat(h, rz, -1.0)
         fG(x, rz, 1.0, 1.0)
-        resz = Snrm2(rz, dims, 0)
+        resz = snrm2(rz, dims, 0)
 		//fmt.Printf("resx: %.17f, resy: %.17f, resz: %.17f\n", resx, resy, resz)
 
         // Statistics for stopping criteria.
@@ -504,7 +504,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         //       = (1/2)*x'*P*x + q'*x + y'*(A*x-b) + z'*(G*x-h+s) - z'*s
         //       = (1/2)*x'*P*x + q'*x + y'*ry + z'*rz - gap
         pcost = f0
-        dcost = f0 + blas.DotFloat(y, ry) + Sdot(z, rz, dims, 0) - gap
+        dcost = f0 + blas.DotFloat(y, ry) + sdot(z, rz, dims, 0) - gap
         if pcost < 0.0 {
             relgap = gap / -pcost
         } else if dcost > 0.0 {
@@ -533,12 +533,12 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
-				Symm(s, m, ind)
-				Symm(z, m, ind)
+				symm(s, m, ind)
+				symm(z, m, ind)
 				ind += m*m
 			}
-			ts,_ = MaxStep(s, dims, 0, nil)
-			tz,_ = MaxStep(z, dims, 0, nil)
+			ts,_ = maxStep(s, dims, 0, nil)
+			tz,_ = maxStep(z, dims, 0, nil)
 			if iter == solopts.MaxIter {
 				// terminated on max iterations.
 				sol.Status = Unknown
@@ -574,9 +574,9 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         // 
         // lmbdasq = lambda o lambda.
 		if iter == 0 {
-			W, err = ComputeScaling(s, z, lmbda, dims, 0)
+			W, err = computeScaling(s, z, lmbda, dims, 0)
 		}
-		Ssqr(lmbdasq, lmbda, dims, 0)
+		ssqr(lmbdasq, lmbda, dims, 0)
 
 		f3, err = kktsolver(W)
 		if err != nil {
@@ -587,12 +587,12 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			} else {
 				ind := dims.Sum("l", "q")
 				for _, m := range dims.At("s") {
-					Symm(s, m, ind)
-					Symm(z, m, ind)
+					symm(s, m, ind)
+					symm(z, m, ind)
 					ind += m*m
 				}
-				ts,_ = MaxStep(s, dims, 0, nil)
-				tz,_ = MaxStep(z, dims, 0, nil)
+				ts,_ = maxStep(s, dims, 0, nil)
+				tz,_ = maxStep(z, dims, 0, nil)
 				// terminated (singular KKT matrix)
 				fmt.Printf("Terminated (singular KKT matrix).\n")
 				err = errors.New("Terminated (singular KKT matrix).")
@@ -638,12 +638,12 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
             
             // s := lmbda o\ s 
             //    = lmbda o\ bs
-			Sinv(s, lmbda, dims, 0)
+			sinv(s, lmbda, dims, 0)
 
             // z := z - W'*s 
             //    = bz - W'*(lambda o\ bs)
 			blas.Copy(s, ws3)
-			Scale(ws3, W, true, false)
+			scale(ws3, W, true, false)
 			blas.AxpyFloat(ws3, z, -1.0)
 
 			err := f3(x, y, z)
@@ -757,20 +757,20 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 				} else {
 					ind = dims.Sum("l", "q")
 					for _, m := range dims.At("s") {
-						Symm(s, m, ind)
-						Symm(z, m, ind)
+						symm(s, m, ind)
+						symm(z, m, ind)
 						ind += m*m
 					}
-					ts,_ = MaxStep(s, dims, 0, nil)
-					tz,_ = MaxStep(z, dims, 0, nil)
+					ts,_ = maxStep(s, dims, 0, nil)
+					tz,_ = maxStep(z, dims, 0, nil)
 					return
 				}
 			}
 
-			dsdz := Sdot(ds, dz, dims, 0)
+			dsdz := sdot(ds, dz, dims, 0)
 			if correction && i == 0 {
 				blas.Copy(ds, ws3)
-				Sprod(ws3, dz, dims, 0)
+				sprod(ws3, dz, dims, 0)
 			}
 
             // Maximum step to boundary.
@@ -778,14 +778,14 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
             // If i is 1, also compute eigenvalue decomposition of the 's' 
             // blocks in ds, dz.  The eigenvectors Qs, Qz are stored in 
             // dsk, dzk.  The eigenvalues are stored in sigs, sigz. 
-			Scale2(lmbda, ds, dims, 0, false)
-			Scale2(lmbda, dz, dims, 0, false)
+			scale2(lmbda, ds, dims, 0, false)
+			scale2(lmbda, dz, dims, 0, false)
 			if i == 0 {
-				ts,_ = MaxStep(ds, dims, 0, nil)
-				tz,_ = MaxStep(dz, dims, 0, nil)
+				ts,_ = maxStep(ds, dims, 0, nil)
+				tz,_ = maxStep(dz, dims, 0, nil)
 			} else {
-				ts,_ = MaxStep(ds, dims, 0, sigs)
-				tz,_ = MaxStep(dz, dims, 0, sigz)
+				ts,_ = maxStep(ds, dims, 0, sigs)
+				tz,_ = maxStep(dz, dims, 0, sigz)
 			}
 			t := maxvec([]float64{0.0, ts, tz})
 			//fmt.Printf("== t=%.17f from %v\n", t, []float64{ts, tz})
@@ -842,8 +842,8 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
         // 
         // diag(lmbda_k)^{1/2} * Qs * diag(lmbda_k)^{1/2} 
         // diag(lmbda_k)^{1/2} * Qz * diag(lmbda_k)^{1/2} 
-		Scale2(lmbda, ds, dims, 0, true)
-		Scale2(lmbda, dz, dims, 0, true)
+		scale2(lmbda, ds, dims, 0, true)
+		scale2(lmbda, dz, dims, 0, true)
 
         // sigs := ( e + step*sigs ) ./ lambda for 's' blocks.
         // sigz := ( e + step*sigz ) ./ lambda for 's' blocks.
@@ -873,7 +873,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			ind3 += m
 		}
 		
-		err = UpdateScaling(W, lmbda, ds, dz)
+		err = updateScaling(W, lmbda, ds, dz)
 
         // Unscale s, z, tau, kappa (unscaled variables are used only to 
         // compute feasibility residuals).
@@ -887,7 +887,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			ind += m
 			ind2 += m*m
 		}
-		Scale(s, W, true, false)
+		scale(s, W, true, false)
 		
 		ind = dims.Sum("l", "q")
 		ind2 = ind
@@ -899,7 +899,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			ind += m
 			ind2 += m*m
 		}
-		Scale(z, W, false, true)
+		scale(z, W, false, true)
 
 		gap = blas.DotFloat(lmbda, lmbda)
 		//fmt.Printf("== gap = %.17f\n", gap)

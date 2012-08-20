@@ -25,9 +25,6 @@ func main() {
 	A := matrix.FloatWithValue(1, n, 1.0)
 	b := matrix.FloatNew(1,1, []float64{1.0})
 
-	//fmt.Printf("G=\n%v\n", G.ToString("%.2f"))
-	//fmt.Printf("h=\n%v\n", h.ToString("%.2f"))
-
 	var solopts cvx.SolverOptions
 	solopts.MaxIter = 30
 	solopts.ShowProgress = true
