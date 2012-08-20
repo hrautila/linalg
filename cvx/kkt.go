@@ -14,7 +14,7 @@ import (
 	"github.com/hrautila/go.opt/linalg/lapack"
 	"github.com/hrautila/go.opt/matrix"
 	"fmt"
-	"math"
+	//"math"
 )
 
 func setDiagonal(M *matrix.FloatMatrix, srow, scol, erow, ecol int, val float64) {
@@ -53,7 +53,7 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 	u := matrix.FloatZeros(ldK, 1)
 	g := matrix.FloatZeros(mnl+G.Rows(), 1)
 
-	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (kktFunc, error) {
+	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
 		var err error = nil
 		// Zero K for each call.
 		blas.ScalFloat(K, 0.0)
@@ -123,15 +123,6 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 		return solve, err
 	}
 	return factor, nil
-}
-
-func matrixNaN(x *matrix.FloatMatrix) bool {
-	for i := 0; i < x.NumElements(); i++ {
-		if math.IsNaN(x.GetIndex(i)) {
-			return true
-		}
-	}
-	return false
 }
 
 

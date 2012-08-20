@@ -14,15 +14,15 @@ import (
 )
 
 // kktFunc solves
-type kktFunc func(x, y, z *matrix.FloatMatrix) error
+type KKTFunc func(x, y, z *matrix.FloatMatrix) error
 
 // kktFactor produces solver function
-type kktFactor func(*FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(kktFunc, error)
+type kktFactor func(*FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
 
 // kktSolver creates problem spesific factor
 type kktSolver func(*matrix.FloatMatrix, *DimensionSet, *matrix.FloatMatrix, int) (kktFactor, error)
 
-func kktNullFactor(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (kktFunc, error) {
+func kktNullFactor(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
 	nullsolver := func(x, y, z *matrix.FloatMatrix) error {
 		return errors.New("Null KTT Solver does not solve anything.")
 	}

@@ -210,7 +210,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 		// kkt function returns us problem spesific factor function.
 		factor, err = kktfunc(G, dims, A, mnl)
 		// solver is 
-		kktsolver = func(W *FloatMatrixSet, x, z *matrix.FloatMatrix) (kktFunc, error) {
+		kktsolver = func(W *FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error) {
 			_, Df, H, err := F.F2(x, z)
 			if err != nil { return nil, err }
 			return factor(W, H, Df)
@@ -310,7 +310,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 	var dsdz, dsdz0, step, step0, dphi, dphi0, sigma0, /*mu0,*/ eta0 float64
 	var newresx, newresznl, newgap, newphi float64
 	var W *FloatMatrixSet
-	var f3 kktFunc
+	var f3 KKTFunc
 	
 	// Declare fDf and fH here, they bind to Df and H as they are already declared.
 	// ??really??

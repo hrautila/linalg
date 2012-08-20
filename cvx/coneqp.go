@@ -71,7 +71,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
-	var kktsolver func(*FloatMatrixSet)(kktFunc, error) = nil
+	var kktsolver func(*FloatMatrixSet)(KKTFunc, error) = nil
 	var refinement int
 	var correction bool = true
 
@@ -212,7 +212,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			fmt.Printf("error on factoring: %s\n", err)
 		}
 		// solver is 
-		kktsolver = func(W *FloatMatrixSet) (kktFunc, error) {
+		kktsolver = func(W *FloatMatrixSet) (KKTFunc, error) {
 			return factor(W, P, nil)
 		}
 	} else {
@@ -264,7 +264,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 	var x, y, z, s, dx, dy, ds, dz, rx, ry, rz *matrix.FloatMatrix
 	var lmbda, lmbdasq, sigs, sigz *matrix.FloatMatrix
 	var W *FloatMatrixSet
-	var f, f3 kktFunc
+	var f, f3 KKTFunc
 	var resx, resy, resz, step, sigma, mu, eta float64
 	var gap, pcost, dcost, relgap, pres, dres, f0 float64
 
