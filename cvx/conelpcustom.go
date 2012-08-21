@@ -17,7 +17,7 @@ import (
 	"math"
 )
 
-// Public interface to provide custom G matrix
+// Public interface to provide custom G matrix-vector products
 type MatrixG interface {
 	//
     //    The call Gf(u, v, alpha, beta, trans) should evaluate the matrix-vector products
@@ -31,7 +31,7 @@ type MatrixG interface {
 	Size() (int, int)
 }
 
-// Public interface to provide custom A matrix
+// Public interface to provide custom A matrix-vector products
 type MatrixA interface {
 	//
     //    The call Af(u, v, alpha, beta, trans) should evaluate the matrix-vector products
@@ -45,7 +45,24 @@ type MatrixA interface {
 	Size() (int, int)
 }
 
-//type KKTFunc func(x, y, z *matrix.FloatMatrix) error
+// Custom solver type for solving linear equations (`KKT systems')
+//        
+//            [ 0  A'  G'   ] [ ux ]   [ bx ]
+//            [ A  0   0    ] [ uy ] = [ by ].
+//            [ G  0  -W'*W ] [ uz ]   [ bz ]
+//
+// W is a scaling matrix, a block diagonal mapping 
+//
+// The call f = CustomKKT(W) should return a function f that solves 
+// the KKT system by f(x, y, z).  On entry, x, y, z contain the 
+// righthand side bx, by, bz.  On exit, they contain the solution, 
+// with uz scaled: the argument z contains W*uz.  In other words,
+// on exit, x, y, z are the solution of
+//
+//            [ 0  A'  G'*W^{-1} ] [ ux ]   [ bx ]
+//            [ A  0   0         ] [ uy ] = [ by ].
+//            [ G  0  -W'        ] [ uz ]   [ bz ]
+//
 type CustomKKT func(W *FloatMatrixSet) (KKTFunc, error)
 
 // internal type for presenting A as MatrixA interface.
@@ -225,8 +242,11 @@ func ConeLpKKT(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, kktsolver 
 	return ConeLpCustom(c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts, primalstart, dualstart)
 }
 
-//    Solves a pair of primal and dual cone programs using custom KKT solver and
-//    
+//    Solves a pair of primal and dual cone programs using custom KKT solver and custom
+//    matrices G and A.
+//
+//	  G must implement interface MatrixG and A must implement interface MatrixA.
+//
 func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 	A MatrixA, b *matrix.FloatMatrix, dims *DimensionSet, kktsolver CustomKKT,
 	solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
@@ -497,7 +517,6 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			return
 		}
 		blas.ScalFloat(s, -1.0)
-		//fmt.Printf("** initial s:\n%v\n", s)
 	} else {
 		blas.Copy(primalstart.At("x")[0], x)
 		blas.Copy(primalstart.At("s")[0], s)
@@ -626,7 +645,6 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			for _, k := range is {
 				s.SetIndex(k, a + s.GetIndex(k))
 			}
-			//fmt.Printf("scaled s=\n%v\n", s.ConvertToString())
 		}
 
 		if tz >= -1e-8 * math.Max(nrmz, 1.0) {
@@ -644,7 +662,6 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			for _, k := range is {
 				z.SetIndex(k, a + z.GetIndex(k))
 			}
-			//fmt.Printf("scaled z=\n%v\n", z.ConvertToString())
 		}
 	} else if primalstart == nil && dualstart != nil {
 		if ts >= -1e-8 * math.Max(nrms, 1.0) {
@@ -699,9 +716,6 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 	var WS fClosure
 	var f3 KKTFunc
 
-	//fmt.Printf("preloop x=\n%v\n", x.ConvertToString())
-	//fmt.Printf("preloop z=\n%v\n", z.ConvertToString())
-	//fmt.Printf("preloop s=\n%v\n", s.ConvertToString())
 	for iter := 0; iter < solopts.MaxIter+1; iter++ {
 		// hrx = -A'*y - G'*z 
 		Af(y, hrx, -1.0, 0.0, la.OptTrans)
