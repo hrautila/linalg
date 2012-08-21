@@ -67,7 +67,7 @@ func checkConeLpDimensions(dims *DimensionSet) error {
 //    The next M cones are positive semidefinite cones of order ms[0], ...,
 //    ms[M-1] >= 0.  
 //
-func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
 
 	err = nil
 	const EXPON = 3

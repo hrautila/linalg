@@ -17,21 +17,38 @@ import (
 	"math"
 )
 
-
+// Public interface to provide custom G matrix
 type MatrixG interface {
-	Gf(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
+	//
+    //    The call Gf(u, v, alpha, beta, trans) should evaluate the matrix-vector products
+    //
+    //        v := alpha * G * u + beta * v  if trans is linalg.OptNoTrans
+    //        v := alpha * G' * u + beta * v  if trans is linalg.OptTrans
+    //
+	Gf(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
+
+	// Return size of the implied matrix.
 	Size() (int, int)
 }
 
+// Public interface to provide custom A matrix
 type MatrixA interface {
-	Af(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
+	//
+    //    The call Af(u, v, alpha, beta, trans) should evaluate the matrix-vector products
+    //
+    //        v := alpha * A * u + beta * v  if trans is linalg.OptNoTrans
+    //        v := alpha * A' * u + beta * v  if trans is linalg.OptTrans
+    //
+	Af(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
+
+	// Return size of the implied matrix.
 	Size() (int, int)
 }
 
 //type KKTFunc func(x, y, z *matrix.FloatMatrix) error
 type CustomKKT func(W *FloatMatrixSet) (KKTFunc, error)
 
-// internal types
+// internal type for presenting A as MatrixA interface.
 type matA struct {
 	mA *matrix.FloatMatrix
 }
@@ -43,6 +60,7 @@ func (amat *matA) Size() (int, int) {
 	return amat.mA.Size()
 }
 
+// internal type for presenting G as MatrixG interface.
 type matG struct {
 	mG *matrix.FloatMatrix
 	dims *DimensionSet
@@ -56,7 +74,32 @@ func (gmat *matG) Size() (int, int) {
 	return gmat.mG.Size()
 }
 
-func ConeLp2(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+//    Solves a pair of primal and dual cone programs
+//
+//        minimize    c'*x
+//        subject to  G*x + s = h
+//                    A*x = b
+//                    s >= 0
+//
+//        maximize    -h'*z - b'*y 
+//        subject to  G'*z + A'*y + c = 0
+//                    z >= 0.
+//
+//    The inequalities are with respect to a cone C defined as the Cartesian
+//    product of N + M + 1 cones:
+//    
+//        C = C_0 x C_1 x .... x C_N x C_{N+1} x ... x C_{N+M}.
+//
+//    The first cone C_0 is the nonnegative orthant of dimension ml.
+//    The next N cones are second order cones of dimension mq[0], ..., 
+//    mq[N-1].  The second order cone of dimension m is defined as
+//    
+//        { (u0, u1) in R x R^{m-1} | u0 >= ||u1||_2 }.
+//
+//    The next M cones are positive semidefinite cones of order ms[0], ...,
+//    ms[M-1] >= 0.  
+//
+func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
 
 
 	if G == nil {
@@ -99,36 +142,94 @@ func ConeLp2(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Sol
 		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
 		return
 	}
-	return ConeLpCustom(c, h, b, &matrixG, &matrixA, dims, kktsolver, solopts, primalstart, dualstart)
+	return ConeLpCustom(c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts, primalstart, dualstart)
 }
 
-//    Solves a pair of primal and dual cone programs
+//    Solves a pair of primal and dual cone programs using custom KKT solver.
 //
-//        minimize    c'*x
-//        subject to  G*x + s = h
-//                    A*x = b
-//                    s >= 0
+//    The customize solver can provide a routine for solving linear equations (`KKT systems')
+//        
+//            [ 0  A'  G'   ] [ ux ]   [ bx ]
+//            [ A  0   0    ] [ uy ] = [ by ].
+//            [ G  0  -W'*W ] [ uz ]   [ bz ]
 //
-//        maximize    -h'*z - b'*y 
-//        subject to  G'*z + A'*y + c = 0
-//                    z >= 0.
+//    W is a scaling matrix, a block diagonal mapping 
 //
-//    The inequalities are with respect to a cone C defined as the Cartesian
-//    product of N + M + 1 cones:
+//           W*z = ( W0*z_0, ..., W_{N+M}*z_{N+M} ) 
+//
+//    defined as follows.  
+//
+//    - For the 'l' block (W_0): 
+//
+//           W_0 = diag(d), 
+//
+//      with d a positive vector of length ml. 
+//
+//    - For the 'q' blocks (W_{k+1}, k = 0, ..., N-1): 
+//                           
+//           W_{k+1} = beta_k * ( 2 * v_k * v_k' - J )
+//
+//      where beta_k is a positive scalar, v_k is a vector in R^mq[k] 
+//      with v_k[0] > 0 and v_k'*J*v_k = 1, and J = [1, 0; 0, -I].
+//
+//    - For the 's' blocks (W_{k+N}, k = 0, ..., M-1):
+//
+//           W_k * x = vec(r_k' * mat(x) * r_k) 
+//
+//      where r_k is a nonsingular matrix of order ms[k], and mat(x) is 
+//      the inverse of the vec operation.
+// 
+//      The argument kktsolver is a function that will be called as f = kktsolver(W),
+//      where W is a FloatMatrixSet that contains the parameters of the scaling:
+//
+//        - W['d'] is a positive float matrix of size (ml,1).
+//        - W['di'] is a positive float matrix with the elementwise inverse of W['d'].
+//        - W['beta'] is a matrix of value [ beta_0, ..., beta_{N-1} ]
+//        - W['v'] is a list [ v_0, ..., v_{N-1} ]  of float matrices
+//        - W['r'] is a list [ r_0, ..., r_{M-1} ]  of float matrices
+//        - W['rti'] is a list [ rti_0, ..., rti_{M-1} ], with rti_k the
+//          inverse of the transpose of r_k.
+//
+//        The call f = kktsolver(W) should return a function f that solves 
+//        the KKT system by f(x, y, z).  On entry, x, y, z contain the 
+//        righthand side bx, by, bz.  On exit, they contain the solution, 
+//        with uz scaled: the argument z contains W*uz.  In other words,
+//        on exit, x, y, z are the solution of
+//
+//            [ 0  A'  G'*W^{-1} ] [ ux ]   [ bx ]
+//            [ A  0   0         ] [ uy ] = [ by ].
+//            [ G  0  -W'        ] [ uz ]   [ bz ]
+//
+func ConeLpKKT(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, kktsolver CustomKKT,
+	solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+
+	if G == nil {
+		err = errors.New("'G' must be non-nil matrix.")
+		return
+	}
+	if A == nil {
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+
+	if dims == nil {
+		dims = DSetNew("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+
+	var matrixA = matA{A}
+	var matrixG = matG{G, dims}
+
+	return ConeLpCustom(c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts, primalstart, dualstart)
+}
+
+//    Solves a pair of primal and dual cone programs using custom KKT solver and
 //    
-//        C = C_0 x C_1 x .... x C_N x C_{N+1} x ... x C_{N+M}.
-//
-//    The first cone C_0 is the nonnegative orthant of dimension ml.
-//    The next N cones are second order cones of dimension mq[0], ..., 
-//    mq[N-1].  The second order cone of dimension m is defined as
-//    
-//        { (u0, u1) in R x R^{m-1} | u0 >= ||u1||_2 }.
-//
-//    The next M cones are positive semidefinite cones of order ms[0], ...,
-//    ms[M-1] >= 0.  
-//
-func ConeLpCustom(c, h, b *matrix.FloatMatrix, G MatrixG, A MatrixA, dims *DimensionSet,
-	kktsolver CustomKKT, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
+	A MatrixA, b *matrix.FloatMatrix, dims *DimensionSet, kktsolver CustomKKT,
+	solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
 
 	err = nil
 	const EXPON = 3
@@ -139,8 +240,6 @@ func ConeLpCustom(c, h, b *matrix.FloatMatrix, G MatrixG, A MatrixA, dims *Dimen
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
-	//var primalstart *FloatMatrixSet = nil
-	//var dualstart *FloatMatrixSet = nil
 	var refinement int
 
 	if solopts.Refinement > 0 {
