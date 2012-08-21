@@ -135,6 +135,35 @@ func (A *dimensions) SizeMatch(rows, cols int) bool {
 	return A != nil && A.rows == rows && A.cols == cols
 }
 
+// Change matrix shape if number of elements match to rows*cols.
+func Reshape(m Matrix, rows, cols int) {
+	if rows*cols == m.NumElements() {
+		switch m.(type) {
+		case *FloatMatrix:
+			m.(*FloatMatrix).SetSize(rows, cols)
+		case *ComplexMatrix:
+			m.(*ComplexMatrix).SetSize(rows, cols)
+		}
+	}
+}
+		
+// Set x = y ie. copy y to x. Matrices must have same number of elements but are
+// required to have same shape.
+func Set(x, y Matrix) {
+	if x.NumElements() != y.NumElements() {
+		return
+	}
+	if ! x.EqualTypes(y) {
+		return
+	}
+	switch x.(type) {
+	case *FloatMatrix:
+		copy(x.FloatArray(), y.FloatArray())
+	case *ComplexMatrix:
+		copy(x.ComplexArray(), y.ComplexArray())
+	}
+}
+	
 // Create a set of indexes from start to end-1 with interval step.
 func MakeIndexSet(start, end, step int) []int {
 	if start < 0 {
@@ -194,6 +223,20 @@ func ColumnIndexes(m Matrix, col int) []int {
 	for i := 0; i < N; i++ {
 		k := col * N + i
 		iset[i] = k
+	}
+	return iset
+}
+
+// Create index set for diagonal in matrix M. 
+func DiagonalIndexes(m Matrix) []int {
+	if m.Cols() != m.Rows() {
+		return []int{}
+	}
+	ind := 0
+	iset := make([]int, m.Rows())
+	for i := 0; i < m.Rows(); i++ {
+		iset[i] = ind
+		ind += m.Rows()
 	}
 	return iset
 }

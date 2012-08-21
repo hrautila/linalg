@@ -20,9 +20,29 @@ func (A *FloatMatrix) Scale(alpha float64, indexes... int) *FloatMatrix {
 	} else  {
 		N := A.NumElements()
 		for _, k := range indexes {
-			k = (N + k) % N
+			if k < 0 {
+				k = N + k
+			}
 			A.elements[k] *= alpha
 		}
+	}
+	return A
+}
+
+// Compute in-place A[indexes[i]] *= values[i]. Indexes are in column-major order.
+func (A *FloatMatrix) ScaleIndexes(indexes []int, values []float64) *FloatMatrix {
+	if len(indexes) == 0 {
+		return A
+	}
+	N := A.NumElements()
+	for i, k := range indexes {
+		if i >= len(values) {
+			return A
+		}
+		if k < 0 {
+			k = N + k
+		}
+		A.elements[k] *= values[i]
 	}
 	return A
 }
@@ -37,7 +57,9 @@ func (A *FloatMatrix) Mod(alpha float64, indexes... int) *FloatMatrix {
 	} else  {
 		N := A.NumElements()
 		for _, k := range indexes {
-			k = (N + k) % N
+			if k < 0 {
+				k = N + k
+			}
 			A.elements[k] = math.Mod(A.elements[k], alpha)
 		}
 	}
@@ -54,9 +76,29 @@ func (A *FloatMatrix) Add(alpha float64, indexes... int) *FloatMatrix {
 	} else  {
 		N := A.NumElements()
 		for _, k := range indexes {
-			k = (N + k) % N
+			if k < 0 {
+				k = N + k
+			}
 			A.elements[k] += alpha
 		}
+	}
+	return A
+}
+
+// Compute in-place A[indexes[i]] += values[i]. Indexes are in column-major order.
+func (A *FloatMatrix) AddIndexes(indexes []int, values []float64) *FloatMatrix {
+	if len(indexes) == 0 {
+		return A
+	}
+	N := A.NumElements()
+	for i, k := range indexes {
+		if i >= len(values) {
+			return A
+		}
+		if k < 0 {
+			k = N + k
+		}
+		A.elements[k] += values[i]
 	}
 	return A
 }
