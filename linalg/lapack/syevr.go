@@ -17,8 +17,8 @@ import (
 
 /*
  Computes selected eigenvalues and eigenvectors of a real symmetric
- 
  matrix (RRR driver).
+
  m = Syevr(A, W, jobz=PJobNo, range=PRangeAll, uplo=PLower,
  vlimit=[]float{0.0, 0.0}, ilimit=[]int{1, 1}, Z=-1, n=A.Rows,
  ldA=max(1,A.Rows), ldZ=-1, abstol=0.0, offsetA=0, offsetW=0, offsetZ=0)
