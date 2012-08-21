@@ -27,6 +27,8 @@ type Option interface {
 	Bool() bool
 	// Option value as string.
 	String() string
+	// Test if other option is of equal
+	Equal(Option) bool
 }
 
 
@@ -118,6 +120,10 @@ func GetComplexOpt(name string, defval complex128, opts ...Option) (val complex1
 	return 
 }
 
+func Equal(a, b Option) bool {
+	return a.Equal(b)
+}
+
 // Integer valued option.
 type IOpt struct {
 	OptName string
@@ -155,6 +161,17 @@ func (O *IOpt) Bool() bool {
 
 func (O *IOpt) String() string {
 	return string(O.Val)
+}
+
+func (O *IOpt) Equal(other Option) bool {
+	switch other.(type) {
+	case *IOpt:
+		if ! strings.EqualFold(O.OptName, other.Name()) {
+			return false
+		}
+		return O.Val == other.Int()
+	}
+	return false
 }
 
 // Float valued option.
@@ -195,6 +212,17 @@ func (O *FOpt) String() string {
 	return "" //string(O.val)
 }
 
+func (O *FOpt) Equal(other Option) bool {
+	switch other.(type) {
+	case *FOpt:
+		if ! strings.EqualFold(O.OptName, other.Name()) {
+			return false
+		}
+		return O.Val == other.Float()
+	}
+	return false
+}
+
 // String valued option.
 type SOpt struct {
 	OptName string
@@ -231,6 +259,17 @@ func (O *SOpt) Bool() bool {
 
 func (O *SOpt) String() string {
 	return O.Val
+}
+
+func (O *SOpt) Equal(other Option) bool {
+	switch other.(type) {
+	case *SOpt:
+		if ! strings.EqualFold(O.OptName, other.Name()) {
+			return false
+		}
+		return O.Val == other.String()
+	}
+	return false
 }
 
 // Boolean valued option.
@@ -271,6 +310,17 @@ func (O *BOpt) String() string {
 	return "" //string(O.val)
 }
 
+func (O *BOpt) Equal(other Option) bool {
+	switch other.(type) {
+	case *BOpt:
+		if ! strings.EqualFold(O.OptName, other.Name()) {
+			return false
+		}
+		return O.Val == other.Bool()
+	}
+	return false
+}
+
 // Return complex valued option.
 func ComplexOpt(name string, val complex128) *COpt {
 	return &COpt{name, val}
@@ -308,6 +358,18 @@ func (O *COpt) Bool() bool {
 func (O *COpt) String() string {
 	return "" //string(O.val)
 }
+
+func (O *COpt) Equal(other Option) bool {
+	switch other.(type) {
+	case *COpt:
+		if ! strings.EqualFold(O.OptName, other.Name()) {
+			return false
+		}
+		return O.Val == other.Complex()
+	}
+	return false
+}
+
 
 
 // Local Variables:
