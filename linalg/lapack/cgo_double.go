@@ -399,11 +399,6 @@ func dormqr(side, trans string, M, N, K int, A []float64, lda int, tau, C []floa
 // void dsyev_(char *jobz, char *uplo, int *n, double *A, int *lda, double *W,
 //		double *work, int *lwork, int *info);
 
-// void dsyevx_(char *jobz, char *range, char *uplo, int *n, double *A, int *lda,
-//		double *vl, double *vu, int *il, int *iu, double *abstol, int *m,
-//		double *W, double *Z, int *ldz, double *work, int *lwork, int *iwork,
-//		int *ifail, int *info);
-
 // void dsyevd_(char *jobz, char *uplo, int *n, double *A, int *ldA, double *W,
 //		double *work, int *lwork, int *iwork, int *liwork, int *info);
 func dsyevd(jobz, uplo string, N int, A []float64, lda int, W []float64) int {
@@ -462,15 +457,23 @@ func dsyevr(jobz, srange, uplo string, N int, A []float64, lda int, vl, vu float
 	defer C.free(unsafe.Pointer(crange))
 
 	// pre-calculate work buffer size
-	C.dsyevr_(cjobz, crange, cuplo, (*C.int)(unsafe.Pointer(&N)),
-		nil, (*C.int)(unsafe.Pointer(&lda)), 
-		(*C.double)(unsafe.Pointer(&vl)), (*C.double)(unsafe.Pointer(&vu)),
-		(*C.int)(unsafe.Pointer(&il)), (*C.int)(unsafe.Pointer(&iu)), 
-		(*C.double)(unsafe.Pointer(&abstol)), (*C.int)(unsafe.Pointer(&M)),
+	C.dsyevr_(cjobz, crange, cuplo,
+		(*C.int)(unsafe.Pointer(&N)),
+		nil,
+		(*C.int)(unsafe.Pointer(&lda)), 
+		(*C.double)(unsafe.Pointer(&vl)),
+		(*C.double)(unsafe.Pointer(&vu)),
+		(*C.int)(unsafe.Pointer(&il)),
+		(*C.int)(unsafe.Pointer(&iu)), 
+		(*C.double)(unsafe.Pointer(&abstol)),
+		(*C.int)(unsafe.Pointer(&M)),
 		nil, nil,
-		(*C.int)(unsafe.Pointer(&LDz)), nil,
-		(*C.double)(unsafe.Pointer(&work)), (*C.int)(unsafe.Pointer(&lwork)),
-		(*C.int)(unsafe.Pointer(&iwork)), (*C.int)(unsafe.Pointer(&liwork)),
+		(*C.int)(unsafe.Pointer(&LDz)),
+		nil,
+		(*C.double)(unsafe.Pointer(&work)),
+		(*C.int)(unsafe.Pointer(&lwork)),
+		(*C.int)(unsafe.Pointer(&iwork)),
+		(*C.int)(unsafe.Pointer(&liwork)),
 		(*C.int)(unsafe.Pointer(&info)))
 
 	// allocate work area
@@ -492,20 +495,117 @@ func dsyevr(jobz, srange, uplo string, N int, A []float64, lda int, vl, vu float
 		Zbuf = (*C.double)(unsafe.Pointer(nil))
 	}
 	
-	C.dsyevr_(cjobz, crange, cuplo, (*C.int)(unsafe.Pointer(&N)),
-		(*C.double)(unsafe.Pointer(&A[0])), (*C.int)(unsafe.Pointer(&lda)), 
-		(*C.double)(unsafe.Pointer(&vl)), (*C.double)(unsafe.Pointer(&vu)),
-		(*C.int)(unsafe.Pointer(&il)), (*C.int)(unsafe.Pointer(&iu)), 
-		(*C.double)(unsafe.Pointer(&abstol)), (*C.int)(unsafe.Pointer(&M)),
-		Wbuf, Zbuf,
-		(*C.int)(unsafe.Pointer(&LDz)), nil,
-		(*C.double)(unsafe.Pointer(&wbuf[0])), (*C.int)(unsafe.Pointer(&lwork)),
-		(*C.int)(unsafe.Pointer(&wibuf[0])), (*C.int)(unsafe.Pointer(&liwork)),
+	C.dsyevr_(cjobz, crange, cuplo,
+		(*C.int)(unsafe.Pointer(&N)),
+		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.int)(unsafe.Pointer(&lda)), 
+		(*C.double)(unsafe.Pointer(&vl)),
+		(*C.double)(unsafe.Pointer(&vu)),
+		(*C.int)(unsafe.Pointer(&il)),
+		(*C.int)(unsafe.Pointer(&iu)), 
+		(*C.double)(unsafe.Pointer(&abstol)),
+		(*C.int)(unsafe.Pointer(&M)),
+		Wbuf,
+		Zbuf,
+		(*C.int)(unsafe.Pointer(&LDz)),
+		nil,
+		(*C.double)(unsafe.Pointer(&wbuf[0])),
+		(*C.int)(unsafe.Pointer(&lwork)),
+		(*C.int)(unsafe.Pointer(&wibuf[0])),
+		(*C.int)(unsafe.Pointer(&liwork)),
 		(*C.int)(unsafe.Pointer(&info)))
 	
 	return info
 }
 	
+// void dsyevx_(char *jobz, char *range, char *uplo, int *n, double *A, int *lda,
+//		double *vl, double *vu, int *il, int *iu, double *abstol, int *m,
+//		double *W, double *Z, int *ldz, double *work, int *lwork, int *iwork,
+//		int *ifail, int *info);
+
+func dsyevx(jobz, srange, uplo string, N int, A []float64, lda int, vl, vu float64,
+	il, iu int, M int, W, Z []float64, LDz int) int {
+
+	var info int = 0
+	var lwork int = -1
+	//var liwork int = -1
+	//var iwork int32
+	var work float64 
+	var abstol float64 = 0.0
+
+	cjobz := C.CString(jobz)
+	defer C.free(unsafe.Pointer(cjobz))
+	cuplo := C.CString(uplo)
+	defer C.free(unsafe.Pointer(cuplo))
+	crange := C.CString(srange)
+	defer C.free(unsafe.Pointer(crange))
+
+	// pre-calculate work buffer size
+	C.dsyevx_(cjobz, crange, cuplo,				// char *jobz, range, uplo
+		(*C.int)(unsafe.Pointer(&N)),			// int *n
+		nil,									// double *A
+		(*C.int)(unsafe.Pointer(&lda)),			// int *lda
+		(*C.double)(unsafe.Pointer(&vl)),		// double *vl
+		(*C.double)(unsafe.Pointer(&vu)),		// double *vu
+		(*C.int)(unsafe.Pointer(&il)),			// int *il
+		(*C.int)(unsafe.Pointer(&iu)),			// int *iu
+		(*C.double)(unsafe.Pointer(&abstol)),	// double *abstol
+		(*C.int)(unsafe.Pointer(&M)),			// int *m
+		nil,									// double *W
+		nil,									// double *Z
+		(*C.int)(unsafe.Pointer(&LDz)),			// int *ldz
+		nil,									// double *work
+		(*C.int)(unsafe.Pointer(&work)),		// int *lwork
+		(*C.int)(unsafe.Pointer(&lwork)),		// int *iwork
+		nil,									// int *ifail
+		(*C.int)(unsafe.Pointer(&info)))		// int *info
+
+	// allocate work area
+	lwork = int(work)
+	//fmt.Printf("dsyevx: lwork=%d, liwork=%d\n", lwork, liwork)
+	wbuf := make([]float64, lwork)
+	wibuf := make([]int32, 5*N)
+
+	var ifailbuf *C.int
+	var ifail []int32
+	ifailbuf = (*C.int)(unsafe.Pointer(nil))
+
+	if jobz[0] == 'V' {
+		ifail = make([]int32, N)
+		ifailbuf = (*C.int)(unsafe.Pointer(&ifail[0]))
+	}
+	var Zbuf, Wbuf *C.double
+	if W != nil {
+		Wbuf = (*C.double)(unsafe.Pointer(&W[0]))
+	} else {
+		Wbuf = (*C.double)(unsafe.Pointer(nil))
+	}
+	if Z != nil {
+		Zbuf = (*C.double)(unsafe.Pointer(&Z[0]))
+	} else {
+		Zbuf = (*C.double)(unsafe.Pointer(nil))
+	}
+	C.dsyevx_(cjobz, crange, cuplo,
+		(*C.int)(unsafe.Pointer(&N)),
+		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.int)(unsafe.Pointer(&lda)), 
+		(*C.double)(unsafe.Pointer(&vl)),
+		(*C.double)(unsafe.Pointer(&vu)),
+		(*C.int)(unsafe.Pointer(&il)),
+		(*C.int)(unsafe.Pointer(&iu)), 
+		(*C.double)(unsafe.Pointer(&abstol)),
+		(*C.int)(unsafe.Pointer(&M)),
+		Wbuf,
+		Zbuf,
+		(*C.int)(unsafe.Pointer(&LDz)),
+		(*C.double)(unsafe.Pointer(&wbuf[0])),
+		(*C.int)(unsafe.Pointer(&lwork)),
+		(*C.int)(unsafe.Pointer(&wibuf[0])),
+		ifailbuf, 
+		(*C.int)(unsafe.Pointer(&info)))
+	
+	return info
+}
 
 // void dsygv_(int *itype, char *jobz, char *uplo, int *n, double *A, int *lda,
 //		double *B, int *ldb, double *W, double *work, int *lwork,  int *info);
