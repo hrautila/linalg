@@ -6,17 +6,8 @@
 
 from cvxopt import matrix, solvers
 from cvxopt import misc, blas
+import helpers
 
-def str2(m, fmt='%.17f'):
-    s = ''
-    for i in xrange(m.size[0]):
-        s += "["
-        for j in xrange(m.size[1]):
-            if j != 0:
-                s += ", "
-            s += fmt % m[i, j]
-        s += "]\n"
-    return s
 
 def solve(opts):
     c = matrix([-6., -4., -5.])
@@ -38,9 +29,10 @@ def solve(opts):
     sol = solvers.conelp(c, G, h, dims, kktsolver='ldl')
     print("\nStatus: " + sol['status'])
     if sol['status'] == 'optimal':
-        print "x=\n", str2(sol['x'])
-        print "s=\n", str2(sol['s'])
-        print "z=\n", str2(sol['z'])
+        print "x=\n", helpers.str2(sol['x'])
+        print "s=\n", helpers.str2(sol['s'])
+        print "z=\n", helpers.str2(sol['z'])
+        helpers.run_go_test("../testconelp", {'x': sol['x'], 's': sol['s'], 'z': sol['z']})
 
 
 solve({'maxiters': 30})

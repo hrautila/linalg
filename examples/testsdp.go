@@ -10,11 +10,74 @@ package main
 
 import (
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
 	"fmt"
+	"flag"
 )
 
+var xVal, ss0Val, ss1Val, zs0Val, zs1Val string
+
+func init() {
+	flag.StringVar(&xVal, "x", "", "Reference value for X")
+	flag.StringVar(&ss0Val, "ss0", "", "Reference value for SQ[0]")
+	flag.StringVar(&ss1Val, "ss1", "", "Reference value for SQ[1]")
+	flag.StringVar(&zs0Val, "zs0", "", "Reference value for ZQ[0]")
+	flag.StringVar(&zs1Val, "zs1", "", "Reference value for ZQ[1]")
+}
+	
+func error(ref, val *matrix.FloatMatrix) (nrm float64, diff *matrix.FloatMatrix) {
+	diff = ref.Minus(val)
+	nrm = blas.Nrm2(diff).Float()
+	return
+}
+
+func check(x, ss0, ss1, zs0, zs1 *matrix.FloatMatrix) {
+	if len(xVal) > 0 {
+		ref, _ := matrix.FloatParseSpe(xVal)
+		nrm, diff := error(ref, x)
+		fmt.Printf("x: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
+	}
+	if len(ss0Val) > 0 {
+		ref, _ := matrix.FloatParseSpe(ss0Val)
+		nrm, diff := error(ref,ss0)
+		fmt.Printf("ss0: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
+	}
+	if len(ss1Val) > 0 {
+		ref, _ := matrix.FloatParseSpe(ss1Val)
+		nrm, diff := error(ref,ss1)
+		fmt.Printf("ss1: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
+	}
+	if len(zs0Val) > 0 {
+		ref, _ := matrix.FloatParseSpe(zs0Val)
+		nrm, diff := error(ref, zs0)
+		fmt.Printf("zs0: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
+	}
+	if len(zs1Val) > 0 {
+		ref, _ := matrix.FloatParseSpe(zs1Val)
+		nrm, diff := error(ref, zs1)
+		fmt.Printf("zs1: nrm=%.9f\n", nrm)
+		if nrm > 10e-7 {
+			fmt.Printf("diff=\n%v\n", diff.ToString("%.12f"))
+		}
+	}
+}
+
 func main() {
+	flag.Parse()
+	reftest := flag.NFlag() > 0
 
 	gdata0 := [][]float64{
 		[]float64{-7., -11., -11., 3.},
@@ -62,6 +125,13 @@ func main() {
 		}
 		for i, m := range sol.Result.At("zs") {
 			fmt.Printf("zs[%d]=\n%v\n", i, m.ToString("%.9f"))
+		}
+		if reftest {
+			ss0 := sol.Result.At("ss")[0]
+			ss1 := sol.Result.At("ss")[1]
+			zs0 := sol.Result.At("zs")[0]
+			zs1 := sol.Result.At("zs")[1]
+			check(x, ss0, ss1, zs0, zs1)
 		}
 	} else {
 		fmt.Printf("status: %v\n", err)

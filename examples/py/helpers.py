@@ -68,3 +68,12 @@ def printW(W):
         else:
             print "** %s[0] **\n" % k, str2(W[k], "%.3f")
 
+
+def run_go_test(name, refvals):
+    import subprocess
+    args = [name]
+    for key in refvals:
+        args += [ "-"+key, strSpe(refvals[key])]
+
+    subprocess.call(args)
+

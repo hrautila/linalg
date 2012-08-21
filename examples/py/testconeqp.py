@@ -7,17 +7,8 @@
 
 from cvxopt import matrix, solvers
 from cvxopt import misc, blas
+import helpers
 
-def str2(m, fmt='%.17f'):
-    s = ''
-    for i in xrange(m.size[0]):
-        s += "["
-        for j in xrange(m.size[1]):
-            if j != 0:
-                s += ", "
-            s += fmt % m[i, j]
-        s += "]\n"
-    return s
 
 def testqp(opts):
     A = matrix([ [ .3, -.4,  -.2,  -.4,  1.3 ], 
@@ -34,15 +25,13 @@ def testqp(opts):
     P = A.T*A
     q = -A.T*b
 
-    print "P=\n", str2(P, "%.17f")
-    print "q=\n", str2(q, "%.17f")
-
     solvers.options.update(opts)
     sol = solvers.coneqp(P, q, G, h, dims, kktsolver='ldl')
     if sol['status'] == 'optimal':
-        print "x=\n", str2(sol['x'])
-        print "s=\n", str(sol['s'])
-        print "z=\n", str2(sol['z'])
+        print "x=\n", helpers.str2(sol['x'], "%.9f")
+        print "s=\n", helpers.str2(sol['s'], "%.9f")
+        print "z=\n", helpers.str2(sol['z'], "%.9f")
+        helpers.run_go_test("../testconeqp", {'x': sol['x'], 's': sol['s'], 'z': sol['z']})
 
 testqp({'maxiters': 10})
 
