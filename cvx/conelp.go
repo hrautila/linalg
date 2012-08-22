@@ -26,7 +26,9 @@ type fClosure struct {
 }
 
 func checkConeLpDimensions(dims *DimensionSet) error {
-	if dims.At("l")[0] < 0 {
+	if len(dims.At("l")) == 0 {
+		dims.Set("l", []int{0})
+	} else if dims.At("l")[0] < 0 {
 		return errors.New("dimension 'l' must be nonnegative integer")
 	}
 	for _, m := range dims.At("q") {

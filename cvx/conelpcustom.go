@@ -26,9 +26,6 @@ type MatrixG interface {
     //        v := alpha * G' * u + beta * v  if trans is linalg.OptTrans
     //
 	Gf(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
-
-	// Return size of the implied matrix.
-	Size() (int, int)
 }
 
 // Public interface to provide custom A matrix-vector products
@@ -40,9 +37,6 @@ type MatrixA interface {
     //        v := alpha * A' * u + beta * v  if trans is linalg.OptTrans
     //
 	Af(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
-
-	// Return size of the implied matrix.
-	Size() (int, int)
 }
 
 // Custom solver type for solving linear equations (`KKT systems')
@@ -73,9 +67,6 @@ type matA struct {
 func (amat *matA) Af(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
 	return blas.GemvFloat(amat.mA, x, y, alpha, beta, trans)
 }
-func (amat *matA) Size() (int, int) {
-	return amat.mA.Size()
-}
 
 // internal type for presenting G as MatrixG interface.
 type matG struct {
@@ -85,10 +76,6 @@ type matG struct {
 
 func (gmat *matG) Gf(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
 	return sgemv(gmat.mG, x, y, alpha, beta, gmat.dims, trans)
-}
-
-func (gmat *matG) Size() (int, int) {
-	return gmat.mG.Size()
 }
 
 //    Solves a pair of primal and dual cone programs
@@ -118,11 +105,12 @@ func (gmat *matG) Size() (int, int) {
 //
 func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
 
-
+	/* saved
 	if G == nil {
 		err = errors.New("'G' must be non-nil matrix.")
 		return
 	}
+	 */
 	if A == nil {
 		A = matrix.FloatZeros(0, c.Rows())
 	}
@@ -130,9 +118,72 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 		b = matrix.FloatZeros(0, 1)
 	}
 
+	if c == nil || c.Cols() > 1 {
+		err = errors.New("'c' must be matrix with 1 column")
+		return 
+	}
+	if c.Rows() < 1 {
+		err = errors.New("No variables, 'c' must have at least one row")
+		return 
+		
+	}
+	if h == nil || h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
 	if dims == nil {
 		dims = DSetNew("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
+	}
+
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
+	//cdim_diag := dims.Sum("l", "q", "s")
+
+	if h.Rows() != cdim {
+		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
+		return 
+	}
+
+	if G == nil {
+		G = matrix.FloatZeros(0, c.Rows())
+	}
+	if !G.SizeMatch(cdim, c.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check A and set defaults if it is nil
+	if A == nil {
+		// zeros rows reduces Gemv to vector products
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if A.Cols() != c.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+	if b.Rows() != A.Rows() {
+		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
+		err = errors.New("Rank(A) < p or Rank([G; A]) < n")
+		return
 	}
 
 	var matrixA = matA{A}
@@ -140,7 +191,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 
 	solvername := solopts.KKTSolverName
 	if len(solvername) == 0 {
-		if dims != nil && (len(dims.At("q")) > 0 || len(dims.At("s")) > 0) {
+		if len(dims.At("q")) > 0 || len(dims.At("s")) > 0 {
 			solvername = "qr"
 		} else {
 			solvername = "chol2"
@@ -220,10 +271,12 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *Solv
 func ConeLpKKT(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, kktsolver CustomKKT,
 	solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
 
+	/* saved
 	if G == nil {
 		err = errors.New("'G' must be non-nil matrix.")
 		return
 	}
+	 */
 	if A == nil {
 		A = matrix.FloatZeros(0, c.Rows())
 	}
@@ -231,9 +284,61 @@ func ConeLpKKT(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, kktsolver 
 		b = matrix.FloatZeros(0, 1)
 	}
 
+	if c == nil || c.Cols() > 1 {
+		err = errors.New("'c' must be matrix with 1 column")
+		return 
+	}
+	if h == nil || h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
 	if dims == nil {
 		dims = DSetNew("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
+	}
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
+	//cdim_diag := dims.Sum("l", "q", "s")
+
+	if G == nil {
+		G = matrix.FloatZeros(0, c.Rows())
+	}
+	if !G.SizeMatch(cdim, c.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check A and set defaults if it is nil
+	if A == nil {
+		// zeros rows reduces Gemv to vector products
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if A.Cols() != c.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+	if b.Rows() != A.Rows() {
+		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
+		err = errors.New("Rank(A) < p or Rank([G; A]) < n")
+		return
 	}
 
 	var matrixA = matA{A}
@@ -297,6 +402,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 	}
 
 	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
 	cdim_diag := dims.Sum("l", "q", "s")
 
 	if h.Rows() != cdim {
@@ -305,48 +411,42 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 	}
 
 	// Data for kth 'q' constraint are found in rows indq[k]:indq[k+1] of G.
-	indq := make([]int, 0, 100)
+	indq := make([]int, 0)
 	indq = append(indq, dims.At("l")[0])
 	for _, k := range dims.At("q") {
 		indq = append(indq, indq[len(indq)-1]+k)
 	}
 
     // Data for kth 's' constraint are found in rows inds[k]:inds[k+1] of G.
-	inds := make([]int, 0, 100)
+	inds := make([]int, 0)
 	inds = append(inds, indq[len(indq)-1])
 	for _, k := range dims.At("s") {
 		inds = append(inds, inds[len(inds)-1]+k*k)
 	}
 
 	if G == nil {
-		err = errors.New("'G' must be non-nil matrix.")
+		err = errors.New("'G' must be non-nil MatrixG interface.")
 		return
-	}
-	grows, gcols := G.Size()
-	if grows != cdim || gcols != c.Rows() {
-		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
-		err = errors.New(estr)
-		return 
 	}
 	Gf := func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
 		return G.Gf(x, y, alpha, beta, trans)
 	}
 
-	// Check A and set defaults if it is nil
+	var Af func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error = nil
+	var Adummy *matrix.FloatMatrix
+
+	// MatrixA  interface must exist.
 	if A == nil {
-		err = errors.New(fmt.Sprintf("'A' cannot be nil and must have %d columns", c.Rows()))
-		return
-	}
-
-	arows, acols := A.Size()
-	if acols != c.Rows() {
-		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
-		err = errors.New(estr)
-		return 
-	}
-
-	Af := func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
-		return A.Af(x, y, alpha, beta, trans)
+		//err = errors.New("'A' must be non-nil MatrixA interface.")
+		//return
+		Adummy = matrix.FloatZeros(0, c.Rows())
+		Af = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+			return blas.GemvFloat(Adummy, x, y, alpha, beta, trans)
+		}
+	} else {
+		Af = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+			return A.Af(x, y, alpha, beta, trans)
+		}
 	}
 
 	// Check b and set defaults if it is nil
@@ -358,10 +458,9 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 		err = errors.New(estr)
 		return 
 	}
-	if b.Rows() != arows {
-		estr := fmt.Sprintf("'b' must have length %d", arows)
-		err = errors.New(estr)
-		return 
+	if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
+		err = errors.New("Rank(A) < p or Rank([G; A]) < n")
+		return
 	}
 
     // kktsolver(W) returns a routine for solving 3x3 block KKT system 
@@ -374,21 +473,6 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 		err = errors.New("nil kktsolver not allowed.")
 		return
 	}
-	/*
-	var factor kktFactor
-	var kktsolver kktFactor = nil
-	if kktfunc, ok := solvers[solvername]; ok {
-		// kkt function returns us problem spesific factor function.
-		factor, err = kktfunc(G, dims, A, 0)
-		// solver is 
-		kktsolver = func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (kktFunc, error) {
-			return factor(W, nil, nil)
-		}
-	} else {
-		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
-		return
-	}
-	 */
 
 	// res() evaluates residual in 5x5 block KKT system
 	//
