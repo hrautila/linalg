@@ -466,7 +466,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 				return errors.New("offsetC illegal, <0")
 			}
 			if ind.LDc == 0 {
-				ind.LDb = max(1, C.Rows())
+				ind.LDc = max(1, C.Rows())
 			}
 			if ind.LDc < max(1, ind.M) {
 				return errors.New("inconsistent ldC")
