@@ -1,15 +1,24 @@
 
 # some helpers to print matrix strings.
 
-def str2(m, fmt='%7.2e'):
+def str2(m, fmt='%7.2e', rowmajor=True):
     s = ''
-    for i in xrange(m.size[0]):
-        s += "["
-        for j in xrange(m.size[1]):
-            if j != 0:
-                s += ", "
-            s += fmt % m[i, j]
-        s += "]\n"
+    if rowmajor:
+        for i in xrange(m.size[0]):
+            s += "["
+            for j in xrange(m.size[1]):
+                if j != 0:
+                    s += ", "
+                s += fmt % m[i, j]
+            s += "]\n"
+    else:
+        for i in xrange(m.size[1]):
+            s += "["
+            for j in xrange(m.size[0]):
+                if j != 0:
+                    s += ", "
+                s += fmt % m[j, i]
+            s += "]\n"
     return s
 
 

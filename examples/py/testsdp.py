@@ -23,6 +23,7 @@ def testsdp(opts):
     print "x = \n", str2(sol['x'], "%.9f")
     print "zs[0] = \n", helpers.str2(sol['zs'][0], "%.9f")
     print "zs[1] = \n", helpers.str2(sol['zs'][1], "%.9f")
+    print "\n *** running GO test ***"
     helpers.run_go_test("../testsdp", {'x': sol['x'],
                                        'ss0': sol['ss'][0],
                                        'ss1': sol['ss'][1],

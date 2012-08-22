@@ -150,5 +150,6 @@ print "x=\n", helpers.str2(x, "%.5f")
 print "y=\n", helpers.str2(y, "%.5f")
 print "w=\n", helpers.str2(w, "%.5f")
 print "h=\n", helpers.str2(h, "%.5f")
+print "\n *** running GO test ***"
 helpers.run_go_test("../testcpl", {'x': Xall})
 

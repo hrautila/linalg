@@ -27,6 +27,7 @@ def testsocp(opts):
     print "x = \n", helpers.str2(sol['x'], "%.9f")
     print "zq[0] = \n", helpers.str2(sol['zq'][0], "%.9f")
     print "zq[1] = \n", helpers.str2(sol['zq'][1], "%.9f")
+    print "\n *** running GO test ***"
     helpers.run_go_test("../testsocp", {'x': sol['x'],
                                        'sq0': sol['sq'][0],
                                        'sq1': sol['sq'][1],

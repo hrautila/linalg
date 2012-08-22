@@ -32,6 +32,7 @@ def solve(opts):
         print "x=\n", helpers.str2(sol['x'])
         print "s=\n", helpers.str2(sol['s'])
         print "z=\n", helpers.str2(sol['z'])
+        print "\n *** running GO test ***"
         helpers.run_go_test("../testconelp", {'x': sol['x'], 's': sol['s'], 'z': sol['z']})
 
 
