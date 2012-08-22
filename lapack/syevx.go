@@ -76,7 +76,10 @@ func Syevx(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int
 	case *matrix.FloatMatrix:
 		Am := A.(*matrix.FloatMatrix)
 		Wm := W.(*matrix.FloatMatrix)
-		Zm := Z.(*matrix.FloatMatrix)
+		var Zm *matrix.FloatMatrix = nil
+		if Z != nil {
+			Zm = Z.(*matrix.FloatMatrix)
+		}
 		return SyevrFloat(Am, Wm, Zm, abstol, vlimit, ilimit, opts...)
 	}
 	return errors.New("Syevr: unknown types")
