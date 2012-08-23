@@ -63,13 +63,13 @@ func SytrfFloat(A *matrix.FloatMatrix, ipiv []int32, opts ...linalg.Option) erro
 	uplo := linalg.ParamString(pars.Uplo)
 	info := dsytrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Sytrf: call error %d", info))
+		return errors.New(fmt.Sprintf("Sytrf: lapack error %d", info))
 	}
 	return nil
 }
 
 func SytrfComplex(A *matrix.ComplexMatrix, ipiv []int32, opts ...linalg.Option) error {
-	return errors.New(fmt.Sprintf("SytrfComplex: not yet implemented"))
+	return errors.New(fmt.Sprintf("Sytrf: complex not yet implemented"))
 }
 
 func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {

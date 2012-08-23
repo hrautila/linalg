@@ -41,7 +41,7 @@ func Potri(A matrix.Matrix, opts ...linalg.Option) error {
 	case *matrix.FloatMatrix:
 		return PotriFloat(A.(*matrix.FloatMatrix), opts...)
 	case *matrix.ComplexMatrix:
-		return errors.New("ComplexMatrix: not implemented yet")
+		return errors.New("Potri: complex not implemented yet")
 	}
 	return errors.New("Potri: unknown types")
 }
@@ -63,7 +63,7 @@ func PotriFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
 	uplo := linalg.ParamString(pars.Uplo)
 	info := dpotri(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Potri: call error %d", info))
+		return errors.New(fmt.Sprintf("Potri lapack error %d", info))
 	}
 	return nil
 }

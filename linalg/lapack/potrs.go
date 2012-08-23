@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -65,28 +66,28 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.N) {
-		return errors.New("lda")
+		return errors.New("Potrs: ldA")
 	}
 	if ind.LDb == 0 {
 		ind.LDb = max(1, B.Rows())
 	}
 	if ind.LDb < max(1, ind.N) {
-		return errors.New("ldb")
+		return errors.New("Potrs: ldB")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Potrs: offsetA")
 	}
 	if A.NumElements() < ind.OffsetA + (ind.N-1)*ind.LDa + ind.N {
-		return errors.New("sizeA")
+		return errors.New("Potrs: sizeA")
 	}
 	if ind.OffsetB < 0 {
-		return errors.New("offsetB")
+		return errors.New("Potrs: offsetB")
 	}
 	if B.NumElements() < ind.OffsetB + (ind.Nrhs-1)*ind.LDb + ind.N {
-		return errors.New("sizeB")
+		return errors.New("Potrs: sizeB")
 	}
 	if ! matrix.EqualTypes(A, B) {
-		return errors.New("types")
+		return errors.New("Potrs: arguments not of same types")
 	}
 	info := -1
 	switch A.(type) {
@@ -97,10 +98,10 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
 		info = dpotrs(uplo, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
 			Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
-		return errors.New("ComplexMatrx: not implemented yet")
+		return errors.New("Potrs: complex not implemented yet")
 	}
 	if info != 0 {
-		return errors.New("Potrs failed")
+		return errors.New(fmt.Sprintf("Potrs: lapack error %d", info))
 	}
 	return nil
 }
