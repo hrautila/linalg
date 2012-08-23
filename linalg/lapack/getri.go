@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -46,14 +47,14 @@ func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("lda")
+		return errors.New("Getri: ldA")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
-		return errors.New("sizeA")
+		return errors.New("Getri: sizeA")
 	}
 	if ipiv != nil && len(ipiv) < ind.N {
-		return errors.New("size ipiv")
+		return errors.New("Getri: size ipiv")
 	}
 	info := -1
 	switch A.(type) {
@@ -61,9 +62,10 @@ func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		Aa := A.FloatArray()
 		info = dgetri(ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
 	case *matrix.ComplexMatrix:
+		return errors.New("Getri: complex not yet implemented")
 	}
 	if info != 0 {
-		return errors.New("Getri call error")
+		return errors.New(fmt.Sprintf("Getri lapack error: %d", info))
 	}
 	return nil
 }

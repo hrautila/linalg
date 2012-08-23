@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -94,7 +95,7 @@ import (
  */
 func Gesvd(A, S, U, Vt matrix.Matrix, opts ...linalg.Option) error {
 	if ! matrix.EqualTypes(A, S, U, Vt) {
-		return errors.New("Gesvd: arguments not same type")
+		return errors.New("Gesvd: arguments not of same type")
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
@@ -139,7 +140,7 @@ func GesvdFloat(A, S, U, Vt *matrix.FloatMatrix, opts ...linalg.Option) error {
 	info := dgesvd(linalg.ParamString(pars.Jobu), linalg.ParamString(pars.Jobvt),
 		ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, Sa[ind.OffsetS:], Ua, ind.LDu, Va, ind.LDvt)
 	if info != 0 {
-		return errors.New("GesvdFloat not implemented yet")
+		return errors.New(fmt.Sprintf("GesvdFloat lapack error: %d", info))
 	}
 	return nil
 }

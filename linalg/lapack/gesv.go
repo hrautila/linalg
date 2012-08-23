@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 
@@ -50,7 +51,7 @@ func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	if ind.N < 0 {
 		ind.N = A.Rows()
 		if ind.N != A.Cols() {
-			return errors.New("A not square")
+			return errors.New("Gesv: A not square")
 		}
 	}
 	if ind.Nrhs < 0 {
@@ -63,30 +64,33 @@ func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.N) {
-		return errors.New("lda")
+		return errors.New("Gesv: ldA")
 	}
 	if ind.LDb == 0 {
 		ind.LDb = max(1, B.Rows())
 	}
 	if ind.LDb < max(1, ind.N) {
-		return errors.New("ldb")
+		return errors.New("Gesv: ldB")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Gesv: offsetA")
 	}
 	if ind.OffsetB < 0 {
-		return errors.New("offsetB")
+		return errors.New("Gesv: offsetB")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
-		return errors.New("sizeA")
+		return errors.New("Gesv: sizeA")
 	}
 	sizeB := B.NumElements()
 	if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb+ind.N {
-		return errors.New("sizeB")
+		return errors.New("Gesv: sizeB")
 	}
 	if ipiv != nil && len(ipiv) < ind.N {
-		return errors.New("size ipiv")
+		return errors.New("Gesv: size ipiv")
+	}
+	if ! matrix.EqualTypes(A, B) {
+		return errors.New("Gesv: arguments not of same type")
 	}
 	info := -1
 	switch A.(type) {
@@ -96,9 +100,10 @@ func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		info = dgesv(ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa, ipiv,
 			Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
+		return errors.New("Gesv: complex not yet implemented")
 	}
 	if info != 0 {
-		return errors.New("Gesv call error")
+		return errors.New(fmt.Sprintf("Gesv: lapack error: %d", info))
 	}
 	return nil
 }

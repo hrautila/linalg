@@ -73,7 +73,7 @@ import (
 */
 func Syevr(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int, opts ...linalg.Option) error {
 	if ! matrix.EqualTypes(A, W, Z) {
-		return errors.New("Syevr: not same type")
+		return errors.New("Syevr: arguments not of same type")
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
@@ -189,7 +189,7 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
 	info := dsyevr(jobz, rnge, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa,
 		vl, vu, il, iu, ind.M, Wa[ind.OffsetW:], Za, ind.LDz)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Syevr: call failed %d", info))
+		return errors.New(fmt.Sprintf("Syevr: lapack error %d", info))
 	}
 	return nil
 }
