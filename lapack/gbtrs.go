@@ -55,10 +55,9 @@ func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) erro
 		return err
 	}
 	ind := linalg.GetIndexOpts(opts...)
-	//err = lapack_check(ind, fgbtrs, A, B, ipiv, pars)
 	ind.Kl = KL
 	if ind.Kl < 0 {
-		return errors.New("invalid kl")
+		return errors.New("Gbtrs: invalid kl")
 	}
 	if ind.N < 0 {
 		ind.N = A.Rows()
@@ -73,35 +72,38 @@ func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) erro
 		ind.Ku = A.Rows() - 2*ind.Kl - 1
 	}
 	if ind.Ku < 0 {
-		return errors.New("invalid ku")
+		return errors.New("Gbtrs: invalid ku")
 	}
 	if ind.LDa == 0 {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < 2*ind.Kl + ind.Ku + 1 {
-		return errors.New("lda")
+		return errors.New("Gbtrs: ldA")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Gbtrs: offsetA")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa + 2*ind.Kl + ind.Ku + 1 {
-		return errors.New("sizeA")
+		return errors.New("Gbtrs: sizeA")
 	}
 	if ind.LDb == 0 {
 		ind.LDb = max(1, B.Rows())
 	}
 	if ind.OffsetB < 0 {
-		return errors.New("offsetB")
+		return errors.New("Gbtrs: offsetB")
 	}
 	sizeB := B.NumElements()
 	if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb + ind.N {
-		return errors.New("sizeB")
+		return errors.New("Gbtrs: sizeB")
 	}
 	if ipiv != nil && len(ipiv) < ind.N {
-		return errors.New("size ipiv")
+		return errors.New("Gbtrs: size ipiv")
 	}
 
+	if ! matrix.EqualTypes(A, B) {
+		return errors.New("Gbtrs: arguments not of same type")
+	}
 	info := -1
 	switch A.(type) {
 	case *matrix.FloatMatrix:
@@ -111,10 +113,10 @@ func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) erro
 		info = dgbtrs(trans, ind.N, ind.Kl, ind.Ku, ind.Nrhs,
 			Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
-		return errors.New("Gbtrs for complex not yet implemented")
+		return errors.New("Gbtrs: complex not yet implemented")
 	}
 	if info != 0 {
-		return errors.New("gbtrs call error")
+		return errors.New(fmt.Sprintf("Gbtrs lapack error: %d", info))
 	}
 	return nil
 }
@@ -140,7 +142,7 @@ func GbtrsFloat(A, B *matrix.FloatMatrix, ipiv []int32, KL int, opts ...linalg.O
 	info := dgbtrs(trans, ind.N, ind.Kl, ind.Ku, ind.Nrhs,
 		Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Gbtrs: call error: %d", info))
+		return errors.New(fmt.Sprintf("Gbtrs: lapack error: %d", info))
 	}
 	return nil
 }

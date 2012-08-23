@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -43,39 +44,42 @@ import (
 func Gtrrf(DL, D, DU, DU2 matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	ind := linalg.GetIndexOpts(opts...)
 	if ind.OffsetD < 0 {
-		return errors.New("offset D")
+		return errors.New("Gttrf: offset D")
 	}
 	if ind.N < 0 {
 		ind.N = D.NumElements() - ind.OffsetD
 	}
 	if ind.N < 0 {
-		return errors.New("size D")
+		return errors.New("Gttrf: size D")
 	}
 	if ind.N == 0 {
 		return nil
 	}
 	if ind.OffsetDL < 0 {
-		return errors.New("offset DL")
+		return errors.New("Gttrf: offset DL")
 	}
 	sizeDL := DL.NumElements()
 	if sizeDL < ind.OffsetDL + ind.N - 1 {
-		return errors.New("sizeDL")
+		return errors.New("Gttrf: sizeDL")
 	}
 	if ind.OffsetDU < 0 {
-		return errors.New("offset DU")
+		return errors.New("Gttrf: offset DU")
 	}
 	sizeDU := DU.NumElements()
 	if sizeDU < ind.OffsetDU + ind.N - 1 {
-		return errors.New("sizeDU")
+		return errors.New("Gttrf: sizeDU")
 	}
 	sizeDU2 := DU2.NumElements()
 	if sizeDU2 < ind.N - 2 {
-		return errors.New("sizeDU2")
+		return errors.New("Gttrf: sizeDU2")
 	}
 	if len(ipiv) < ind.N {
-		return errors.New("size ipiv")
+		return errors.New("Gttrf: size ipiv")
 	}
 	info := -1
+	if ! matrix.EqualTypes(DL, D, DU, DU2) {
+		return errors.New("Gttrf: arguments not same type")
+	}
 	switch DL.(type) {
 	case *matrix.FloatMatrix:
 		DLa := DL.FloatArray()
@@ -85,9 +89,10 @@ func Gtrrf(DL, D, DU, DU2 matrix.Matrix, ipiv []int32, opts ...linalg.Option) er
 		info = dgttrf(ind.N, DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:],
 			DU2a, ipiv)
 	case *matrix.ComplexMatrix:
+		return errors.New("Gttrf: complex not yet implemented")
 	}
 	if info != 0 {
-		return errors.New("Gttrf call error")
+		return errors.New(fmt.Sprintf("Gttrf lapack error: %d", info))
 	}
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -55,7 +56,7 @@ func Trtrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	if ind.N < 0 {
 		ind.N = A.Rows()
 		if ind.N != A.Cols() {
-			return errors.New("A not square")
+			return errors.New("Trtrs: A not square")
 		}
 	}
 	if ind.Nrhs < 0 {
@@ -68,27 +69,30 @@ func Trtrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.N) {
-		return errors.New("lda")
+		return errors.New("Trtrs: ldA")
 	}
 	if ind.LDb == 0 {
 		ind.LDb = max(1, B.Rows())
 	}
 	if ind.LDb < max(1, ind.N) {
-		return errors.New("ldb")
+		return errors.New("Trtrs: ldB")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Trtrs: offsetA")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
-		return errors.New("sizeA")
+		return errors.New("Trtrs: sizeA")
 	}
 	if ind.OffsetB < 0 {
-		return errors.New("offsetB")
+		return errors.New("Trtrs: offsetB")
 	}
 	sizeB := B.NumElements()
 	if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb+ind.N {
-		return errors.New("sizeB")
+		return errors.New("Trtrs: sizeB")
+	}
+	if ! matrix.EqualTypes(A, B) {
+		return errors.New("Trtrs: arguments not of same type")
 	}
 	info := -1
 	uplo := linalg.ParamString(pars.Uplo)
@@ -101,9 +105,10 @@ func Trtrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		info = dtrtrs(uplo, trans, diag, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
 			Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
+		return errors.New("Trtrs: complex not yet implmented")
 	}
 	if info != 0 {
-		return errors.New("sytrf failed")
+		return errors.New(fmt.Sprintf("Trtrs lapack error: %d", info))
 	}
 	return nil
 }

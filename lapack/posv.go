@@ -77,13 +77,13 @@ func PosvFloat(A, B *matrix.FloatMatrix, opts ...linalg.Option) error {
 	uplo := linalg.ParamString(pars.Uplo)
 	info := dposv(uplo, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Posv: call error %d", info))
+		return errors.New(fmt.Sprintf("Posv: lapack error %d", info))
 	}
 	return nil
 }
 
 func PosvComplex(A, B *matrix.ComplexMatrix, opts ...linalg.Option) error {
-		return errors.New(fmt.Sprintf("PosvComplex: not yet implemented"))
+	return errors.New(fmt.Sprintf("Posv: complex not yet implemented"))
 }
 
 func checkPosv(ind *linalg.IndexOpts, A, B matrix.Matrix) error {
