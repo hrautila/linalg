@@ -45,7 +45,7 @@ func Potrf(A matrix.Matrix, opts ...linalg.Option) error {
 	case *matrix.FloatMatrix:
 		return PotrfFloat(A.(*matrix.FloatMatrix), opts...)
 	case *matrix.ComplexMatrix:
-		return errors.New("ComplexMatrx: not implemented yet")
+		return errors.New("Potrf: complex not implemented yet")
 	}
 	return errors.New("Potrf unknown types")
 }
@@ -64,7 +64,7 @@ func PotrfFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
 	uplo := linalg.ParamString(pars.Uplo)
 	info := dpotrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Potrf: call error %d", info))
+		return errors.New(fmt.Sprintf("Potrf: lapack error %d", info))
 	}
 	return nil
 }

@@ -92,7 +92,7 @@ func GbsvFloat(A, B *matrix.FloatMatrix, ipiv []int32, kl int, opts ...linalg.Op
 	info := dgbsv(ind.N, ind.Kl, ind.Ku, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
 		ipiv, Ba[ind.OffsetB:], ind.LDb)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Gbsv call error: %d", info))
+		return errors.New(fmt.Sprintf("Gbsv lapack error: %d", info))
 	}
 	return nil
 }
@@ -107,7 +107,7 @@ func GbsvComplex(A, B *matrix.ComplexMatrix, ipiv []int32, kl int, opts ...linal
 	if ind.N == 0 || ind.Nrhs == 0 {
 		return nil
 	}
-	return errors.New("GbsvComplex not implemented yet")
+	return errors.New("Gbsv: complex not implemented yet")
 }
 
 func checkGbsv(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {

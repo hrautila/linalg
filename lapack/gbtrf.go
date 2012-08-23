@@ -45,7 +45,7 @@ func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Option) erro
 		Am := A.(*matrix.FloatMatrix)
 		return Gbtrf(Am, ipiv, M, KL, opts...)
 	case *matrix.ComplexMatrix:
-		return errors.New("complex not yet implemented.")
+		return errors.New("Gbtrf: complex not yet implemented.")
 	}
 	return errors.New("Gbtrf: unknown types")
 }
@@ -64,7 +64,7 @@ func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.O
 	Aa := A.FloatArray()
 	info := dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
 	if info != 0 {
-		return errors.New(fmt.Sprintf("Gbtrf call error: %d", info))
+		return errors.New(fmt.Sprintf("Gbtrf lapack error: %d", info))
 	}
 	return nil
 }

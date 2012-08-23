@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -58,19 +59,19 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.M) {
-		return errors.New("lda")
+		return errors.New("Geqrf: ldA")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Geqrf: offsetA")
 	}
 	if A.NumElements() < ind.OffsetA + ind.K*ind.LDa {
-		return errors.New("sizeA")
+		return errors.New("Geqrf: sizeA")
 	}
 	if tau.NumElements() < min(ind.M, ind.N) {
-		return errors.New("sizeTau")
+		return errors.New("Geqrf: sizeTau")
 	}
 	if ! matrix.EqualTypes(A, tau) {
-		return errors.New("not same type")
+		return errors.New("Geqrf: arguments not of same type")
 	}
 	info := -1
 	switch A.(type) {
@@ -79,10 +80,10 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
 		taua := tau.FloatArray()
 		info = dgeqrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, taua)
 	case *matrix.ComplexMatrix:
-		return errors.New("ComplexMatrx: not implemented yet")
+		return errors.New("Geqrf: complex not yet implemented")
 	}
 	if info != 0 {
-		return errors.New("Geqrf failed")
+		return errors.New(fmt.Sprintf("Geqrf lapack error: %d", info))
 	}
 	return nil
 }

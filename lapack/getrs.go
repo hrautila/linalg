@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 
@@ -56,7 +57,7 @@ func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	if ind.N < 0 {
 		ind.N = A.Rows()
 		if ind.N != A.Cols() {
-			return errors.New("A not square")
+			return errors.New("Getrs: A not square")
 		}
 	}
 	if ind.Nrhs < 0 {
@@ -69,30 +70,33 @@ func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		ind.LDa = max(1, A.Rows())
 	}
 	if ind.LDa < max(1, ind.N) {
-		return errors.New("lda")
+		return errors.New("Getrs: ldA")
 	}
 	if ind.LDb == 0 {
 		ind.LDb = max(1, B.Rows())
 	}
 	if ind.LDb < max(1, ind.N) {
-		return errors.New("ldb")
+		return errors.New("Getrs: ldB")
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Getrs: offsetA")
 	}
 	if ind.OffsetB < 0 {
-		return errors.New("offsetB")
+		return errors.New("Getrs: offsetB")
 	}
 	sizeA := A.NumElements()
 	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
-		return errors.New("sizeA")
+		return errors.New("Getrs: sizeA")
 	}
 	sizeB := B.NumElements()
 	if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb+ind.N {
-		return errors.New("sizeB")
+		return errors.New("Getrs: sizeB")
 	}
 	if ipiv != nil && len(ipiv) < ind.N {
-		return errors.New("size ipiv")
+		return errors.New("Getrs: size ipiv")
+	}
+	if ! matrix.EqualTypes(A, B) {
+		return errors.New("Getrs: arguments not of same type")
 	}
 	info := -1
 	trans := linalg.ParamString(pars.Trans)
@@ -103,9 +107,10 @@ func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		info = dgetrs(trans, ind.N, ind.Nrhs,
 			Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
+		return errors.New("Getrs: complex not yet implemented")
 	}
 	if info != 0 {
-		return errors.New("dgetrf call error")
+		return errors.New(fmt.Sprintf("Getrs lapack error: %d", info))
 	}
 	return nil
 }

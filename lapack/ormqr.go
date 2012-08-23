@@ -11,6 +11,7 @@ import (
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/matrix"
 	"errors"
+	"fmt"
 )
 
 /*
@@ -80,36 +81,36 @@ func Ormqf(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
 	switch pars.Side {
 	case linalg.PLeft:
 		if ind.K > ind.M {
-			errors.New("K")
+			errors.New("Ormqf: K")
 		}
 		if ind.LDa < max(1, ind.M) {
-			return errors.New("lda")
+			return errors.New("Ormqf: ldA")
 		}
 	case linalg.PRight:
 		if ind.K > ind.N {
-			errors.New("K")
+			errors.New("Ormqf: K")
 		}
 		if ind.LDa < max(1, ind.N) {
-			return errors.New("lda")
+			return errors.New("Ormqf: ldA")
 		}
 	}
 	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
+		return errors.New("Ormqf: offsetA")
 	}
 	if A.NumElements() < ind.OffsetA + ind.K*ind.LDa {
-		return errors.New("sizeA")
+		return errors.New("Ormqf: sizeA")
 	}
 	if ind.OffsetC < 0 {
-		return errors.New("offsetC")
+		return errors.New("Ormqf: offsetC")
 	}
 	if C.NumElements() < ind.OffsetC + (ind.N-1)*ind.LDa + ind.M {
-		return errors.New("sizeC")
+		return errors.New("Ormqf: sizeC")
 	}
 	if tau.NumElements() < ind.K {
-		return errors.New("sizeTau")
+		return errors.New("Ormqf: sizeTau")
 	}
 	if ! matrix.EqualTypes(A, C, tau) {
-		return errors.New("not same type")
+		return errors.New("Ormqf: arguments not of same type")
 	}
 	info := -1
 	side := linalg.ParamString(pars.Side)
@@ -122,10 +123,10 @@ func Ormqf(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
 		info = dormqr(side, trans, ind.M, ind.N, ind.K, Aa[ind.OffsetA:], ind.LDa,
 			taua, Ca[ind.OffsetC:], ind.LDc)
 	case *matrix.ComplexMatrix:
-		return errors.New("ComplexMatrx: not implemented yet")
+		return errors.New("Ormqf: complex not implemented yet")
 	}
 	if info != 0 {
-		return errors.New("Ormqr failed")
+		return errors.New(fmt.Sprintf("Ormqr: lapack error %d", info))
 	}
 	return nil
 }
