@@ -22,21 +22,39 @@ type Opt struct {
 // variables.
 type IndexOpts struct {
 	// these for BLAS and LAPACK
-	N, Nx, Ny int
-	M, Ma, Mb int
-	LDa, LDb, LDc int
-	IncX, IncY int
-	OffsetX, OffsetY, OffsetA, OffsetB, OffsetC int
-	K int
-	Ku int
-	Kl int
+	N int				// default: -1
+	Nx int				// default: -1
+	Ny int				// default: -1
+	M int				// default: -1
+	Ma int				// default: -1
+	Mb int				// default: -1
+	LDa int				// default: 0
+	LDb int				// default: 0
+	LDc int				// default: 0
+	IncX int			// default: 0
+	IncY int			// default: 0
+	OffsetX int			// default: 0
+	OffsetY int			// default: 0
+	OffsetA int			// default: 0
+	OffsetB int			// default: 0
+	OffsetC int			// default: 0
+	K int				// default: -1
+	Ku int				// default: -1
+	Kl int				// default: 0
 	// these used in LAPACK
-	Nrhs int
-	OffsetD, OffsetDL, OffsetDU int
-	LDw, LDz int
-	OffsetW, OffsetZ int
-	LDu, LDvt int
-	OffsetS, OffsetU, OffsetVt int
+	Nrhs int			// default: -1
+	OffsetD int			// default: 0
+	OffsetDL int		// default: 0
+	OffsetDU int		// default: 0
+	LDw int				// default: 0
+	LDz int				// default: 0
+	OffsetW int			// default: 0
+	OffsetZ int			// default: 0
+	LDu int				// default: 0
+	LDvt int			// default: 0
+	OffsetS int			// default: 0
+	OffsetU int			// default: 0
+	OffsetVt int		// default: 0
 }
 
 // Parse option list and return index structure with relevant fields set and

@@ -28,14 +28,14 @@ import (
  Computes selected eigenvalues/vectors of a real symmetric n by n
  matrix A.
  
- If range is PRangeAll, all eigenvalues are computed.
- If range is PRangeValue, all eigenvalues in the interval (vlimit[0],vlimit[1]] are
+ If range is OptRangeAll, all eigenvalues are computed.
+ If range is OptRangeValue, all eigenvalues in the interval (vlimit[0],vlimit[1]] are
  computed.
- If range is PRangeInt, all eigenvalues il through iu are computed
+ If range is OptRangeInt, all eigenvalues il through iu are computed
  (sorted in ascending order with 1 <= il <= iu <= n).
 
- If jobz is PJobNo, only the eigenvalues are returned in W.
- If jobz is PJobValue, the eigenvectors are also returned in Z.
+ If jobz is OptJobNo, only the eigenvalues are returned in W.
+ If jobz is OptJobValue, the eigenvectors are also returned in Z.
 
  On exit, the content of A is destroyed.
 
@@ -53,9 +53,9 @@ import (
             If nonpositive, the LAPACK default value is used.
 
  OPTIONS
-  jobz      'N' or 'V'
-  range     'A', 'V' or 'I'
-  uplo      'L' or 'U'
+  jobz      linalg.OptJobNo or linalg.OptJobValue
+  range     linalg.OptRangeAll, linalg.OptRangeValue or linalg.OptRangeInt
+  uplo      linalg.OptLower or linalg.OptUpper
   n         integer.  If negative, the default value is used.
   m         the number of eigenvalues computed;
   ldA       nonnegative integer.  ldA >= max(1,n).  If zero, the

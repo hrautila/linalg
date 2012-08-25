@@ -287,17 +287,14 @@ func (O *BOpt) Name() string {
 	return O.OptName
 }
 
-// Return zero.
 func (O *BOpt) Int() int {
 	return 0
 }
 
-// Return NaN.
 func (O *BOpt) Float() float64 {
 	return math.NaN()
 }
 
-// Return NaN.
 func (O *BOpt) Complex() complex128 {
 	return cmplx.NaN()
 }
