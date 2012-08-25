@@ -20,7 +20,7 @@ def testsdp(opts):
     h += [ matrix([[14., 9., 40.], [9., 91., 10.], [40., 10., 15.]]) ]  
 
     sol = solvers.sdp(c, Gs=G, hs=h)  
-    print "x = \n", str2(sol['x'], "%.9f")
+    print "x = \n", helpers.str2(sol['x'], "%.9f")
     print "zs[0] = \n", helpers.str2(sol['zs'][0], "%.9f")
     print "zs[1] = \n", helpers.str2(sol['zs'][1], "%.9f")
     print "\n *** running GO test ***"
@@ -28,7 +28,7 @@ def testsdp(opts):
                                        'ss0': sol['ss'][0],
                                        'ss1': sol['ss'][1],
                                        'zs0': sol['zs'][0],
-                                       'zs0': sol['zs'][1]})
+                                       'zs1': sol['zs'][1]})
 
 testsdp({'maxiters': 20})
 

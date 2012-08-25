@@ -88,7 +88,7 @@ func mcsdp(w *matrix.FloatMatrix) (*cvx.Solution, error) {
 
 		err = nil
 		// scale diagonal of x by 1/2
-		x.Scale(0.5, matrix.MakeDiagonalSet(n, n)...)
+		x.Scale(0.5, matrix.MakeDiagonalSet(n)...)
 
 		// a := tril(x)*r
 		// (python: a = +r is really making a copy of r)
@@ -132,7 +132,7 @@ func mcsdp(w *matrix.FloatMatrix) (*cvx.Solution, error) {
 		if err != nil {	return nil, err	} 
 		
         // Cholesky factorization of tsq = t.*t.
-		tsq := t.Mul(t) 
+		tsq := matrix.Mul(t, t) 
 		err = lapack.Potrf(tsq)
 		if err != nil {	return nil, err	} 
 		
@@ -143,8 +143,8 @@ func mcsdp(w *matrix.FloatMatrix) (*cvx.Solution, error) {
 			cngrnc(t, tbst, 1.0)
 			
             // x := x - diag(tbst) = bx - diag(rti*rti' * bs * rti*rti')
-			diag := matrix.FloatVector(tbst.Get(matrix.MakeDiagonalSet(n, n)...))
-			matrix.Set(x, x.Minus(diag))
+			diag := matrix.FloatVector(tbst.Get(matrix.MakeDiagonalSet(n)...))
+			x.Minus(diag)
 
             // x := (t.*t)^{-1} * x = (t.*t)^{-1} * (bx - diag(t*bs*t))
 			err = lapack.Potrs(tsq, x)
@@ -166,7 +166,7 @@ func mcsdp(w *matrix.FloatMatrix) (*cvx.Solution, error) {
 	lapack.Syevx(wp, lmbda, nil, 0.0, nil, []int{1,1}, linalg.OptRangeInt)
 	x0 := matrix.FloatZeros(n, 1).Add(-lmbda.GetAt(0,0)+1.0)
 	s0 := w.Copy()
-	s0.AddIndexes(matrix.MakeDiagonalSet(n, n), x0.FloatArray())
+	s0.AddIndexes(matrix.MakeDiagonalSet(n), x0.FloatArray())
 	matrix.Reshape(s0, n*n, 1)
 	
 	// initial feasible z is identity
@@ -202,7 +202,7 @@ func main() {
 			return
 		}
 	} else {
-		data = matrix.FloatRandom(20, 20, false)
+		data = matrix.FloatNormal(20, 20)
 	}
 	reftest := flag.NFlag() - dataCount > 0
 

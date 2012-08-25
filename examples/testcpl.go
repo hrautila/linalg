@@ -64,21 +64,21 @@ func (p *FloorPlan) F1(x *matrix.FloatMatrix)(f, Df *matrix.FloatMatrix, err err
 	dk2 := matrix.FloatZeros(5, 5)
 	x17 := matrix.FloatVector(x.FloatArray()[17:])
 	// -( Amin ./ (x17 .* x17) )
-	diag := p.Amin.Div(x17.Mul(x17)).Scale(-1.0)
-	dk2.SetIndexes(matrix.MakeDiagonalSet(5, 5), diag.FloatArray())
+	diag := matrix.Div(p.Amin, matrix.Mul(x17, x17)).Scale(-1.0)
+	dk2.SetIndexes(matrix.MakeDiagonalSet(5), diag.FloatArray())
 	Df, _ = matrix.FloatMatrixCombined(matrix.StackRight, zeros, dk1, dk2)
 
 	x12 := matrix.FloatVector(x.FloatArray()[12:17])
-	// f = -x[12:17] + div(Amin, x[17:])
-	f = p.Amin.Div(x17).Minus(x12)
+	// f = -x[12:17] + div(Amin, x[17:]) == div(Amin, x[17:]) - x[12:17]
+	f = matrix.Minus(matrix.Div(p.Amin, x17), x12)
 	return 
 }
 
 func (p *FloorPlan) F2(x, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, err error) {
 	f, Df, err = p.F1(x)
 	x17 := matrix.FloatVector(x.FloatArray()[17:])
-	tmp := p.Amin.Div(x17.Pow(3.0))
-	tmp = z.Mul(tmp).Scale(2.0)
+	tmp := matrix.Div(p.Amin, matrix.Pow(x17, 3.0))
+	tmp = matrix.Mul(z, tmp).Scale(2.0)
 	diag := matrix.FloatDiagonal(5, tmp.FloatArray()...)
 	H = matrix.FloatZeros(22, 22)
 	H.SetSubMatrix(17, 17, diag)

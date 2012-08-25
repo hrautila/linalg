@@ -108,8 +108,8 @@ func main() {
 	Ghs.Append("hs", h0, h1)
 
 	c := matrix.FloatVector([]float64{1.0, -1.0, 1.0})
-	Ghs.Print()
-	fmt.Printf("calling...\n")
+	//Ghs.Print()
+	//fmt.Printf("calling...\n")
 	// nil variables
 	var Gs, hs, A, b *matrix.FloatMatrix = nil, nil, nil, nil
 
@@ -120,9 +120,11 @@ func main() {
 	if sol != nil && sol.Status == cvx.Optimal {
 		x := sol.Result.At("x")[0]
 		fmt.Printf("x=\n%v\n", x.ToString("%.9f"))
+		/*
 		for i, m := range sol.Result.At("ss") {
 			fmt.Printf("ss[%d]=\n%v\n", i, m.ToString("%.9f"))
 		}
+		 */
 		for i, m := range sol.Result.At("zs") {
 			fmt.Printf("zs[%d]=\n%v\n", i, m.ToString("%.9f"))
 		}

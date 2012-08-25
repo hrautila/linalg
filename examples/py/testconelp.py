@@ -6,6 +6,7 @@
 
 from cvxopt import matrix, solvers
 from cvxopt import misc, blas
+import localcones
 import helpers
 
 
@@ -29,9 +30,9 @@ def solve(opts):
     sol = solvers.conelp(c, G, h, dims, kktsolver='ldl')
     print("\nStatus: " + sol['status'])
     if sol['status'] == 'optimal':
-        print "x=\n", helpers.str2(sol['x'])
-        print "s=\n", helpers.str2(sol['s'])
-        print "z=\n", helpers.str2(sol['z'])
+        print "x=\n", helpers.str2(sol['x'], "%.9f")
+        print "s=\n", helpers.str2(sol['s'], "%.9f")
+        print "z=\n", helpers.str2(sol['z'], "%.9f")
         print "\n *** running GO test ***"
         helpers.run_go_test("../testconelp", {'x': sol['x'], 's': sol['s'], 'z': sol['z']})
 
