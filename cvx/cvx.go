@@ -6,6 +6,7 @@
 // version. See the COPYING tile included in this archive.
 
 
+// Convex programming package, a port of CVXOPT python package
 package cvx
 
 import (
@@ -54,9 +55,9 @@ const (
 type Solution struct {
 	Status StatusCode
 	X *matrix.FloatMatrix
+	Y *matrix.FloatMatrix
 	S *matrix.FloatMatrix
 	Z *matrix.FloatMatrix
-	Y *matrix.FloatMatrix
 	Result *FloatMatrixSet
 	PrimalObjective float64
 	DualObjective float64

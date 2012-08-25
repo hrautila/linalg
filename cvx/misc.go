@@ -308,7 +308,7 @@ func scale2(lmbda, x *matrix.FloatMatrix, dims *DimensionSet, mnl int, inverse b
 		}
 		for j := 0; j < m; j++ {
 			c := matrix.FloatVector(lmbda.FloatArray()[ind2:ind2+m])
-			c.ApplyConst(c, scaleF, lmbda.GetIndex(ind2+j))
+			c.ApplyConst(lmbda.GetIndex(ind2+j), scaleF)
 			if ! inverse {
 				blas.Tbsv(c, x, &la_.IOpt{"n", m}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1}, 
 					&la_.IOpt{"offsetx", ind+j*m})
@@ -362,24 +362,30 @@ func updateScaling(W *FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err erro
 	//fmt.Printf("ml=%d, mnl=%d, m=%d'n", ml, mnl, m)
 
 	stmp = matrix.FloatVector(s.FloatArray()[:m])
-	stmp.Apply(stmp, math.Sqrt)
+	stmp.Apply(math.Sqrt)
 	s.SetIndexes(matrix.MakeIndexSet(0, m, 1), stmp.FloatArray())
 
 	ztmp = matrix.FloatVector(z.FloatArray()[:m])
-	ztmp.Apply(ztmp, math.Sqrt)
+	ztmp.Apply(math.Sqrt)
 	z.SetIndexes(matrix.MakeIndexSet(0, m, 1), ztmp.FloatArray())
 
     // d := d .* s .* z 
 	if len(dnlset) > 0 {
 		blas.TbmvFloat(s, dnlset[0], &la_.IOpt{"n", mnl}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
 		blas.TbsvFloat(z, dnlset[0], &la_.IOpt{"n", mnl}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
-		dnliset[0].Apply(dnlset[0], func(a float64)float64 { return 1.0/a})
+		//dnliset[0].Apply(dnlset[0], func(a float64)float64 { return 1.0/a})
+		//--dnliset[0] = matrix.Inv(dnlset[0])
+		matrix.Set(dnliset[0], dnlset[0])
+		dnliset[0].Inv()
 	}
 	blas.TbmvFloat(s, dset[0], &la_.IOpt{"n", ml},
 		&la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", mnl})
 	blas.TbsvFloat(z, dset[0], &la_.IOpt{"n", ml},
 		&la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1}, &la_.IOpt{"offseta", mnl})
-	diset[0].Apply(dset[0], func(a float64)float64 { return 1.0/a})
+	//diset[0].Apply(dset[0], func(a float64)float64 { return 1.0/a})
+	//--diset[0] = matrix.Inv(dset[0])
+	matrix.Set(diset[0], dset[0])
+	diset[0].Inv()
 
     // lmbda := s .* z
 	blas.CopyFloat(s, lmbda, &la_.IOpt{"n", m})
@@ -629,14 +635,17 @@ func computeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
 	if mnl > 0 {
 		stmp = matrix.FloatVector(s.FloatArray()[:mnl])
 		ztmp = matrix.FloatVector(z.FloatArray()[:mnl])
-		dnl := stmp.Div(ztmp)
-		dnl.Apply(dnl, math.Sqrt)
-		dnli := dnl.Copy()
-		dnli.Apply(dnli, func(a float64)float64 { return 1.0/a })
+		//dnl := stmp.Div(ztmp)
+		//dnl.Apply(dnl, math.Sqrt)
+		dnl := matrix.Sqrt(matrix.Div(stmp, ztmp))
+		//dnli := dnl.Copy()
+		//dnli.Apply(dnli, func(a float64)float64 { return 1.0/a })
+		dnli := matrix.Inv(dnl)
 		W.Set("dnl", dnl)
 		W.Set("dnli", dnli)
-		lmd = stmp.Mul(ztmp)
-		lmd.Apply(lmd, math.Sqrt)
+		//lmd = stmp.Mul(ztmp)
+		//lmd.Apply(lmd, math.Sqrt)
+		lmd = matrix.Sqrt(matrix.Mul(stmp, ztmp))
 		lmbda.SetIndexes(matrix.MakeIndexSet(0, mnl, 1), lmd.FloatArray())
 	} else {
 		mnl = 0
@@ -654,21 +663,24 @@ func computeScaling(s, z, lmbda *matrix.FloatMatrix, dims *DimensionSet, mnl int
     // lambda_k is stored in the first dims['l'] positions of lmbda.
              
 	m := dims.At("l")[0]
-	td := s.FloatArray()
-	stmp = matrix.FloatVector(td[mnl:mnl+m])
-	zd := z.FloatArray()
-	//fmt.Printf("zdata=%v\n", zd[mnl:mnl+m])
-	ztmp = matrix.FloatVector(zd[mnl:mnl+m])
-	d := stmp.Div(ztmp)
-	d.Apply(d, math.Sqrt)
-	di := d.Copy()
-	di.Apply(di, func(a float64)float64 { return 1.0/a })
+	//td := s.FloatArray()
+	stmp = matrix.FloatVector(s.FloatArray()[mnl:mnl+m])
+	//zd := z.FloatArray()
+	ztmp = matrix.FloatVector(z.FloatArray()[mnl:mnl+m])
+	//fmt.Printf(".Sqrt()=\n%v\n", matrix.Div(stmp, ztmp).Sqrt().ToString("%.17f"))
+	//d := stmp.Div(ztmp)
+	//d.Apply(d, math.Sqrt)
+	d := matrix.Div(stmp, ztmp).Sqrt()
+	//di := d.Copy()
+	//di.Apply(di, func(a float64)float64 { return 1.0/a })
+	di := matrix.Inv(d)
 	//fmt.Printf("d:\n%v\n", d)
 	//fmt.Printf("di:\n%v\n", di)
 	W.Set("d", d)
 	W.Set("di", di)
-	lmd = stmp.Mul(ztmp)
-	lmd.Apply(lmd, math.Sqrt)
+	//lmd = stmp.Mul(ztmp)
+	//lmd.Apply(lmd, math.Sqrt)
+	lmd = matrix.Mul(stmp, ztmp).Sqrt()
 	// lmd has indexes mnl:mnl+m and length of m
 	lmbda.SetIndexes(matrix.MakeIndexSet(mnl, mnl+m, 1), lmd.FloatArray())
 	//fmt.Printf("after l:\n%v\n", lmbda)

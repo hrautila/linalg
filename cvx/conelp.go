@@ -44,7 +44,7 @@ func checkConeLpDimensions(dims *DimensionSet) error {
 	return nil
 }
 
-//    Solves a pair of primal and dual cone programs
+// Solves a pair of primal and dual cone programs
 //
 //        minimize    c'*x
 //        subject to  G*x + s = h
@@ -55,19 +55,19 @@ func checkConeLpDimensions(dims *DimensionSet) error {
 //        subject to  G'*z + A'*y + c = 0
 //                    z >= 0.
 //
-//    The inequalities are with respect to a cone C defined as the Cartesian
-//    product of N + M + 1 cones:
+// The inequalities are with respect to a cone C defined as the Cartesian
+// product of N + M + 1 cones:
 //    
 //        C = C_0 x C_1 x .... x C_N x C_{N+1} x ... x C_{N+M}.
 //
-//    The first cone C_0 is the nonnegative orthant of dimension ml.
-//    The next N cones are second order cones of dimension mq[0], ..., 
-//    mq[N-1].  The second order cone of dimension m is defined as
+// The first cone C_0 is the nonnegative orthant of dimension ml.
+// The next N cones are second order cones of dimension mq[0], ..., 
+// mq[N-1].  The second order cone of dimension m is defined as
 //    
 //        { (u0, u1) in R x R^{m-1} | u0 >= ||u1||_2 }.
 //
-//    The next M cones are positive semidefinite cones of order ms[0], ...,
-//    ms[M-1] >= 0.  
+// The next M cones are positive semidefinite cones of order ms[0], ...,
+// ms[M-1] >= 0.  
 //
 func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
 

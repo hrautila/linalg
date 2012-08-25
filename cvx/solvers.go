@@ -16,7 +16,7 @@ import (
 )
 
 
-//    Solves a pair of primal and dual LPs
+// Solves a pair of primal and dual LPs
 //
 //        minimize    c'*x
 //        subject to  G*x + s = h
@@ -68,29 +68,29 @@ func Lp(c, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, primalstart, 
 	return ConeLp(c, G, h, A, b, dims, solopts, primalstart, dualstart)
 }
 
-//    Solves a quadratic program
+// Solves a quadratic program
 //
 //        minimize    (1/2)*x'*P*x + q'*x 
 //        subject to  G*x <= h      
 //                    A*x = b.
 //
 //
-//    Input arguments.
+// Input arguments.
 //
-//        P is a n x n float matrix with the lower triangular part of P stored
-//        in the lower triangle.  Must be positive semidefinite.
+// * P is a n x n float matrix with the lower triangular part of P stored
+// in the lower triangle.  Must be positive semidefinite.
 //
-//        q is an n x 1 matrix.
+// * q is an n x 1 matrix.
 //
-//        G is an m x n matrix or nil.
+// * G is an m x n matrix or nil.
 //
-//        h is an m x 1 matrix or nil.
+// * h is an m x 1 matrix or nil.
 //
-//        A is a p x n matrix or nil.
+// * A is a p x n matrix or nil.
 //
-//        b is a p x 1 matrix or nil.
+// * b is a p x 1 matrix or nil.
 //
-//        The default values for G, h, A and b are empty matrices with zero rows.
+// The default values for G, h, A and b are empty matrices with zero rows.
 //
 //
 func Qp(P, q, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, initvals *FloatMatrixSet) (sol *Solution, err error) {

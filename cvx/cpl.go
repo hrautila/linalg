@@ -19,25 +19,25 @@ import (
 
 // ConvexProg is an interface that handles the following functions.
 //
-// F0() returns a tuple (mnl, x0, error).  mnl is the number of nonlinear 
-// inequality constraints.  x0 is a point in the domain of f.
+// F0() returns a tuple (mnl, x0, error).  
+//
+//  * mnl is the number of nonlinear inequality constraints.
+//  * x0 is a point in the domain of f.
 //
 // F1(x) returns a tuple (f, Df, error).
 //
-//    f is  a matrix of size (mnl, 1) containing f(x). 
-//
-//    Df is a matrix of size (mnl, n), containing the derivatives
-//    of f at x:  Df[k,:] is the transpose of the gradient of fk at x.
-//    If x is not in dom f, F(x) returns None or (None, None).
+//  * f is a matrix of size (mnl, 1) containing f(x). 
+//  * Df is a matrix of size (mnl, n), containing the derivatives of f at x.
+//    Df[k,:] is the transpose of the gradient of fk at x.
+//    If x is not in dom f, F1(x) returns (nil, nil, error)
 //
 // F2(x, z) with z a positive matrix of size (mnl,1), returns a tuple (f, Df, H, error).
 //            
-//    f and Df are defined as above.
-//                
-//    H is a matrix of size (n,n).  The lower triangular part of H contains the
-//    lower triangular part of sum_k z[k] * Hk where Hk is the Hessian of fk at x.
+//   * f and Df are defined as above.
+//   * H is a matrix of size (n,n).  The lower triangular part of H contains the
+//     lower triangular part of sum_k z[k] * Hk where Hk is the Hessian of fk at x.
 //  
-//  When F2 is called, it can be assumed that x is dom f. 
+// When F2() is called, it can be assumed that x is dom f. 
 //
 //
 type ConvexProg interface {
