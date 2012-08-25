@@ -26,9 +26,9 @@
 // same meaning as in the LAPACK definition.  Default values of the
 // dimension arguments are derived from the matrix sizes.
 //
-// If a routine from the LAPACK library returns with a positive 'info'
-// value, an ArithmeticError is raised.  If it returns with a negative
-// 'info' value, a ValueError is raised.  In both cases the value of
-// 'info' is returned as an argument to the exception."
+// If a routine from the LAPACK library returns with a non zero 'info'
+// value function returns with non-nil error with 'info' value included in
+// error string.
+
 package lapack
 

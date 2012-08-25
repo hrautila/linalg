@@ -23,8 +23,8 @@ import (
 
  QR factorization of an m by n real or complex matrix A:
 
- A = Q*R = [Q1 Q2] * [R1; 0] if m >= n
- A = Q*R = Q * [R1 R2]       if m <= n,
+  A = Q*R = [Q1 Q2] * [R1; 0] if m >= n
+  A = Q*R = Q * [R1 R2]       if m <= n,
 
  where Q is m by m and orthogonal/unitary and R is m by n with R1
  upper triangular.  On exit, R is stored in the upper triangular
