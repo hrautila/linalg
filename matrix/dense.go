@@ -10,6 +10,7 @@ package matrix
 import (
 	"math"
 	"math/cmplx"
+	"math/rand"
 	"fmt"
 	"errors"
 )
@@ -47,21 +48,45 @@ func FloatValue(value float64) *FloatMatrix {
 	return makeFloatMatrix(1, 1, e)
 }
 
-// Create random matrix with elements from [0.0, 1.0).
-func FloatRandom(rows, cols int, nonNeg bool) *FloatMatrix {
+// Create random matrix with elements from [0.0, 1.0) uniformly distributed..
+func FloatUniform(rows, cols int) *FloatMatrix {
 	A := FloatZeros(rows, cols)
 	for i, _ := range A.elements {
-		A.elements[i] = uniformFloat64(nonNeg)
+		A.elements[i] = rand.Float64()
+	}
+	return A
+}
+
+// Create random matrix with elements from normal distribution (mean=0.0, stddev=1.0)
+func FloatNormal(rows, cols int) *FloatMatrix {
+	A := FloatZeros(rows, cols)
+	for i, _ := range A.elements {
+		A.elements[i] = rand.NormFloat64()
 	}
 	return A
 }
 
 // Create symmetric n by n random  matrix with elements from [0.0, 1.0).
-func FloatRandomSymmetric(n int, nonNeg bool) *FloatMatrix {
+func FloatUniformSymmetric(n int) *FloatMatrix {
 	A := FloatZeros(n, n)
 	for i := 0; i < n; i++ {
 		for j := i; j < n; j++ {
-			val := uniformFloat64(nonNeg)
+			val := rand.Float64()
+			A.SetAt(i, j, val)
+			if i != j {
+				A.SetAt(j, i, val)
+			}
+		}
+	}
+	return A
+}
+
+// Create symmetric n by n random  matrix with elements from normal distribution.
+func FloatNormalSymmetric(n int) *FloatMatrix {
+	A := FloatZeros(n, n)
+	for i := 0; i < n; i++ {
+		for j := i; j < n; j++ {
+			val := rand.NormFloat64()
 			A.SetAt(i, j, val)
 			if i != j {
 				A.SetAt(j, i, val)
@@ -215,11 +240,6 @@ func (A *FloatMatrix) Complex() complex128 {
 	return cmplx.NaN()
 }
 
-// Return false for float matrix.
-func (A *FloatMatrix) IsComplex() bool {
-	return false
-}
-
 // Test if parameter matrices are of same type as self.
 func (A *FloatMatrix) EqualTypes(mats ...Matrix) bool {
 loop:
@@ -274,7 +294,7 @@ func (A *FloatMatrix) GetIndexes(indexes []int) []float64 {
 // Returns the array. If vals array is too small new slice is allocated and 
 // returned with row elements.
 func (A *FloatMatrix) GetRowArray(i int, vals []float64) []float64 {
-	if cap(vals) < A.Cols() {
+	if vals == nil || cap(vals) < A.Cols() {
 		vals = make([]float64, A.Cols())
 	}
 	step := A.LeadingIndex()
@@ -518,6 +538,21 @@ func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) error {
 	return nil
 }
 
+// Get sub-matrix of size (nrows, ncols) starting at (row, col). Returns nil if
+// nrows+row >= A.Rows() or ncols+col >= A.Cols()
+func (A *FloatMatrix) GetSubMatrix(row, col, nrows, ncols int) (m *FloatMatrix) {
+	if row + nrows > A.Rows() || col + ncols > A.Cols() {
+		return nil
+	}
+	var colArray []float64 = nil
+	m = FloatZeros(nrows, ncols)
+	for i := 0; i < ncols; i++  {
+		colArray = A.GetColumnArray(col+i, colArray)
+		m.SetColumnArray(i, colArray[row:])
+	}
+	return m
+}
+
 // Create a copy of matrix.
 func (A *FloatMatrix) Copy() (B *FloatMatrix) {
 	B = new(FloatMatrix)
@@ -578,6 +613,7 @@ func makeFloatMatrix(rows, cols int, elements []float64) *FloatMatrix {
 	A.elements = elements
 	return A
 }
+
 
 // Local Variables:
 // tab-width: 4

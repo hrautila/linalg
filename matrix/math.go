@@ -9,271 +9,327 @@ package matrix
 
 import (
 	"math"
-	"math/rand"
-	"math/cmplx"
-	"errors"
 )
 
-// Find maximum element value for matrix. For complex matrix returns NaN.
-func Max(A Matrix) float64 {
-	m := math.Inf(-1)
-	if ar := A.FloatArray(); ar != nil {
-		for _, v := range ar {
-			m = math.Max(m, v)
+
+// Make a copy C of A and compute  C *= alpha for all elements in the matrix if list of indexes
+// is empty. Otherwise compute C[i] *= alpha for i in indexes array. 
+func Scale(A *FloatMatrix, alpha float64, indexes... int) *FloatMatrix {
+	C := A.Copy()
+	Cr := C.FloatArray()
+	if len(indexes) == 0 {
+		for k, _ := range Cr {
+			Cr[k] *= alpha
+		}
+	} else  {
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k = N + k
+			}
+			Cr[k] *= alpha
+		}
+	}
+	return C
+}
+
+// Make a copy C of A and compute for all k in indexes: C[k] *= values[k].
+// Indexes are in column-major order.  Returns a new matrix
+func ScaleAt(A *FloatMatrix, values []float64, indexes []int) *FloatMatrix {
+	C := A.Copy()
+	if len(indexes) == 0 {
+		return C
+	}
+	Cr := C.FloatArray()
+	N := A.NumElements()
+	for i, k := range indexes {
+		if i >= len(values) {
+			return C
+		}
+		if k < 0 {
+			k = N + k
+		}
+		Cr[k] *= values[i]
+	}
+	return C
+}
+
+
+// Make a copy C of A and compute inverse C[i] = 1.0/C[i]. If indexes is empty calculates for
+// all elements. Returns a new matrix.
+func Inv(A *FloatMatrix, indexes... int) *FloatMatrix {
+	C := A.Copy()
+	Cr := C.FloatArray()
+	if len(indexes) == 0 {
+		for k, _ := range Cr {
+			Cr[k] = 1.0/Cr[k]
+		}
+	} else  {
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k = N + k
+			}
+			Cr[k] = 1.0/Cr[k]
+		}
+	}
+	return C
+}
+
+// Make a copy C of A and compute C += alpha for all elements in the matrix if list of indexes
+// is empty. Otherwise compute C[indexes[i]] += alpha for indexes in column-major order.
+func Add(A *FloatMatrix, alpha float64, indexes... int) *FloatMatrix {
+	C := A.Copy()
+	C.Add(alpha, indexes...)
+	return C
+}
+
+// Make copy C of A and compute  C[indexes[i]] +=  values[i]. Indexes are in column-major order.
+// Returns a new matrix.
+func AddAt(A *FloatMatrix, values []float64, indexes []int) *FloatMatrix {
+	C := A.Copy()
+	if len(indexes) == 0 {
+		return C
+	}
+	Cr := C.FloatArray()
+	N := A.NumElements()
+	for i, k := range indexes {
+		if i >= len(values) {
+			return C
+		}
+		if k < 0 {
+			k = N + k
+		}
+		Cr[k] += values[i]
+	}
+	return C
+}
+
+
+// Compute element wise division C[i,j] = A[i,j] / B[i,j]. Returns new matrix.
+func Div(A, B *FloatMatrix) *FloatMatrix {
+	if ! A.SizeMatch(B.Size()) {
+		return nil
+	}
+	C := A.Copy()
+	C.Div(B)
+	return C
+}
+
+// Compute element-wise product C[i,j] = A[i,j] * B[i,j]. Returns new matrix.
+func Mul(A, B *FloatMatrix) *FloatMatrix {
+	if ! A.SizeMatch(B.Size()) {
+		return nil
+	}
+	C := A.Copy()
+	C.Mul(B)
+	return C
+}
+
+// Compute element-wise sum A + B + C +... Returns a new matrix.
+func Plus(matrices ...*FloatMatrix) *FloatMatrix {
+	if len(matrices) <= 1 {
+		if len(matrices) == 1 {
+			return matrices[0]
+		}
+		return nil
+	}
+	A := matrices[0]
+	for _, B := range matrices[1:] {
+		if ! A.SizeMatch(B.Size()) {
+			return nil
+		}
+	}
+	C := A.Copy()
+	for _, B := range matrices[1:] {
+		C.Plus(B)
+	}
+	return C
+}
+
+// Compute element-wise difference A - B - C -... Returns a new matrix.
+func Minus(matrices ...*FloatMatrix) *FloatMatrix {
+	if len(matrices) <= 1 {
+		if len(matrices) == 1 {
+			return matrices[0]
+		}
+		return nil
+	}
+	A := matrices[0]
+	for _, B := range matrices[1:] {
+		if ! A.SizeMatch(B.Size()) {
+			return nil
+		}
+	}
+	C := A.Copy()
+	for _, B := range matrices[1:] {
+		C.Minus(B)
+	}
+	return C
+}
+
+
+// Compute matrix product C = A * B where A is m*p and B is p*n.
+// Returns a new m*n matrix.
+func Times(A, B *FloatMatrix) *FloatMatrix {
+	if A.Cols() != B.Rows() {
+		return nil
+	}
+	rows := A.Rows()
+	cols := B.Cols()
+	C := FloatZeros(rows, cols)
+	Cr := C.FloatArray()
+	arow := make([]float64, A.Cols())
+	bcol := make([]float64, B.Rows())
+	for i := 0; i < rows; i++ {
+		arow = A.GetRowArray(i, arow)
+		for j := 0; j < cols; j++ {
+			bcol = B.GetColumnArray(j, bcol)
+			for k, _ := range arow {
+				Cr[j*rows+i] += arow[k]*bcol[k]
+			}
+		}
+	}
+	return C
+}
+
+
+// Makes a copy C of A and applies function fn to elements of then new copy C. If indexes is
+// non empty then function is applied to all elements of C indexed by indexes array.
+// Otherwise function is applied to all elements of A. New value of element in C is fn(A[i]).
+// Returns a new matrix.
+func Apply(A *FloatMatrix, fn func(float64)float64, indexes ...int) *FloatMatrix {
+	if A == nil {
+		return nil
+	}
+	C := A.Copy()
+	return C.Apply(fn, indexes...)
+}
+
+// Makes a copy C of A and applies function fn to elements of then new copy C. If indexes is
+// non empty then function is applied to all elements of C indexed by indexes array.
+// Otherwise function is applied to all elements of A. New value of element in C is fn(A[i], x).
+// Returns a new matrix.
+func ApplyConst(A *FloatMatrix, x float64, fn func(float64,float64)float64, indexes ...int) *FloatMatrix {
+	if A == nil {
+		return nil
+	}
+	C := A.Copy()
+	return C.ApplyConst(x, fn, indexes...)
+}
+
+// Makes a copy C of A and applies function fn to elements of the new copy C pointed
+// by the contexts of indexes array. New value of element in C is fn(A[indexes[i]], values[i]).
+// Returns new matrix.
+func ApplyConstValues(A *FloatMatrix, values []float64, fn func(float64,float64)float64, indexes []int) *FloatMatrix {
+	if A == nil {
+		return A
+	}
+	C := A.Copy()
+	return C.ApplyConstValues(values, fn, indexes)
+}
+
+// Find element-wise maximum. 
+func Max(A *FloatMatrix, indexes... int) float64 {
+	res := math.Inf(-1)
+	Ar := A.FloatArray()
+	if len(indexes) == 0 {
+		for _, v := range Ar {
+			res = math.Max(res, v)
 		}
 	} else {
-		m = math.NaN()
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k = N + k
+			}
+			res = math.Max(res, Ar[k])
+		}
 	}
-	return m
+	return res
 }
 
-// Find minimum element value for matrix. For complex matrix returns NaN.
-func Min(A Matrix) float64 {
-	m := math.Inf(+1)
-	if ar := A.FloatArray(); ar != nil {
-		for _, v := range A.FloatArray() {
-			m = math.Min(m, v)
+// Find element-wise minimum. 
+func Min(A *FloatMatrix, indexes... int) float64 {
+	res := math.Inf(+1)
+	Ar := A.FloatArray()
+	if len(indexes) == 0 {
+		for _, v := range Ar {
+			res = math.Min(res, v)
 		}
 	} else {
-		m = math.NaN()
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k = N + k
+			}
+			res = math.Min(res, Ar[k])
+		}
 	}
-	return m
+	return res
 }
 
-// Return copy of A with each element as Sqrt(A[i,j]).
-func Sqrt(A Matrix) Matrix {
-	B := A.MakeCopy()
-	applyFunc(B, math.Sqrt, cmplx.Sqrt)
-	return B
+// Return sum of elements
+func Sum(A *FloatMatrix, indexes... int) float64 {
+	res := 0.0
+	Ar := A.FloatArray()
+	if len(indexes) == 0 {
+		for _, v := range Ar {
+			res += v
+		}
+	} else {
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k = N + k
+			}
+			res += Ar[k]
+		}
+	}
+	return res
 }
 
-// Return copy of A with each element as Exp(A[i,j]).
-func Exp(A Matrix) Matrix {
-	B := A.MakeCopy()
-	applyFunc(B, math.Exp, cmplx.Exp)
-	return B
+// Compute element-wise C = Exp(A). Returns a new matrix.
+func Exp(A *FloatMatrix, indexes ...int) *FloatMatrix {
+	return Apply(A, math.Exp, indexes...)
 }
 
-// Return copy of A with each element as Log(A[i,j]).
-func Log(A Matrix) Matrix {
-	B := A.MakeCopy()
-	applyFunc(B, math.Log, cmplx.Log)
-	return B
+// Compute element-wise C = Log(A). Returns a new matrix.
+func Log(A *FloatMatrix, indexes ...int)  *FloatMatrix {
+	return Apply(A, math.Log, indexes...)
 }
 
 // Return copy of A with each element as Log10(A[i,j]).
-func Log10(A Matrix) Matrix {
-	B := A.MakeCopy()
-	applyFunc(B, math.Log10, cmplx.Log10)
-	return B
+func Log10(A *FloatMatrix, indexes ...int) *FloatMatrix {
+	return Apply(A, math.Log10, indexes...)
 }
 
 // Return copy of A with each element as Log1p(A[i,j]). Returns nil for
 // complex valued matrix.
-func Log1p(A Matrix) Matrix {
-	if A.IsComplex() {
-		return nil
-	}
-	B := A.MakeCopy()
-	applyFunc(B, math.Log1p, nil)
-	return B
+func Log1p(A *FloatMatrix, indexes ...int) *FloatMatrix {
+	return Apply(A, math.Log1p, indexes...)
 }
 
 // Return copy of A with each element as Log2(A[i,j]). Returns nil for
 // complex valued matrix.
-func Log2(A Matrix) Matrix {
-	if A.IsComplex() {
-		return nil
-	}
-	B := A.MakeCopy()
-	applyFunc(B, math.Log2, nil)
-	return B
+func Log2(A *FloatMatrix, indexes ...int) *FloatMatrix {
+	return Apply(A, math.Log2, indexes...)
 }
 
-// Return copy of A with each element as Abs(A[i,j]). Returns a float matrix for
-// complex valued matrix.
-func Abs(A Matrix) Matrix {
-	if ! A.IsComplex() {
-		B := A.MakeCopy()
-		applyFunc(B, math.Abs, nil)
-		return B
-	} 
-	// Complex matrix here
-	B := FloatZeros(A.Size())
-	Ba := B.FloatArray()
-	Aa := A.ComplexArray()
-	for k, v := range Aa {
-		Ba[k] = cmplx.Abs(v)
-	}
-	return B
+// Compute element-wise C = Pow(A). Returns a new matrix.
+func Pow(A *FloatMatrix, exp float64, indexes ...int) *FloatMatrix {
+	return ApplyConst(A, exp, math.Pow, indexes...)
 }
 
-// Return conjugate copy of A with each element as Conj(A[i,j]). Returns nil for
-// float valued matrix.
-func Conj(A Matrix) Matrix {
-	if ! A.IsComplex() {
-		return nil
-	}
-	B := A.MakeCopy()
-	applyFunc(B, nil, cmplx.Conj)
-	return B
+// Compute element-wise C = Sqrt(A). Returns a new matrix.
+func Sqrt(A *FloatMatrix, indexes ...int) *FloatMatrix {
+	return Apply(A, math.Sqrt, indexes...)
 }
 
-// Return copy of A with each element as Pow(A[i,j], y). 
-func Pow(A Matrix, y Scalar) Matrix {
-	C := A.MakeCopy()
-	if C.IsComplex() {
-		applyComplex(C, cmplx.Pow, y.Complex())
-	} else {
-		applyFloat(C, math.Pow, y.Float())
-	}
-	return C
+// Compute element-wise C = Abs(A). Returns a new matrix.
+func Abs(A *FloatMatrix, indexes ...int) *FloatMatrix {
+	return Apply(A, math.Abs, indexes...)
 }
-
-// Return copy of A with each element as 1/A[i,j].
-func Inv(A Matrix) Matrix {
-	C := A.MakeCopy()
-	applyFunc(C,
-		func(v float64)float64 {return 1.0/v},
-		func(v complex128)complex128 {return complex(1.0/real(v), 1.0/imag(v))} )
-	return C
-}
-
-// Return new matrix which is element wise division A / B.
-// A and B matrices must be of same type and have equal number of elements.
-func Div(A, B Matrix) (Matrix, error) {
-	res := A.MakeCopy()
-	if A.NumElements() != B.NumElements() {
-		return nil, errors.New("Mismatching sizes")
-	}
-	if ! res.EqualTypes(B) {
-		return nil, errors.New("Mismatching types")
-	}
-	if res.IsComplex() {
-		ar := res.ComplexArray()
-		br := B.ComplexArray()
-		for i, _ := range ar {
-			ar[i] /= br[i]
-		}
-	} else {
-		ar := res.FloatArray()
-		br := B.FloatArray()
-		for i, _ := range ar {
-			ar[i] /= br[i]
-		}
-	}
-	return res, nil
-}
-
-// Return new matrix which is element wise product of argument matrices.
-// A and B matrices must be of same type and have equal number of elements.
-func Mul(ml ...Matrix) (Matrix, error) {
-	fst := ml[0]
-	res := fst.MakeCopy()
-	for _, m := range ml[1:] {
-		if fst.NumElements() != m.NumElements() {
-			return nil, errors.New("Mismatching sizes")
-		}
-		if ! fst.EqualTypes(m) {
-			return nil, errors.New("Mismatching types")
-		}
-		mul(res, m)
-	}
-	return res, nil
-}
-
-
-func mul(a, b Matrix) {
-	if a.IsComplex() {
-		ar := a.ComplexArray()
-		br := b.ComplexArray()
-		for i, _ := range ar {
-			ar[i] *= br[i]
-		}
-	} else {
-		ar := a.FloatArray()
-		br := b.FloatArray()
-		for i, _ := range ar {
-			ar[i] *= br[i]
-		}
-	}
-}
-
-// Return new matrix which is element wise sum of argument matrices.
-// A and B matrices must be of same type and have equal number of elements.
-func Sum(ml ...Matrix) (Matrix, error) {
-	fst := ml[0]
-	res := fst.MakeCopy()
-	for _, m := range ml[1:] {
-		if fst.NumElements() != m.NumElements() {
-			return nil, errors.New("Mismatching sizes")
-		}
-		if ! fst.EqualTypes(m) {
-			return nil, errors.New("Mismatching types")
-		}
-		add(res, m)
-	}
-	return res, nil
-}
-
-func add(a, b Matrix) {
-	if a.IsComplex() {
-		ar := a.ComplexArray()
-		br := b.ComplexArray()
-		for i, _ := range ar {
-			ar[i] += br[i]
-		}
-	} else {
-		ar := a.FloatArray()
-		br := b.FloatArray()
-		for i, _ := range ar {
-			ar[i] += br[i]
-		}
-	}
-}
-
-func applyFunc(A Matrix, rFunc func(float64)float64, cFunc func(complex128)complex128) {
-	if ! A.IsComplex() && rFunc != nil {
-		vals := A.FloatArray()
-		for i, _ := range vals {
-			vals[i] = rFunc(vals[i])
-		}
-	} else if cFunc != nil {
-		vals := A.ComplexArray()
-		for i, _ := range vals {
-			vals[i] = cFunc(vals[i])
-		}
-	}
-}
-
-func applyComplex(A Matrix, cFunc func(complex128,complex128)complex128, cval complex128) {
-	if cFunc != nil {
-		vals := A.ComplexArray()
-		for i, _ := range vals {
-			vals[i] = cFunc(vals[i], cval)
-		}
-	}
-}
-
-func applyFloat(A Matrix, cFunc func(float64,float64)float64, cval float64) {
-	if cFunc != nil {
-		vals := A.FloatArray()
-		for i, _ := range vals {
-			vals[i] = cFunc(vals[i], cval)
-		}
-	}
-}
-
-// Helper function for genearing random float64 numbers in range [0.0, 1.0) if nonNegative is true.
-// If nonNegative is false returns numbers in range (-1.0, 1.0).
-func uniformFloat64(nonNegative bool) float64 {
-	val := rand.Float64()
-	if nonNegative {
-		return val
-	}
-	return 2.0*(val - 0.5)
-}
-
 
 // Local Variables:
 // tab-width: 4

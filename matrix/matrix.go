@@ -23,14 +23,6 @@ type Matrix interface {
 	// Returns underlying complex128 array for BLAS/LAPACK routines. Returns nil
 	// if matrix is float64 valued matrix.
 	ComplexArray() []complex128
-	// Returns true if matrix is complex valued. False otherwise.
-	IsComplex() bool
-	// For all float valued matrices return the value of A[0,0]. Returns NaN
-	// if not float valued.
-	Float() float64
-	// For all complex valued matrices return the value of A[0,0]. Returns
-	// NaN if not complex valued.
-	Complex() complex128
 	// Matrix in string format.
 	String() string
 	// Make a copy  and return as Matrix interface type.
@@ -52,18 +44,16 @@ type Scalar interface {
 // Float constant
 type FScalar float64
 
-// Return self
+// Return self as float64.
 func (self FScalar) Float() float64        { return float64(self) }
 // Return complex(self, 0)
 func (self FScalar) Complex() complex128   { return complex(float64(self), 0) }
-func (self FScalar) Add(a float64) FScalar { return FScalar(float64(self)+a) }
-func (self FScalar) Scale(a float64) FScalar{ return FScalar(float64(self)*a) }
-func (self FScalar) Inv() FScalar          { return FScalar(1.0/float64(self)) }
 
-// Return real(self).
+// Complex constant
 type CScalar complex128
+// Return real(self).
 func (self CScalar) Float() float64 { return float64(real(self)) }
-// Return self.
+// Return self as complex128.
 func (self CScalar) Complex() complex128  { return complex128(self) }
 
 // Stacking direction for matrix constructor.
@@ -135,7 +125,7 @@ func (A *dimensions) SizeMatch(rows, cols int) bool {
 	return A != nil && A.rows == rows && A.cols == cols
 }
 
-// Change matrix shape if number of elements match to rows*cols.
+// Change matrix shape if number of elements match to rows*cols. 
 func Reshape(m Matrix, rows, cols int) {
 	if rows*cols == m.NumElements() {
 		switch m.(type) {
@@ -148,7 +138,7 @@ func Reshape(m Matrix, rows, cols int) {
 }
 		
 // Set x = y ie. copy y to x. Matrices must have same number of elements but are
-// required to have same shape.
+// not required to have same shape.
 func Set(x, y Matrix) {
 	if x.NumElements() != y.NumElements() {
 		return
@@ -166,6 +156,8 @@ func Set(x, y Matrix) {
 	
 // Create a set of indexes from start to end-1 with interval step.
 func MakeIndexSet(start, end, step int) []int {
+	return Indexes(start, end , step)
+	/*
 	if start < 0 {
 		start = 0
 	}
@@ -184,24 +176,23 @@ func MakeIndexSet(start, end, step int) []int {
 		inds = append(inds, k)
 	}
 	return inds
+	 */
 }
 
-// Create index set to access diagonal entries of matrix.
-//  indexes := MakeDiagonalSet(A.Size())
-func MakeDiagonalSet(rows, cols int) []int {
-	if rows != cols {
+// Create index set to access diagonal entries of matrix of size (n, n).
+func MakeDiagonalSet(n int) []int {
+	if n <= 0 {
 		return []int{}
 	}
-	inds := make([]int, rows)
-	for i :=0; i < rows; i++  {
-		inds[i] = i*rows + i
-	}
-	return inds
+	return Indexes(0, n*n, n+1)
 }
 
 // Create index set for a row in matrix M. 
 func RowIndexes(m Matrix, row int) []int {
 	nrows, N := m.Size()
+	if row < 0 {
+		row += nrows
+	}
 	if row > nrows {
 		return []int{}
 	}
@@ -216,6 +207,9 @@ func RowIndexes(m Matrix, row int) []int {
 // Create index set for a column in matrix M. 
 func ColumnIndexes(m Matrix, col int) []int {
 	N, ncols := m.Size()
+	if col < 0 {
+		col += ncols
+	}
 	if col > ncols {
 		return []int{}
 	}
@@ -232,15 +226,38 @@ func DiagonalIndexes(m Matrix) []int {
 	if m.Cols() != m.Rows() {
 		return []int{}
 	}
-	ind := 0
-	iset := make([]int, m.Rows())
-	for i := 0; i < m.Rows(); i++ {
-		iset[i] = ind
-		ind += m.Rows()
+	return Indexes(0, m.NumElements(), m.Rows()+1)
+}
+
+
+// Create an index set. Three argument call is (start, end, step) where start < end and step > 0.
+// It produces set of indexes from start to end-1 with step interval. Two argument call is 
+// interpreted as (start, end, 1) and one argument call as (0, end, 1).
+func Indexes(specs ...int) []int {
+	start := 0
+	end := 0
+	step := 1
+	if len(specs) == 1 {
+		end = specs[0]
+	} else if len(specs) == 2 {
+		start = specs[0]
+		end = specs[1]
+	} else if len(specs) > 2 {
+		start = specs[0]
+		end = specs[1]
+		step = specs[2]
+	}
+	iset := make([]int, 0)
+	// must have: start < end && step > 0
+	if !(start < end && step > 0) {
+		return iset
+	}
+	for i := start; i < end; i += step {
+		iset = append(iset, i)
 	}
 	return iset
 }
-
+		
 // Local Variables:
 // tab-width: 4
 // End:

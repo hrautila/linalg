@@ -7,21 +7,16 @@
 
 package matrix
 
+import "math/cmplx"
+
 // Compute in-place product A[i,j] *= alpha
-func (A *ComplexMatrix) Mult(alpha complex128) *ComplexMatrix {
+func (A *ComplexMatrix) Scale(alpha complex128) *ComplexMatrix {
 	for k, v := range A.elements {
 		A.elements[k] = alpha * v
 	}
 	return A
 }
 
-// Compute in-place division A[i,j] /= alpha
-func (A *ComplexMatrix) Div(alpha complex128) *ComplexMatrix {
-	for k, v := range A.elements {
-		A.elements[k] = v / alpha
-	}
-	return A
-}
 
 // Compute in-place sum A[i,j] += alpha
 func (A *ComplexMatrix) Add(alpha complex128) *ComplexMatrix {
@@ -31,13 +26,6 @@ func (A *ComplexMatrix) Add(alpha complex128) *ComplexMatrix {
 	return A
 }
 
-// Compute in-place difference A[i,j] -= alpha
-func (A *ComplexMatrix) Sub(alpha complex128) *ComplexMatrix {
-	for k, v := range A.elements {
-		A.elements[k] = v - alpha
-	}
-	return A
-}
 
 // Compute in-place negation -A[i,j]
 func (A *ComplexMatrix) Neg() *ComplexMatrix {
@@ -47,91 +35,48 @@ func (A *ComplexMatrix) Neg() *ComplexMatrix {
 	return A
 }
 
-// Compute sum C = A + B. Returns a new matrix.
-func (A *ComplexMatrix) Plus(B *ComplexMatrix) *ComplexMatrix {
-	if A.Rows() != B.Rows() || A.Cols() != B.Cols() {
-		return nil
+// Compute in-place conjugate A[i,j]
+func (A *ComplexMatrix) Conj() *ComplexMatrix {
+	for k, v := range A.elements {
+		A.elements[k] = cmplx.Conj(v)
 	}
-	C := ComplexZeros(A.Rows(), A.Cols())
-	for k, _ := range A.elements {
-		C.elements[k] = A.elements[k] + B.elements[k]
-	}
-	return C
-}
-
-// Compute difference C = A - B. Returns a new matrix.
-func (A *ComplexMatrix) Minus(B *ComplexMatrix) *ComplexMatrix {
-	if A.Rows() != B.Rows() || A.Cols() != B.Cols() {
-		return nil
-	}
-	C := ComplexZeros(A.Rows(), A.Cols())
-	for k, _ := range A.elements {
-		C.elements[k] = A.elements[k] - B.elements[k]
-	}
-	return C
-}
-
-// Compute product C = A * B. Returns a new matrix.
-func (A *ComplexMatrix) Times(B *ComplexMatrix) *ComplexMatrix {
-	if A.Cols() != B.Rows() {
-		return nil
-	}
-	C := ComplexZeros(A.Rows(), B.Cols())
-	arow := make([]complex128, A.Cols())
-	bcol := make([]complex128, B.Rows())
-	for i := 0; i < A.Rows(); i++ {
-		for j := 0; j < B.Cols(); j++ {
-			arow = A.GetRowArray(i, arow)
-			bcol = B.GetColumnArray(j, bcol)
-			for k, _ := range arow {
-				C.elements[i*A.Rows()+j] += arow[k]*bcol[k]
-			}
-		}
-	}
-	return C
+	return A
 }
 
 
 // Compute A = fn(C) by applying function fn element wise to A. For all i, j:
 // A[i,j] = fn(C[i,j]). If C == nil reduces to A[i,j] = fn(A[i,j]). Returns self. 
-func (A *ComplexMatrix) Apply(C *ComplexMatrix, fn func(complex128)complex128) *ComplexMatrix {
-	if C != nil && ! A.SizeMatch(C.Size()) {
-		return nil
-	}
-	B := C
-	if B == nil {
-		B = A
-	}
-	for k,v := range B.elements {
-		A.elements[k] = fn(v)
+func (A *ComplexMatrix) Apply(fn func(complex128)complex128, indexes ...int) *ComplexMatrix {
+	if len(indexes) == 0 {
+		for k, v := range A.elements {
+			A.elements[k] = fn(v)
+		}
+	} else {
+		N := A.NumElements()
+		for k, v := range A.elements {
+			if k < 0 {
+				k = k + N
+			}
+			A.elements[k] = fn(v)
+		}
 	}
 	return A
 }
 
-// Compute C = fn(A, x) by applying function fn element wise to A. For all i, j:
-// C[i,j] = fn(A[i,j], x). Returns new matrix.
-func (A *ComplexMatrix) Apply2(fn func(complex128,complex128)complex128, x complex128) *ComplexMatrix {
-	C := ComplexZeros(A.Rows(), A.Cols())
-	for k,v := range A.elements {
-		C.elements[k] = fn(v, x)
-	}
-	return C
-}
-
-// Compute C = fn(A) by applying function fn to all elements in indexes.
-// For all i in indexes: C[i] = fn(A[i]).
-// If C is nil then computes inplace A = fn(A). If C is not nil then sizes of A and C must match.
-// Returns pointer to the result matrix.
-func (A *ComplexMatrix) ApplyToIndexes(C *ComplexMatrix, indexes []int, fn func(complex128)complex128) *ComplexMatrix {
-	if C != nil && ! A.SizeMatch(C.Size()) {
-		return nil
-	}
-	B := C
-	if C == nil {
-		B = A
-	}
-	for _,v := range indexes {
-		A.elements[v] = fn(B.elements[v])
+// Compute A = fn(A, x) by applying function fn element wise to A.
+func (A *ComplexMatrix) Apply2(fn func(complex128,complex128)complex128, x complex128, indexes ...int) *ComplexMatrix {
+	if len(indexes) == 0 {
+		for k, v := range A.elements {
+			A.elements[k] = fn(v, x)
+		}
+	} else {
+		N := A.NumElements()
+		for k, v := range A.elements {
+			if k < 0 {
+				k = k + N
+			}
+			A.elements[k] = fn(v, x)
+		}
 	}
 	return A
 }

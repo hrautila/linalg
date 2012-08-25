@@ -66,6 +66,25 @@ func (A *FloatMatrix) Mod(alpha float64, indexes... int) *FloatMatrix {
 	return A
 }
 
+// Compute in-place inverse A[i,j] = 1.0/A[i,j]. If indexes is empty calculates for
+// all elements
+func (A *FloatMatrix) Inv(indexes... int) *FloatMatrix {
+	if len(indexes) == 0 {
+		for k, _ := range A.elements {
+			A.elements[k] = 1.0/A.elements[k]
+		}
+	} else  {
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k = N + k
+			}
+			A.elements[k] = 1.0/A.elements[k]
+		}
+	}
+	return A
+}
+
 // Compute in-place A += alpha for all elements in the matrix if list of indexes
 // is empty. Otherwise compute A[i] += alpha for indexes in column-major order.
 func (A *FloatMatrix) Add(alpha float64, indexes... int) *FloatMatrix {
@@ -104,53 +123,52 @@ func (A *FloatMatrix) AddIndexes(indexes []int, values []float64) *FloatMatrix {
 }
 
 
-// Compute element wise division C[i,] = A[i,j] / B[i,j]. Returns new matrix.
+// Compute element-wise division A /= B. Return A. If A and B sizes
+// do not match A is returned unaltered.
 func (A *FloatMatrix) Div(B *FloatMatrix) *FloatMatrix {
 	if ! A.SizeMatch(B.Size()) {
-		return nil
+		return A
 	}
-	C := FloatZeros(A.Rows(), A.Cols())
 	for k, v := range B.elements {
-		C.elements[k] = A.elements[k] / v
+		A.elements[k] /= v
 	}
-	return C
+	return A
 }
 
-// Compute element-wise product C[i,j] = A[i,j] * B[i,j]. Returns new matrix.
+// Compute element-wise product A *= B. Return A. If A and B sizes
+// do not match A is returned unaltered.
 func (A *FloatMatrix) Mul(B *FloatMatrix) *FloatMatrix {
 	if ! A.SizeMatch(B.Size()) {
-		return nil
+		return A
 	}
-	var C *FloatMatrix = FloatZeros(A.Rows(), A.Cols())
-	for k, _ := range B.elements {
-		val := A.elements[k] * B.elements[k]
-		C.elements[k] = val
+	for k, v := range B.elements {
+		A.elements[k] *= v
 	}
-	return C
+	return A
 }
 
-// Compute element-wise sum C = A + B. Returns a new matrix.
+// Compute element-wise sum A += B. Return A. If A and B sizes
+// do not match A is returned unaltered.
 func (A *FloatMatrix) Plus(B *FloatMatrix) *FloatMatrix {
 	if ! A.SizeMatch(B.Size()) {
-		return nil
+		return A
 	}
-	C := FloatZeros(A.Rows(), A.Cols())
-	for k, _ := range A.elements {
-		C.elements[k] = A.elements[k] + B.elements[k]
+	for k, v := range B.elements {
+		A.elements[k] += v
 	}
-	return C
+	return A
 }
 
-// Compute element-wise difference C = A - B. Returns a new matrix.
+// Compute element-wise difference A -= B. Return A. If A and B sizes
+// do not match A is returned unaltered.
 func (A *FloatMatrix) Minus(B *FloatMatrix) *FloatMatrix {
 	if ! A.SizeMatch(B.Size()) {
-		return nil
+		return A
 	}
-	C := FloatZeros(A.Rows(), A.Cols())
-	for k, _ := range A.elements {
-		C.elements[k] = A.elements[k] - B.elements[k]
+	for k, v := range B.elements {
+		A.elements[k] -= v
 	}
-	return C
+	return A
 }
 
 
@@ -182,16 +200,40 @@ func (A *FloatMatrix) Times(B *FloatMatrix) *FloatMatrix {
 // For all i, j: A[i,j] = fn(C[i,j]). If C is nil then computes inplace
 // A = fn(A). If C is not nil then sizes of A and C must match.
 // Returns pointer to self.
-func (A *FloatMatrix) Apply(C *FloatMatrix, fn func(float64)float64) *FloatMatrix {
-	if C != nil && ! A.SizeMatch(C.Size()) {
-		return nil
+func (A *FloatMatrix) Apply(fn func(float64)float64, indexes ...int) *FloatMatrix {
+	if len(indexes) == 0 {
+		for k,v := range A.elements {
+			A.elements[k] = fn(v)
+		}
+	} else {
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k += N
+			}
+			A.elements[k] = fn(A.elements[k])
+		}
 	}
-	var B *FloatMatrix = C
-	if B == nil {
-		B = A
-	}
-	for k,v := range B.elements {
-		A.elements[k] = fn(v)
+	return A
+}
+
+// Compute A = fn(C) by applying function fn element wise to C.
+// For all i, j: A[i,j] = fn(C[i,j]). If C is nil then computes inplace
+// A = fn(A). If C is not nil then sizes of A and C must match.
+// Returns pointer to self.
+func (A *FloatMatrix) ApplyConst(x float64, fn func(float64,float64)float64, indexes ...int) *FloatMatrix {
+	if len(indexes) == 0 {
+		for k,v := range A.elements {
+			A.elements[k] = fn(v, x)
+		}
+	} else {
+		N := A.NumElements()
+		for _, k := range indexes {
+			if k < 0 {
+				k += N
+			}
+			A.elements[k] = fn(A.elements[k], x)
+		}
 	}
 	return A
 }
@@ -218,17 +260,16 @@ func (A *FloatMatrix) ApplyToIndexes(C *FloatMatrix, indexes []int, fn func(floa
 
 // Compute A = fn(C, x) by applying function fn element wise to C.
 // For all i, j: A[i,j] = fn(C[i,j], x). 
-func (A *FloatMatrix) ApplyConst(C *FloatMatrix, fn func(float64,float64)float64, x float64) *FloatMatrix {
-
-	if C != nil && ! A.SizeMatch(C.Size()) {
-		return nil
-	}
-	B := C
-	if C == nil {
-		B = A
-	}
-	for k,v := range B.elements {
-		A.elements[k] = fn(v, x)
+func (A *FloatMatrix) ApplyConstValues(values []float64, fn func(float64,float64)float64, indexes []int) *FloatMatrix {
+	N := A.NumElements()
+	for i, k := range indexes {
+		if i > len(values) {
+			return A
+		}
+		if k < 0 {
+			k += N
+		}
+		A.elements[k] = fn(A.elements[k], values[i])
 	}
 	return A
 }
@@ -290,22 +331,24 @@ func (A *FloatMatrix) Sum(indexes... int) float64 {
 	return m
 }
 
-// Compute element-wise C = Exp(A). Returns a new matrix.
+// Compute element-wise A = Exp(A).
 func (A *FloatMatrix) Exp() *FloatMatrix {
-	C := FloatZeros(A.Rows(), A.Cols())
-	return C.Apply(A, math.Exp)
+	return A.Apply(math.Exp)
 }
 
-// Compute element-wise C = Log(A). Returns a new matrix.
+// Compute element-wise A = Sqrt(A).
+func (A *FloatMatrix) Sqrt() *FloatMatrix {
+	return A.Apply(math.Sqrt)
+}
+
+// Compute element-wise A = Log(A).
 func (A *FloatMatrix) Log() *FloatMatrix {
-	C := FloatZeros(A.Rows(), A.Cols())
-	return C.Apply(A, math.Log)
+	return A.Apply(math.Log)
 }
 		
-// Compute element-wise C = Pow(A). Returns a new matrix.
+// Compute element-wise A = Pow(A).
 func (A *FloatMatrix) Pow(exp float64) *FloatMatrix {
-	C := FloatZeros(A.Rows(), A.Cols())
-	return C.ApplyConst(A, math.Pow, exp)
+	return A.ApplyConst(exp, math.Pow)
 }
 		
 

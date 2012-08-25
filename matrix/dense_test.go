@@ -6,9 +6,6 @@ import (
 	"fmt"
 )
 
-func check(m Matrix) {
-	fmt.Printf("complex: %v\n", m.Complex())
-}
 
 func PrintArray(m Matrix) {
 	ar := m.FloatArray()
@@ -49,8 +46,8 @@ func TestFParse2(t *testing.T) {
 }
 
 func TestCRandom(t *testing.T) {
-	B := FloatRandom(3, 2, true)
-	A := FloatRandomSymmetric(3, false)
+	B := FloatUniform(3, 2)
+	A := FloatUniformSymmetric(3)
 	fmt.Printf("B:\n%v\n", B)
 	fmt.Printf("A symmetric:\n%v\n", A)
 }
@@ -90,32 +87,6 @@ func TestFMath(t *testing.T) {
 	fmt.Printf("A *= 9.0\n%v\n", A)
 	A.Add(-1.0)
 	fmt.Printf("A -= 1.0\n%v\n", A)
-	B := A.Mul(A)
-	fmt.Printf("B = A .* A\n%v\n", B)
-	/*
-	A.Div(2.0)
-	fmt.Printf("A /= 2.0\n%v\n", A)
-	A.Mod(3.0)
-	fmt.Printf("A %%= 3.0\n%v\n", A)
-	A.Neg()
-	fmt.Printf("A = -A:\n%v\n", A)
-	 */
-	C := A.Times(A)
-	fmt.Printf("C = A*A:\n%v\n", C)
-	D := C.Plus(A)
-	fmt.Printf("D = C+A:\n%v\n", D)
-	F := D.Minus(A)
-	fmt.Printf("F = D-A:\n%v\n", F)
-	G := FloatZeros(3, 2); G.Add(1.0)
-	H := G.Transpose()
-	fmt.Printf("G:\n%v\n", G)
-	fmt.Printf("H:\n%v\n", H)
-	K := G.Times(H)
-	fmt.Printf("K = G*H:\n%v\n", K)
-	X := FloatWithValue(K.Cols(), 1, 2.0)
-	fmt.Printf("X:\n%v\n", X)
-	Z := K.Times(X)
-	fmt.Printf("Z = K*X:\n%v\n", Z)
 }
 
 func TestMath2(t *testing.T) {
@@ -134,23 +105,18 @@ func TestFuncs(t *testing.T) {
 	AddTwo := func (n float64) float64 {
 		return n+2.0
 	}
-	C := A.Apply(A.Copy(), AddTwo)
+	C := Apply(A, AddTwo)
 	fmt.Printf("C = AddTwo(A):\n%v\n", C)
 }
 
-func TestFuncs2(t *testing.T) {
-	A := FloatOnes(2, 3)
-	B := Exp(A)
-	fmt.Printf("B = Exp(A):\n%v\n", B)
-}
 
 func TestIndexing(t *testing.T) {
 	A := FloatVector([]float64{0, 1, 2, 3, 4, 5})
 	fmt.Printf(" 0: %v\n", A.GetIndex(0))
 	fmt.Printf("-1: %v\n", A.GetIndex(-1))
-	fmt.Printf(" 6: %v\n", A.GetIndex(6))
-	fmt.Printf(" every 2nd: %v\n", A.GetIndexes(MakeIndexSet(0, A.NumElements(), 2)))
-	check(A)
+	// this should fail: index out of bounds
+	//fmt.Printf(" 6: %v\n", A.GetIndex(6))
+	fmt.Printf(" every 2nd: %v\n", A.GetIndexes(Indexes(0, A.NumElements(), 2)))
 }
 
 func TestScalars(t *testing.T) {

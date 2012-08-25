@@ -9,6 +9,7 @@ package matrix
 
 import (
 	"math"
+	"math/rand"
 )
 
 // A column-major dense matrix backed by a flat array of all elements.
@@ -41,12 +42,12 @@ func ComplexValue(value complex128) *ComplexMatrix {
 }
 
 // Create random matrix with element's real and imaginary parts
-// from [0.0, 1.0) if nonNeg is true otherwise in range (-1.0, 1.0)
-func ComplexRandom(rows, cols int, nonNeg bool) *ComplexMatrix {
+// from [0.0, 1.0).
+func ComplexUniform(rows, cols int) *ComplexMatrix {
 	A := ComplexZeros(rows, cols)
 	for i, _ := range A.elements {
-		re := uniformFloat64(nonNeg)
-		im := uniformFloat64(nonNeg)
+		re := rand.Float64()
+		im := rand.Float64()
 		A.elements[i] = complex(re, im)
 	}
 	return A
@@ -54,12 +55,43 @@ func ComplexRandom(rows, cols int, nonNeg bool) *ComplexMatrix {
 
 // Create symmetric n by n random  matrix with element's real and imaginary
 // parts from [0.0, 1.0).
-func ComplexRandomSymmetric(n int, nonNeg bool) *ComplexMatrix {
+func ComplexUniformSymmetric(n int) *ComplexMatrix {
 	A := ComplexZeros(n, n)
 	for i := 0; i < n; i++ {
 		for j := i; j < n; j++ {
-			re := uniformFloat64(nonNeg)
-			im := uniformFloat64(nonNeg)
+			re := rand.Float64()
+			im := rand.Float64()
+			val := complex(re, im)
+			A.SetAt(val, i, j)
+			if i != j {
+				A.SetAt(val, j, i)
+			}
+		}
+	}
+	return A
+}
+
+
+// Create random matrix with element's real and imaginary parts
+// from [0.0, 1.0).
+func ComplexNormal(rows, cols int) *ComplexMatrix {
+	A := ComplexZeros(rows, cols)
+	for i, _ := range A.elements {
+		re := rand.NormFloat64()
+		im := rand.NormFloat64()
+		A.elements[i] = complex(re, im)
+	}
+	return A
+}
+
+// Create symmetric n by n random  matrix with element's real and imaginary
+// parts from normal distribution.
+func ComplexNormalSymmetric(n int) *ComplexMatrix {
+	A := ComplexZeros(n, n)
+	for i := 0; i < n; i++ {
+		for j := i; j < n; j++ {
+			re := rand.NormFloat64()
+			im := rand.NormFloat64()
 			val := complex(re, im)
 			A.SetAt(val, i, j)
 			if i != j {

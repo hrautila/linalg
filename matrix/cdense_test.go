@@ -45,9 +45,9 @@ func TestCParse(t *testing.T) {
 
 func TestRand(t *testing.T) {
 	fmt.Printf("Test matrix creation.\n")
-	A := ComplexRandom(3, 2, true)
+	A := ComplexUniform(3, 2)
 	fmt.Printf("A :\n%v\n", A)
-	B := ComplexRandomSymmetric(2, false)
+	B := ComplexUniformSymmetric(2)
 	fmt.Printf("B :\n%v\n", B)
 }
 	
