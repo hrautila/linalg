@@ -10,6 +10,7 @@ package cvx
 
 import (
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"errors"
 	"fmt"
 	"math"
@@ -27,7 +28,7 @@ import (
 //        subject to  G'*z + A'*y + c = 0
 //                    z >= 0.
 //
-func Lp(c, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+func Lp(c, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, primalstart, dualstart *sets.FloatMatrixSet) (sol *Solution, err error) {
 
 	if c == nil {
 		err = errors.New("'c' must a column matrix")
@@ -62,7 +63,7 @@ func Lp(c, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, primalstart, 
 		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", p))
 		return
 	}
-	dims := DSetNew("l", "q", "s")
+	dims := sets.DSetNew("l", "q", "s")
 	dims.Set("l", []int{m})
 
 	return ConeLp(c, G, h, A, b, dims, solopts, primalstart, dualstart)
@@ -93,7 +94,7 @@ func Lp(c, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, primalstart, 
 // The default values for G, h, A and b are empty matrices with zero rows.
 //
 //
-func Qp(P, q, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, initvals *FloatMatrixSet) (sol *Solution, err error) {
+func Qp(P, q, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, initvals *sets.FloatMatrixSet) (sol *Solution, err error) {
 
 	sol = nil
 	if P == nil || P.Rows() != P.Cols() {
@@ -160,7 +161,7 @@ func Qp(P, q, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, initvals *
 //    
 //        sq[k][0] >= || sq[k][1:] ||_2,  zq[k][0] >= || zq[k][1:] ||_2.
 //
-func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *sets.FloatMatrixSet, solopts *SolverOptions, primalstart, dualstart *sets.FloatMatrixSet) (sol *Solution, err error) {
 	if c == nil {
 		err = errors.New("'c' must a column matrix")
 		return
@@ -226,7 +227,7 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", p))
 		return
 	}
-	dims := DSetNew("l", "q", "s")
+	dims := sets.DSetNew("l", "q", "s")
 	dims.Set("l", []int{ml})
 	dims.Set("q", mq)
 	//N := dims.Sum("l", "q")
@@ -234,33 +235,33 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 	hargs := make([]*matrix.FloatMatrix, 0, len(hqset)+1)
 	hargs = append(hargs, hl)
 	hargs = append(hargs, hqset...)
-	h, indh:= matrix.FloatMatrixCombined(matrix.StackDown, hargs...)
+	h, indh:= matrix.FloatMatrixStacked(matrix.StackDown, hargs...)
 
 	Gargs := make([]*matrix.FloatMatrix, 0, len(Gqset)+1)
 	Gargs = append(Gargs, Gl)
 	Gargs = append(Gargs, Gqset...)
-	G, indg := matrix.FloatMatrixCombined(matrix.StackDown, Gargs...)
+	G, indg := matrix.FloatMatrixStacked(matrix.StackDown, Gargs...)
 
-	var pstart, dstart *FloatMatrixSet = nil, nil
+	var pstart, dstart *sets.FloatMatrixSet = nil, nil
 	if primalstart != nil {
-		pstart = FloatSetNew("x", "s")
+		pstart = sets.FloatSetNew("x", "s")
 		pstart.Set("x", primalstart.At("x")[0])
 		slset := primalstart.At("sl")
 		margs := make([]*matrix.FloatMatrix, 0, len(slset)+1)
 		margs = append(margs, primalstart.At("s")[0])
 		margs = append(margs, slset...)
-		sl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		sl, _ := matrix.FloatMatrixStacked(matrix.StackDown,	margs...)
 		pstart.Set("s", sl)
 	}
 
 	if dualstart != nil {
-		dstart = FloatSetNew("y", "z")
+		dstart = sets.FloatSetNew("y", "z")
 		dstart.Set("y", dualstart.At("y")[0])
 		zlset := primalstart.At("zl")
 		margs := make([]*matrix.FloatMatrix, 0, len(zlset)+1)
 		margs = append(margs, dualstart.At("z")[0])
 		margs = append(margs, zlset...)
-		zl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		zl, _ := matrix.FloatMatrixStacked(matrix.StackDown,	margs...)
 		dstart.Set("z", zl)
 	}
 		
@@ -312,7 +313,7 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *FloatMatrixSet, solopts *Sol
 //    X[:] = Gs[k]*x.  For a symmetric matrix, zs[k], vec(zs[k]) is the 
 //    vector zs[k][:].
 //    
-func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *FloatMatrixSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *sets.FloatMatrixSet, solopts *SolverOptions, primalstart, dualstart *sets.FloatMatrixSet) (sol *Solution, err error) {
 	if c == nil {
 		err = errors.New("'c' must a column matrix")
 		return
@@ -380,7 +381,7 @@ func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *FloatMatrixSet, solopts *Solv
 		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", p))
 		return
 	}
-	dims := DSetNew("l", "q", "s")
+	dims := sets.DSetNew("l", "q", "s")
 	dims.Set("l", []int{ml})
 	dims.Set("s", ms)
 	N := dims.Sum("l") + dims.SumSquared("s")
@@ -397,30 +398,33 @@ func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *FloatMatrixSet, solopts *Solv
 	Gargs := make([]*matrix.FloatMatrix, 0)
 	Gargs = append(Gargs, Gl)
 	Gargs = append(Gargs, Gsset...)
-	G, sizeg := matrix.FloatMatrixCombined(matrix.StackDown, Gargs...)
+	G, sizeg := matrix.FloatMatrixStacked(matrix.StackDown, Gargs...)
 
-	var pstart, dstart *FloatMatrixSet = nil, nil
+	var pstart, dstart *sets.FloatMatrixSet = nil, nil
 	if primalstart != nil {
-		pstart = FloatSetNew("x", "s")
+		pstart = sets.FloatSetNew("x", "s")
 		pstart.Set("x", primalstart.At("x")[0])
 		slset := primalstart.At("sl")
 		margs := make([]*matrix.FloatMatrix, 0, len(slset)+1)
 		margs = append(margs, primalstart.At("s")[0])
 		margs = append(margs, slset...)
-		sl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		sl, _ := matrix.FloatMatrixStacked(matrix.StackDown,	margs...)
 		pstart.Set("s", sl)
 	}
 
 	if dualstart != nil {
-		dstart = FloatSetNew("y", "z")
+		dstart = sets.FloatSetNew("y", "z")
 		dstart.Set("y", dualstart.At("y")[0])
 		zlset := primalstart.At("zl")
 		margs := make([]*matrix.FloatMatrix, 0, len(zlset)+1)
 		margs = append(margs, dualstart.At("z")[0])
 		margs = append(margs, zlset...)
-		zl, _ := matrix.FloatMatrixCombined(matrix.StackDown,	margs...)
+		zl, _ := matrix.FloatMatrixStacked(matrix.StackDown,	margs...)
 		dstart.Set("z", zl)
 	}
+
+	//fmt.Printf("h=\n%v\n", h.ToString("%.3f"))
+	//fmt.Printf("G=\n%v\n", G.ToString("%.3f"))
 
 	sol, err = ConeLp(c, G, h, A, b, dims, solopts, pstart, dstart)
 	// unpack sol.Result

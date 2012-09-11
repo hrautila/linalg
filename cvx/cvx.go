@@ -11,6 +11,7 @@ package cvx
 
 import (
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"errors"
 )
 
@@ -18,19 +19,19 @@ import (
 type KKTFunc func(x, y, z *matrix.FloatMatrix) error
 
 // kktFactor produces solver function
-type kktFactor func(*FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
+type kktFactor func(*sets.FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
 
 // kktSolver creates problem spesific factor
-type kktSolver func(*matrix.FloatMatrix, *DimensionSet, *matrix.FloatMatrix, int) (kktFactor, error)
+type kktSolver func(*matrix.FloatMatrix, *sets.DimensionSet, *matrix.FloatMatrix, int) (kktFactor, error)
 
-func kktNullFactor(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
+func kktNullFactor(W *sets.FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
 	nullsolver := func(x, y, z *matrix.FloatMatrix) error {
 		return errors.New("Null KTT Solver does not solve anything.")
 	}
 	return nullsolver, nil
 }
 
-func kktNullSolver(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix) (kktFactor, error) {
+func kktNullSolver(G *matrix.FloatMatrix, dims *sets.DimensionSet, A *matrix.FloatMatrix) (kktFactor, error) {
 	return kktNullFactor, nil
 }
 
@@ -58,7 +59,7 @@ type Solution struct {
 	Y *matrix.FloatMatrix
 	S *matrix.FloatMatrix
 	Z *matrix.FloatMatrix
-	Result *FloatMatrixSet
+	Result *sets.FloatMatrixSet
 	PrimalObjective float64
 	DualObjective float64
 	Gap float64

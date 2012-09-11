@@ -12,6 +12,7 @@ import (
 	la "github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"errors"
 	"fmt"
 	"math"
@@ -78,7 +79,7 @@ type ConvexProg interface {
 //    The next M cones are positive semidefinite cones of order ms[0], ...,
 //    ms[M-1] >= 0.  
 //
-func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions) (sol *Solution, err error) {
+func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts *SolverOptions) (sol *Solution, err error) {
 
 	const (
 		STEP = 0.99
@@ -147,7 +148,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 		h = matrix.FloatZeros(0, 1)
 	}
 	if dims == nil {
-		dims = DSetNew("l", "q", "s")
+		dims = sets.DSetNew("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
 	}
 	if err = checkConeLpDimensions(dims); err != nil {
@@ -210,7 +211,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 		// kkt function returns us problem spesific factor function.
 		factor, err = kktfunc(G, dims, A, mnl)
 		// solver is 
-		kktsolver = func(W *FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error) {
+		kktsolver = func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error) {
 			_, Df, H, err := F.F2(x, z)
 			if err != nil { return nil, err }
 			return factor(W, H, Df)
@@ -284,7 +285,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 	ds0 := matrix.FloatZeros(mnl+cdim, 1)
 	ds20 := matrix.FloatZeros(mnl+cdim, 1)
 	
-	W0 := FloatSetNew("d", "di", "dnl", "dnli", "v", "r", "rti", "beta")
+	W0 := sets.FloatSetNew("d", "di", "dnl", "dnli", "v", "r", "rti", "beta")
 	W0.Set("dnl", matrix.FloatZeros(mnl, 1))
 	W0.Set("dnli", matrix.FloatZeros(mnl, 1))
 	W0.Set("d", matrix.FloatZeros(dims.At("l")[0], 1))
@@ -309,7 +310,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 	var resx0, /*resy0, reszl0,*/ resznl0, /*pcost0, dcost0,*/ dres0, pres0 float64
 	var dsdz, dsdz0, step, step0, dphi, dphi0, sigma0, /*mu0,*/ eta0 float64
 	var newresx, newresznl, newgap, newphi float64
-	var W *FloatMatrixSet
+	var W *sets.FloatMatrixSet
 	var f3 KKTFunc
 	
 	// Declare fDf and fH here, they bind to Df and H as they are already declared.
@@ -433,7 +434,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 				err = nil
 				sol.Status = Optimal
 			}
-			sol.Result = FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
+			sol.Result = sets.FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
 			sol.Result.Set("x", x)
 			sol.Result.Set("y", y)
 			sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
@@ -537,7 +538,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 
 				err = errors.New(msg)
 				sol.Status = Unknown
-				sol.Result = FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
+				sol.Result = sets.FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
 				sol.Result.Set("x", x)
 				sol.Result.Set("y", y)
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
@@ -758,7 +759,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, so
 
 				err = errors.New(msg)
 				sol.Status = Unknown
-				sol.Result = FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
+				sol.Result = sets.FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
 				sol.Result.Set("x", x)
 				sol.Result.Set("y", y)
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))

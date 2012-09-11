@@ -13,6 +13,7 @@ import (
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/linalg/lapack"
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"fmt"
 	//"math"
 )
@@ -44,7 +45,7 @@ func setDiagonal(M *matrix.FloatMatrix, srow, scol, erow, ecol int, val float64)
 // H is n x n,  A is p x n, Df is mnl x n, G is N x n where
 // N = dims['l'] + sum(dims['q']) + sum( k**2 for k in dims['s'] ).
 //
-func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mnl int) (kktFactor, error) {
+func kktLdl(G *matrix.FloatMatrix, dims *sets.DimensionSet, A *matrix.FloatMatrix, mnl int) (kktFactor, error) {
 
 	p, n := A.Size()
 	ldK := n + p + mnl + dims.At("l")[0] + dims.Sum("q") + dims.SumPacked("s")
@@ -53,7 +54,7 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 	u := matrix.FloatZeros(ldK, 1)
 	g := matrix.FloatZeros(mnl+G.Rows(), 1)
 
-	factor := func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
+	factor := func(W *sets.FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
 		var err error = nil
 		// Zero K for each call.
 		blas.ScalFloat(K, 0.0)
@@ -61,7 +62,6 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			K.SetSubMatrix(0, 0, H)
 		}
 		K.SetSubMatrix(n, 0, A)
-		//fmt.Printf("G=\n%v\n", G)
 		for k := 0; k < n; k++ {
 			// g is (mnl + G.Rows(), 1) matrix, Df is (mnl, n), G is (N, n)
 			if mnl > 0 {
@@ -93,20 +93,13 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
             //
             // On entry, x, y, z contain bx, by, bz.  On exit, they contain
             // the solution ux, uy, W*uz.
-			//fmt.Printf("** start solve **\n")
-			//fmt.Printf("x=\n%v\n", x.ConvertToString())
-			//fmt.Printf("z=\n%v\n", z.ConvertToString())
 			err = nil
 			blas.Copy(x, u)
 			blas.Copy(y, u, &la_.IOpt{"offsety", n})
-			//fmt.Printf("solving: u=\n%v\n", u.ConvertToString())
-			//W.Print()
 			err = scale(z, W, true, true)
-			//fmt.Printf("solving: post-scale z=\n%v\n", z.ConvertToString())
 			if err != nil { return }
+			//fmt.Printf("kkt-ldl solve post-scale z=\n%v\n", z.ToString("%.17f"))
 			err = pack(z, u, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsety", n+p})
-			//fmt.Printf("solve: post-Pack {mnl=%d, n=%d, p=%d} u=\n%v\n",
-			//	mnl, n, p, u.ConvertToString())
 			if err != nil { return }
 
 			err = lapack.Sytrs(K, u, ipiv)
@@ -115,9 +108,8 @@ func kktLdl(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mn
 			blas.Copy(u, x, &la_.IOpt{"n", n})
 			blas.Copy(u, y, &la_.IOpt{"n", p}, &la_.IOpt{"offsetx", n})
 			err = unpack(u, z, dims, &la_.IOpt{"mnl", mnl}, &la_.IOpt{"offsetx", n+p})
-			//fmt.Printf("** end solve **\n")
-			//fmt.Printf("x=\n%v\n", x.ConvertToString())
-			//fmt.Printf("z=\n%v\n", z.ConvertToString())
+			//fmt.Printf("kkt-ldl solve end x=\n%v\n", x.ToString("%.17f"))
+			//fmt.Printf("kkt-ldl solve end z=\n%v\n", z.ToString("%.17f"))
 			return 
 		}
 		return solve, err
@@ -131,13 +123,13 @@ type kktLdlSolver struct {
 	K, u, g *matrix.FloatMatrix
 	ipiv []int32
 	G, A *matrix.FloatMatrix
-	dims *DimensionSet
-	W *FloatMatrixSet
+	dims *sets.DimensionSet
+	W *sets.FloatMatrixSet
 	//H, Df *matrix.FloatMatrix
 }
 
 // not really needed. 
-func createLdlSolver(G *matrix.FloatMatrix, dims *DimensionSet, A *matrix.FloatMatrix, mnl int) *kktLdlSolver {
+func createLdlSolver(G *matrix.FloatMatrix, dims *sets.DimensionSet, A *matrix.FloatMatrix, mnl int) *kktLdlSolver {
 	kkt := new(kktLdlSolver)
 	
 	kkt.p, kkt.n = A.Size()
