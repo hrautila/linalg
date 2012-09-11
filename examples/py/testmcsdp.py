@@ -121,7 +121,7 @@ n = 30
 w = normal(n,n)
 x, z = mcsdp(w)
 print "x=\n", helpers.str2(x, "%.9f")
-print "z=\n", helpers.str2(z, "%.9f")
+#print "z=\n", helpers.str2(z, "%.9f")
 print "\n *** running GO test ***"
 helpers.run_go_test("../testmcsdp", {'x': x, 'z': z, 'data': w})
 

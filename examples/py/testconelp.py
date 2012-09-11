@@ -4,13 +4,14 @@
 #
 # The small linear cone program of section 8.1 (Linear cone programs).
 
+import sys
 from cvxopt import matrix, solvers
 from cvxopt import misc, blas
 import localcones
 import helpers
 
 
-def solve(opts):
+def solve(opts, chkpoints):
     c = matrix([-6., -4., -5.])
 
     G = matrix([[ 16., 7.,  24.,  -8.,   8.,  -1.,  0., -1.,  0.,  0.,   7.,  
@@ -26,15 +27,23 @@ def solve(opts):
     b = matrix(0.0, (0, 1))
 
     dims = {'l': 2, 'q': [4, 4], 's': [3]}
-    solvers.options.update(opts)
-    sol = solvers.conelp(c, G, h, dims, kktsolver='ldl')
+
+    if chkpoints:
+        helpers.sp_reset("./sp.conelp")
+        helpers.sp_activate()
+    localcones.options.update(opts)
+    sol = localcones.conelp(c, G, h, dims, kktsolver='ldl')
     print("\nStatus: " + sol['status'])
     if sol['status'] == 'optimal':
         print "x=\n", helpers.str2(sol['x'], "%.9f")
         print "s=\n", helpers.str2(sol['s'], "%.9f")
         print "z=\n", helpers.str2(sol['z'], "%.9f")
         print "\n *** running GO test ***"
-        helpers.run_go_test("../testconelp", {'x': sol['x'], 's': sol['s'], 'z': sol['z']})
+        rungotest(sol)
+
+def rungotest(sol):
+    helpers.run_go_test("../testconelp", {'x': sol['x'], 's': sol['s'], 'z': sol['z']})
 
 
-solve({'maxiters': 30})
+chkpoints = False
+solve({'maxiters': 30}, chkpoints)

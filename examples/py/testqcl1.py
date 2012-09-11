@@ -1,9 +1,15 @@
 # The quadratically constrained 1-norm minimization example of section 8.7
 # (Exploiting structure).
 
+import sys
 from cvxopt import blas, lapack, solvers, matrix, mul, div, setseed, normal
 from math import sqrt
 import helpers
+import localcones
+
+# helper variables for checkpointing
+loopg = 0
+loopf = 0
 
 def qcl1(A, b):
 
@@ -38,12 +44,17 @@ def qcl1(A, b):
     h = matrix( 0.0, (2*n + m + 1, 1))
     h[2*n] = 1.0
     h[2*n+1:] = -b
-    #print "c=\n", helpers.str2(c, "%.5f")
-    #print "h=\n", helpers.str2(h, "%.5f")
 
     def G(x, y, alpha = 1.0, beta = 0.0, trans = 'N'):    
-        #print "Gf:x=\n", helpers.str2(x, "%.5f")
-        #print "Gf:y=\n", helpers.str2(y, "%.5f")
+        minor = 0
+        if not helpers.sp_minor_empty():
+            minor = helpers.sp_minor_top()
+        else:
+            global loopg
+            loopg += 1
+            minor = loopg
+        helpers.sp_create("00-Gfunc", minor)
+
         y *= beta
         if trans=='N':
             # y += alpha * G * x 
@@ -55,8 +66,8 @@ def qcl1(A, b):
             # y += alpha * G'*x 
             y[:n] += alpha * (x[:n] - x[n:2*n] - A.T * x[-m:])  
             y[n:] -= alpha * (x[:n] + x[n:2*n]) 
-        #print "end Gf:x=\n", helpers.str2(x, "%.5f")
-        #print "end Gf:y=\n", helpers.str2(y, "%.5f")
+
+        helpers.sp_create("10-Gfunc", minor)
 
 
     def Fkkt(W): 
@@ -80,96 +91,113 @@ def qcl1(A, b):
   
         # As = W3^-1 * [ 0 ; -A ] = 1/beta * ( 2*J*v * v' - I ) * [0; A]
  
+        minor = 0
+        if not helpers.sp_minor_empty():
+            minor = helpers.sp_minor_top()
+
         beta, v = W['beta'][0], W['v'][0]
-        #print "v[1:].T =\n", helpers.str2(v[1:].T, "%.5f")
-        #print "v[1:].T*A=\n", helpers.str2(v[1:].T*A, "%.5f")
         As = 2 * v * (v[1:].T * A)
-        #print "As=\n", helpers.str2(As, "%.5f")
         As[1:,:] *= -1.0
         As[1:,:] -= A
         As /= beta
       
         # S = As'*As + 4 * (W1**2 + W2**2)**-1
         S = As.T * As 
-        #print "S=\n", helpers.str2(S, "%.5f")
         d1, d2 = W['d'][:n], W['d'][n:]       
-        print "d1=\n", helpers.str2(d1, "%.17f")
-        print "d2=\n", helpers.str2(d2, "%.17f")
         d = 4.0 * (d1**2 + d2**2)**-1
-        #print "d=\n", helpers.str2(d, "%.5f")
         S[::n+1] += d
-        #print "S=\n", helpers.str2(S, "%.5f")
         lapack.potrf(S)
-        #print "potrf S=\n", helpers.str2(S, "%.5f")
 
         def f(x, y, z):
 
-            #print "f start: x=\n", helpers.str2(x, "%.5f")
-            #print "f start: z=\n", helpers.str2(z, "%.5f")
-
+            minor = 0
+            if not helpers.sp_minor_empty():
+                minor = helpers.sp_minor_top()
+            else:
+                global loopf
+                loopf += 1
+                minor = loopf
+            helpers.sp_create("00-f", minor)
+  
             # z := - W**-T * z 
             z[:n] = -div( z[:n], d1 )
             z[n:2*n] = -div( z[n:2*n], d2 )
+
             z[2*n:] -= 2.0*v*( v[0]*z[2*n] - blas.dot(v[1:], z[2*n+1:]) ) 
             z[2*n+1:] *= -1.0
             z[2*n:] /= beta
-            #print "f 0: z=\n", helpers.str2(z, "%.5f")
 
-            # x := x - G' * W**-1 * z
+              # x := x - G' * W**-1 * z
             x[:n] -= div(z[:n], d1) - div(z[n:2*n], d2) + As.T * z[-(m+1):]
             x[n:] += div(z[:n], d1) + div(z[n:2*n], d2) 
+            helpers.sp_create("15-f", minor)
 
+  
             # Solve for x[:n]:
             #
             #    S*x[:n] = x[:n] - (W1**2 - W2**2)(W1**2 + W2**2)^-1 * x[n:]
             
             x[:n] -= mul( div(d1**2 - d2**2, d1**2 + d2**2), x[n:]) 
-            #print "f potrs: x=\n", helpers.str2(x, "%.5f")
+            helpers.sp_create("25-f", minor)
+
             lapack.potrs(S, x)
+            helpers.sp_create("30-f", minor)
             
             # Solve for x[n:]:
             #
             #    (d1**-2 + d2**-2) * x[n:] = x[n:] + (d1**-2 - d2**-2)*x[:n]
              
             x[n:] += mul( d1**-2 - d2**-2, x[:n])
+            helpers.sp_create("35-f", minor)
+
             x[n:] = div( x[n:], d1**-2 + d2**-2)
+            helpers.sp_create("40-f", minor)
 
             # z := z + W^-T * G*x 
             z[:n] += div( x[:n] - x[n:2*n], d1) 
-            z[n:2*n] += div( -x[:n] - x[n:2*n], d2) 
-            z[2*n:] += As*x[:n]
-            print "f end: x=\n", helpers.str2(x, "%.17f")
-            print "f end: z=\n", helpers.str2(z, "%.17f")
+            helpers.sp_create("44-f", minor)
 
+            z[n:2*n] += div( -x[:n] - x[n:2*n], d2) 
+            helpers.sp_create("48-f", minor)
+
+            z[2*n:] += As*x[:n]
+            helpers.sp_create("50-f", minor)
+  
         return f
 
     dims = {'l': 2*n, 'q': [m+1], 's': []}
-    solvers.options['maxiters'] = 30
-    sol = solvers.conelp(c, G, h, dims, kktsolver = Fkkt)
+    localcones.options['maxiters'] = 30
+    sol = localcones.conelp(c, G, h, dims, kktsolver = Fkkt)
     if sol['status'] == 'optimal':
         return sol['x'][:n],  sol['z'][-m:]
     else:
         return None, None
 
+def rungo(A, b, x, z):
+    helpers.run_go_test("../testqcl1", {'x': x, 'z': z, 'A': A, 'b': b})
+
 setseed()
 #m, n = 100, 100
-m, n = 5, 5
+m, n = 10, 10
 A, b = normal(m,n), normal(m,1)
 
-A = matrix([[0.66438870630377256, 1.68511096852776343, -1.47728250254375526, 0.30317355325876538, -0.89916397951294613],
-            [0.83465996542735588, 0.55877932252879847, -1.06626707857638992, 1.16931080498876594, -0.56601175168881845],
-            [0.32693688563254980, -0.77989544839110070, 0.10934309320941947, -1.86725147718547602, 1.55493765723389710],
-            [-0.43138937120640264, 0.20898065620849879, -0.59006087009136965, -0.04384982450250739, 0.27861225756921282],
-            [0.44000590962830038, 0.09061011469006654, 0.09036863350603415, 0.02113202375617339, 0.39620504458741246]])
-
-b = matrix([-0.39126297858919096, -0.62890266671369610, -0.74060474150487765, -0.00313362362240900, -0.08087134031555188])
-
-#print "-A", helpers.strSpe(A)
-#print "-b", helpers.strSpe(b)
-#print "A\n", helpers.str2(A, "%.17f", False)
-#print "b\n", helpers.str2(b, "%.17f", False)
+no_go = False
+if len(sys.argv[1:]) > 0 and sys.argv[1] == '-sp':
+    helpers.sp_reset("./sp.qcl1")
+    helpers.sp_activate()
+    no_go = True
 
 x, z = qcl1(A, b)
-print "x\n", helpers.str2(x, "%.9f", False)
-print "z\n", helpers.str2(z, "%.9f", False)
-if x is None: print("infeasible")
+if x is None:
+    print("infeasible")
+    x = matrix(0.0, (0, 1))
+    z = matrix(0.0, (0, 1))
+else:
+    print "x\n", helpers.str2(x, "%.9f")
+    print "z\n", helpers.str2(z, "%.9f")
+
+if not no_go:
+    rungo(A, b, x, z)
+else:
+    print "A=\"%s\"\n" % helpers.strSpe(A)
+    print "b=\"%s\"\n" % helpers.strSpe(b)
