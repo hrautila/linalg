@@ -231,62 +231,17 @@ func ApplyConstValues(A *FloatMatrix, values []float64, fn func(float64,float64)
 
 // Find element-wise maximum. 
 func Max(A *FloatMatrix, indexes... int) float64 {
-	res := math.Inf(-1)
-	Ar := A.FloatArray()
-	if len(indexes) == 0 {
-		for _, v := range Ar {
-			res = math.Max(res, v)
-		}
-	} else {
-		N := A.NumElements()
-		for _, k := range indexes {
-			if k < 0 {
-				k = N + k
-			}
-			res = math.Max(res, Ar[k])
-		}
-	}
-	return res
+	return A.Max(indexes...)
 }
 
 // Find element-wise minimum. 
 func Min(A *FloatMatrix, indexes... int) float64 {
-	res := math.Inf(+1)
-	Ar := A.FloatArray()
-	if len(indexes) == 0 {
-		for _, v := range Ar {
-			res = math.Min(res, v)
-		}
-	} else {
-		N := A.NumElements()
-		for _, k := range indexes {
-			if k < 0 {
-				k = N + k
-			}
-			res = math.Min(res, Ar[k])
-		}
-	}
-	return res
+	return A.Min(indexes...)
 }
 
 // Return sum of elements
 func Sum(A *FloatMatrix, indexes... int) float64 {
-	res := 0.0
-	Ar := A.FloatArray()
-	if len(indexes) == 0 {
-		for _, v := range Ar {
-			res += v
-		}
-	} else {
-		N := A.NumElements()
-		for _, k := range indexes {
-			if k < 0 {
-				k = N + k
-			}
-			res += Ar[k]
-		}
-	}
-	return res
+	return A.Sum(indexes...)
 }
 
 // Compute element-wise C = Exp(A). Returns a new matrix.
@@ -299,19 +254,17 @@ func Log(A *FloatMatrix, indexes ...int)  *FloatMatrix {
 	return Apply(A, math.Log, indexes...)
 }
 
-// Return copy of A with each element as Log10(A[i,j]).
+// Return copy of A with each element as Log10(A). Returns a new matrix.
 func Log10(A *FloatMatrix, indexes ...int) *FloatMatrix {
 	return Apply(A, math.Log10, indexes...)
 }
 
-// Return copy of A with each element as Log1p(A[i,j]). Returns nil for
-// complex valued matrix.
+// Return copy of A with each element as Log1p(A). Returns a new matrix.
 func Log1p(A *FloatMatrix, indexes ...int) *FloatMatrix {
 	return Apply(A, math.Log1p, indexes...)
 }
 
-// Return copy of A with each element as Log2(A[i,j]). Returns nil for
-// complex valued matrix.
+// Return copy of A with each element as Log2(A). Returns a new matrix
 func Log2(A *FloatMatrix, indexes ...int) *FloatMatrix {
 	return Apply(A, math.Log2, indexes...)
 }

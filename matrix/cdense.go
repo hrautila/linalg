@@ -105,7 +105,7 @@ func ComplexNormalSymmetric(n int) *ComplexMatrix {
 
 // Create a column-major matrix from a array of arrays. Parameter rowOrder
 // indicates if data is array of rows or array of columns.
-func ComplexMatrixStacked(data [][]complex128, order DataOrder) *ComplexMatrix {
+func ComplexMatrixFromTable(data [][]complex128, order DataOrder) *ComplexMatrix {
 	var rows, cols int
 	if order == RowOrder {
 		rows = len(data)

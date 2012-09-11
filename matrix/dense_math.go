@@ -196,10 +196,9 @@ func (A *FloatMatrix) Times(B *FloatMatrix) *FloatMatrix {
 }
 
 
-// Compute A = fn(C) by applying function fn element wise to C.
-// For all i, j: A[i,j] = fn(C[i,j]). If C is nil then computes inplace
-// A = fn(A). If C is not nil then sizes of A and C must match.
-// Returns pointer to self.
+// Compute A = fn(A) by applying function fn element wise to A.
+// If indexes array is non-empty function is applied to elements of A
+// indexed by the contents of indexes.
 func (A *FloatMatrix) Apply(fn func(float64)float64, indexes ...int) *FloatMatrix {
 	if len(indexes) == 0 {
 		for k,v := range A.elements {
@@ -217,10 +216,11 @@ func (A *FloatMatrix) Apply(fn func(float64)float64, indexes ...int) *FloatMatri
 	return A
 }
 
-// Compute A = fn(C) by applying function fn element wise to C.
-// For all i, j: A[i,j] = fn(C[i,j]). If C is nil then computes inplace
-// A = fn(A). If C is not nil then sizes of A and C must match.
-// Returns pointer to self.
+// Compute A = fn(A, x) by applying function fn element wise to A.
+// If indexes array is non-empty function is applied to elements of A
+// indexed by the contents of indexes.
+//  For all i in A:       A[i]          = fn(A[i], x)           if len(indexes) == 0
+//  For all i in indexes: A[indexes[i]] = fn(A[indexes[i]], x)  if len(indexes) > 0
 func (A *FloatMatrix) ApplyConst(x float64, fn func(float64,float64)float64, indexes ...int) *FloatMatrix {
 	if len(indexes) == 0 {
 		for k,v := range A.elements {
@@ -258,8 +258,8 @@ func (A *FloatMatrix) ApplyToIndexes(C *FloatMatrix, indexes []int, fn func(floa
 	return A
 }
 
-// Compute A = fn(C, x) by applying function fn element wise to C.
-// For all i, j: A[i,j] = fn(C[i,j], x). 
+// Compute A = fn(A, x) by applying function fn element wise to A.
+//  For all i in indexes: A[indexes[i]] = fn(A[indexes[i]], values[i])
 func (A *FloatMatrix) ApplyConstValues(values []float64, fn func(float64,float64)float64, indexes []int) *FloatMatrix {
 	N := A.NumElements()
 	for i, k := range indexes {

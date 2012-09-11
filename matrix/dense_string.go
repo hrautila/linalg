@@ -115,7 +115,7 @@ func FloatParse(s string) (A *FloatMatrix, err error) {
 		}
 		arrays = append(arrays, row)
 	}
-	A = FloatMatrixStacked(arrays, RowOrder)
+	A = FloatMatrixFromTable(arrays, RowOrder)
 	return
 }
 
@@ -164,7 +164,7 @@ rows:
 		}
 		arrays = append(arrays, row)
 	}
-	A = FloatMatrixStacked(arrays, RowOrder)
+	A = FloatMatrixFromTable(arrays, RowOrder)
 	return
 }
 

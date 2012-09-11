@@ -98,7 +98,7 @@ func FloatNormalSymmetric(n int) *FloatMatrix {
 
 // Create a column-major matrix from a array of arrays. Parameter order
 // indicates if data is array of rows (RowOrder) or array of columns (ColumnOrder).
-func FloatMatrixStacked(data [][]float64, order... DataOrder) *FloatMatrix {
+func FloatMatrixFromTable(data [][]float64, order... DataOrder) *FloatMatrix {
 	var rows, cols int
 	if len(order) == 0 || order[0] == ColumnOrder {
 		cols = len(data)
@@ -132,7 +132,7 @@ func FloatMatrixStacked(data [][]float64, order... DataOrder) *FloatMatrix {
 // Colmax is the largest column count of matrices and rowmax is the largest row count.
 // Return  new matrix and array of submatrix sizes, row counts for StackDown and column
 // counts for StackRight
-func FloatMatrixCombined(direction Stacking, mlist... *FloatMatrix) (*FloatMatrix, []int) {
+func FloatMatrixStacked(direction Stacking, mlist... *FloatMatrix) (*FloatMatrix, []int) {
 	maxc := 0
 	maxr := 0
 	N := 0

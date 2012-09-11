@@ -47,11 +47,9 @@ func ComplexParse(s string) (A *ComplexMatrix, err error) {
 	}
 	rowStrings := strings.Split(s[start+1:end], ";")
 	//nrows := len(rowStrings)
-	//fmt.Printf("rows: %d: %v\n", len(rowStrings), rowStrings)
 	ncols := 0
 	for _, row := range rowStrings {
 		rowElems := strings.Split(strings.Trim(row, ") "), ")")
-		//fmt.Printf("row: %d: %v\n", len(rowElems), rowElems)
 		if ncols == 0 {
 			ncols = len(rowElems)
 		} else if ncols != len(rowElems) {
@@ -70,7 +68,7 @@ func ComplexParse(s string) (A *ComplexMatrix, err error) {
 		}
 		arrays = append(arrays, row)
 	}
-	A = ComplexMatrixStacked(arrays, RowOrder)
+	A = ComplexMatrixFromTable(arrays, RowOrder)
 	return
 }
 
