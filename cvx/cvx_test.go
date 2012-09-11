@@ -10,27 +10,28 @@ package cvx
 
 import (
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"fmt"
 	"testing"
 )
 
-func calcDims(dims *DimensionSet) (int, int, int) {
+func calcDims(dims *sets.DimensionSet) (int, int, int) {
 	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
 	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
 	cdim_diag := dims.Sum("l", "q", "s")
 	return cdim, cdim_pckd, cdim_diag
 }
 
-func makeDSet() *DimensionSet {
-	dims := DSetNew("l", "q", "s")
+func makeDSet() *sets.DimensionSet {
+	dims := sets.DSetNew("l", "q", "s")
 	dims.Set("l", []int{2})
 	dims.Set("q", []int{4, 4})
 	dims.Set("s", []int{3})
 	return dims
 }
 
-func makeMatrixSet(dims *DimensionSet) *FloatMatrixSet {
-	W := FloatSetNew("d", "di", "v", "beta", "r", "rti")
+func makeMatrixSet(dims *sets.DimensionSet) *sets.FloatMatrixSet {
+	W := sets.FloatSetNew("d", "di", "v", "beta", "r", "rti")
 	dd := dims.At("l")[0]
 	W.Set("d", matrix.FloatOnes(dd, 1))
 	W.Set("di", matrix.FloatOnes(dd, 1))
