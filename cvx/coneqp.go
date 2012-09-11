@@ -11,12 +11,13 @@ import (
 	la "github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"errors"
 	"fmt"
 	"math"
 )
 
-func checkConeQpDimensions(dims *DimensionSet) error {
+func checkConeQpDimensions(dims *sets.DimensionSet) error {
 	if dims.At("l")[0] < 0 {
 		return errors.New("dimension 'l' must be nonnegative integer")
 	}
@@ -59,7 +60,7 @@ func checkConeQpDimensions(dims *DimensionSet) error {
 // The next M cones are positive semidefinite cones of order ms[0], ...,
 // ms[M-1] >= 0.  
 //
-func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, initvals *FloatMatrixSet) (sol *Solution, err error) {
+func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts *SolverOptions, initvals *sets.FloatMatrixSet) (sol *Solution, err error) {
 
 
 	err = nil
@@ -71,7 +72,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
-	var kktsolver func(*FloatMatrixSet)(KKTFunc, error) = nil
+	var kktsolver func(*sets.FloatMatrixSet)(KKTFunc, error) = nil
 	var refinement int
 	var correction bool = true
 
@@ -120,7 +121,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		return
 	}
 	if dims == nil {
-		dims = DSetNew("l", "q", "s")
+		dims = sets.DSetNew("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
 	}
 
@@ -212,7 +213,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			fmt.Printf("error on factoring: %s\n", err)
 		}
 		// solver is 
-		kktsolver = func(W *FloatMatrixSet) (KKTFunc, error) {
+		kktsolver = func(W *sets.FloatMatrixSet) (KKTFunc, error) {
 			return factor(W, P, nil)
 		}
 	} else {
@@ -224,7 +225,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 	wz3 := matrix.FloatZeros(cdim, 1)
 
 	// 
-	res := func(ux, uy, uz, us, vx, vy, vz, vs *matrix.FloatMatrix, W *FloatMatrixSet, lmbda *matrix.FloatMatrix) (err error) {
+	res := func(ux, uy, uz, us, vx, vy, vz, vs *matrix.FloatMatrix, W *sets.FloatMatrixSet, lmbda *matrix.FloatMatrix) (err error) {
         // Evaluates residual in Newton equations:
         // 
         //      [ vx ]    [ vx ]   [ 0     ]   [ P  A'  G' ]   [ ux        ]
@@ -263,7 +264,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 
 	var x, y, z, s, dx, dy, ds, dz, rx, ry, rz *matrix.FloatMatrix
 	var lmbda, lmbdasq, sigs, sigz *matrix.FloatMatrix
-	var W *FloatMatrixSet
+	var W *sets.FloatMatrixSet
 	var f, f3 KKTFunc
 	var resx, resy, resz, step, sigma, mu, eta float64
 	var gap, pcost, dcost, relgap, pres, dres, f0 float64
@@ -275,7 +276,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		//     [       ] [   ] = [    ].
 		//     [ A  0  ] [ y ]   [  b ]
 		//
-		Wtmp := FloatSetNew("d", "di", "beta", "v", "r", "rti")
+		Wtmp := sets.FloatSetNew("d", "di", "beta", "v", "r", "rti")
 		Wtmp.Set("d", matrix.FloatZeros(0, 1))
 		Wtmp.Set("di", matrix.FloatZeros(0, 1))
 		f3, err = kktsolver(Wtmp)
@@ -305,7 +306,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			relgap = math.NaN()
 		}
 
-		sol.Result = FloatSetNew("x", "y", "s", "z")
+		sol.Result = sets.FloatSetNew("x", "y", "s", "z")
 		sol.Result.Set("x", x)
 		sol.Result.Set("y", y)
 		sol.Result.Set("s", matrix.FloatZeros(0,1))
@@ -334,7 +335,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 		//     [ A   0   0  ].
 		//     [ G   0  -I  ]
 		//
-		W = FloatSetNew("d", "di", "v", "beta", "r", "rti")
+		W = sets.FloatSetNew("d", "di", "v", "beta", "r", "rti")
 		W.Set("d", matrix.FloatOnes(dims.At("l")[0], 1))
 		W.Set("di", matrix.FloatOnes(dims.At("l")[0], 1))
 		W.Set("beta", matrix.FloatOnes(len(dims.At("q")), 1))
@@ -549,7 +550,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 			// optimal solution found
 			//fmt.Print("Optimal solution.\n")
 			err = nil
-			sol.Result = FloatSetNew("x", "y", "s", "z")
+			sol.Result = sets.FloatSetNew("x", "y", "s", "z")
 			sol.Result.Set("x", x)
 			sol.Result.Set("y", y)
 			sol.Result.Set("s", s)
@@ -596,7 +597,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *S
 				// terminated (singular KKT matrix)
 				fmt.Printf("Terminated (singular KKT matrix).\n")
 				err = errors.New("Terminated (singular KKT matrix).")
-				sol.Result = FloatSetNew("x", "y", "s", "z")
+				sol.Result = sets.FloatSetNew("x", "y", "s", "z")
 				sol.Result.Set("x", x)
 				sol.Result.Set("y", y)
 				sol.Result.Set("s", s)
