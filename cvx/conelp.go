@@ -12,36 +12,73 @@ import (
 	la "github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/go.opt/cvx/sets"
+	"github.com/hrautila/go.opt/cvx/checkpnt"
+	//"github.com/hrautila/go.opt/helpers"
 	"errors"
 	"fmt"
 	"math"
 )
 
-
-type fClosure struct {
-	wx, wy, ws, wz *matrix.FloatMatrix
-	wx2, wy2, ws2, wz2 *matrix.FloatMatrix
-	// these are singleton matrices
-	wtau, wkappa, wtau2, wkappa2 *matrix.FloatMatrix
+// Public interface to provide custom G matrix-vector products
+type MatrixG interface {
+	//
+    //    The call Gf(u, v, alpha, beta, trans) should evaluate the matrix-vector products
+    //
+    //        v := alpha * G * u + beta * v  if trans is linalg.OptNoTrans
+    //        v := alpha * G' * u + beta * v  if trans is linalg.OptTrans
+    //
+	Gf(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
 }
 
-func checkConeLpDimensions(dims *DimensionSet) error {
-	if len(dims.At("l")) == 0 {
-		dims.Set("l", []int{0})
-	} else if dims.At("l")[0] < 0 {
-		return errors.New("dimension 'l' must be nonnegative integer")
-	}
-	for _, m := range dims.At("q") {
-		if m < 1 {
-			return errors.New("dimension 'q' must be list of positive integers")
-		}
-	}
-	for _, m := range dims.At("s") {
-		if m < 1 {
-			return errors.New("dimension 's' must be list of positive integers")
-		}
-	}
-	return nil
+// Public interface to provide custom A matrix-vector products
+type MatrixA interface {
+	//
+    //    The call Af(u, v, alpha, beta, trans) should evaluate the matrix-vector products
+    //
+    //        v := alpha * A * u + beta * v  if trans is linalg.OptNoTrans
+    //        v := alpha * A' * u + beta * v  if trans is linalg.OptTrans
+    //
+	Af(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
+}
+
+// Custom solver type for solving linear equations (`KKT systems')
+//        
+//            [ 0  A'  G'   ] [ ux ]   [ bx ]
+//            [ A  0   0    ] [ uy ] = [ by ].
+//            [ G  0  -W'*W ] [ uz ]   [ bz ]
+//
+// W is a scaling matrix, a block diagonal mapping 
+//
+// The call f = CustomKKT(W) should return a function f that solves 
+// the KKT system by f(x, y, z).  On entry, x, y, z contain the 
+// righthand side bx, by, bz.  On exit, they contain the solution, 
+// with uz scaled: the argument z contains W*uz.  In other words,
+// on exit, x, y, z are the solution of
+//
+//            [ 0  A'  G'*W^{-1} ] [ ux ]   [ bx ]
+//            [ A  0   0         ] [ uy ] = [ by ].
+//            [ G  0  -W'        ] [ uz ]   [ bz ]
+//
+type CustomKKT func(W *sets.FloatMatrixSet) (KKTFunc, error)
+
+// internal type for presenting A as MatrixA interface.
+type matA struct {
+	mA *matrix.FloatMatrix
+}
+
+func (amat *matA) Af(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+	return blas.GemvFloat(amat.mA, x, y, alpha, beta, trans)
+}
+
+// internal type for presenting G as MatrixG interface.
+type matG struct {
+	mG *matrix.FloatMatrix
+	dims *sets.DimensionSet
+}
+
+func (gmat *matG) Gf(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
+	return sgemv(gmat.mG, x, y, alpha, beta, gmat.dims, trans)
 }
 
 // Solves a pair of primal and dual cone programs
@@ -69,7 +106,257 @@ func checkConeLpDimensions(dims *DimensionSet) error {
 // The next M cones are positive semidefinite cones of order ms[0], ...,
 // ms[M-1] >= 0.  
 //
-func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *SolverOptions, primalstart, dualstart *FloatMatrixSet) (sol *Solution, err error) {
+func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts *SolverOptions, primalstart, dualstart *sets.FloatMatrixSet) (sol *Solution, err error) {
+
+	/* saved
+	if G == nil {
+		err = errors.New("'G' must be non-nil matrix.")
+		return
+	}
+	 */
+	if A == nil {
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+
+	if c == nil || c.Cols() > 1 {
+		err = errors.New("'c' must be matrix with 1 column")
+		return 
+	}
+	if c.Rows() < 1 {
+		err = errors.New("No variables, 'c' must have at least one row")
+		return 
+		
+	}
+	if h == nil || h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
+	if dims == nil {
+		dims = sets.DSetNew("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
+	//cdim_diag := dims.Sum("l", "q", "s")
+
+	if h.Rows() != cdim {
+		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
+		return 
+	}
+
+	if G == nil {
+		G = matrix.FloatZeros(0, c.Rows())
+	}
+	if !G.SizeMatch(cdim, c.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check A and set defaults if it is nil
+	if A == nil {
+		// zeros rows reduces Gemv to vector products
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if A.Cols() != c.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+	if b.Rows() != A.Rows() {
+		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
+		err = errors.New("Rank(A) < p or Rank([G; A]) < n")
+		return
+	}
+
+	var matrixA = matA{A}
+	var matrixG = matG{G, dims}
+
+	solvername := solopts.KKTSolverName
+	if len(solvername) == 0 {
+		if len(dims.At("q")) > 0 || len(dims.At("s")) > 0 {
+			solvername = "qr"
+		} else {
+			solvername = "chol2"
+		}
+	}
+
+	var factor kktFactor
+	var kktsolver CustomKKT = nil
+	if kktfunc, ok := solvers[solvername]; ok {
+		// kkt function returns us problem spesific factor function.
+		factor, err = kktfunc(G, dims, A, 0)
+		kktsolver = func(W *sets.FloatMatrixSet) (KKTFunc, error) {
+			return factor(W, nil, nil)
+		}
+	} else {
+		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
+		return
+	}
+	return ConeLpCustom(c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts, primalstart, dualstart)
+}
+
+// Solves a pair of primal and dual cone programs using custom KKT solver.
+//
+// The customize solver can provide a routine for solving linear equations (`KKT systems')
+//        
+//            [ 0  A'  G'   ] [ ux ]   [ bx ]
+//            [ A  0   0    ] [ uy ] = [ by ].
+//            [ G  0  -W'*W ] [ uz ]   [ bz ]
+//
+// W is a scaling matrix, a block diagonal mapping 
+//
+//           W*z = ( W0*z_0, ..., W_{N+M}*z_{N+M} ) 
+//
+// defined as follows.  
+//
+// ** For the 'l' block (W_0): 
+//
+//           W_0 = diag(d), 
+//
+// with d a positive vector of length ml. 
+//
+// ** For the 'q' blocks (W_{k+1}, k = 0, ..., N-1): 
+//                           
+//           W_{k+1} = beta_k * ( 2 * v_k * v_k' - J )
+//
+// where beta_k is a positive scalar, v_k is a vector in R^mq[k] 
+// with v_k[0] > 0 and v_k'*J*v_k = 1, and J = [1, 0; 0, -I].
+//
+// ** For the 's' blocks (W_{k+N}, k = 0, ..., M-1):
+//
+//           W_k * x = vec(r_k' * mat(x) * r_k) 
+//
+// where r_k is a nonsingular matrix of order ms[k], and mat(x) is 
+// the inverse of the vec operation.
+// 
+// The argument kktsolver is a function that will be called as f = kktsolver(W),
+// where W is a FloatMatrixSet that contains the parameters of the scaling:
+//
+//  - W['d'] is a positive float matrix of size (ml,1).
+//  - W['di'] is a positive float matrix with the elementwise inverse of W['d'].
+//  - W['beta'] is a matrix of value [ beta_0, ..., beta_{N-1} ]
+//  - W['v'] is a list [ v_0, ..., v_{N-1} ]  of float matrices
+//  - W['r'] is a list [ r_0, ..., r_{M-1} ]  of float matrices
+//  - W['rti'] is a list [ rti_0, ..., rti_{M-1} ], with rti_k the inverse of the transpose of r_k.
+//
+// The call f = kktsolver(W) should return a function f that solves 
+// the KKT system by f(x, y, z).  On entry, x, y, z contain the 
+// righthand side bx, by, bz.  On exit, they contain the solution, 
+// with uz scaled: the argument z contains W*uz.  In other words,
+// on exit, x, y, z are the solution of
+//
+//            [ 0  A'  G'*W^{-1} ] [ ux ]   [ bx ]
+//            [ A  0   0         ] [ uy ] = [ by ].
+//            [ G  0  -W'        ] [ uz ]   [ bz ]
+//
+func ConeLpKKT(c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, kktsolver CustomKKT,
+	solopts *SolverOptions, primalstart, dualstart *sets.FloatMatrixSet) (sol *Solution, err error) {
+
+	/* saved
+	if G == nil {
+		err = errors.New("'G' must be non-nil matrix.")
+		return
+	}
+	 */
+	if A == nil {
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+
+	if c == nil || c.Cols() > 1 {
+		err = errors.New("'c' must be matrix with 1 column")
+		return 
+	}
+	if h == nil || h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
+	if dims == nil {
+		dims = sets.DSetNew("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
+	//cdim_diag := dims.Sum("l", "q", "s")
+
+	if G == nil {
+		G = matrix.FloatZeros(0, c.Rows())
+	}
+	if !G.SizeMatch(cdim, c.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check A and set defaults if it is nil
+	if A == nil {
+		// zeros rows reduces Gemv to vector products
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if A.Cols() != c.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+	if b.Rows() != A.Rows() {
+		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
+		err = errors.New("Rank(A) < p or Rank([G; A]) < n")
+		return
+	}
+
+	var matrixA = matA{A}
+	var matrixG = matG{G, dims}
+
+	return ConeLpCustom(c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts, primalstart, dualstart)
+}
+
+//    Solves a pair of primal and dual cone programs using custom KKT solver and custom
+//    matrices G and A.
+//
+//	  G must implement interface MatrixG and A must implement interface MatrixA.
+//
+func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
+	A MatrixA, b *matrix.FloatMatrix, dims *sets.DimensionSet, kktsolver CustomKKT,
+	solopts *SolverOptions, primalstart, dualstart *sets.FloatMatrixSet) (sol *Solution, err error) {
 
 	err = nil
 	const EXPON = 3
@@ -80,8 +367,6 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
-	//var primalstart *FloatMatrixSet = nil
-	//var dualstart *FloatMatrixSet = nil
 	var refinement int
 
 	if solopts.Refinement > 0 {
@@ -105,15 +390,6 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		relTolerance = solopts.RelTol
 	}
 
-	solvername := solopts.KKTSolverName
-	if len(solvername) == 0 {
-		if dims != nil && (len(dims.At("q")) > 0 || len(dims.At("s")) > 0) {
-			solvername = "qr"
-		} else {
-			solvername = "chol2"
-		}
-	}
-
 	if c == nil || c.Cols() > 1 {
 		err = errors.New("'c' must be matrix with 1 column")
 		return 
@@ -123,15 +399,12 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		return 
 	}
 
-	if dims == nil {
-		dims = DSetNew("l", "q", "s")
-		dims.Set("l", []int{h.Rows()})
-	}
 	if err = checkConeLpDimensions(dims); err != nil {
 		return 
 	}
 
 	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
 	cdim_diag := dims.Sum("l", "q", "s")
 
 	if h.Rows() != cdim {
@@ -140,41 +413,42 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 	}
 
 	// Data for kth 'q' constraint are found in rows indq[k]:indq[k+1] of G.
-	indq := make([]int, 0, 100)
+	indq := make([]int, 0)
 	indq = append(indq, dims.At("l")[0])
 	for _, k := range dims.At("q") {
 		indq = append(indq, indq[len(indq)-1]+k)
 	}
 
     // Data for kth 's' constraint are found in rows inds[k]:inds[k+1] of G.
-	inds := make([]int, 0, 100)
+	inds := make([]int, 0)
 	inds = append(inds, indq[len(indq)-1])
 	for _, k := range dims.At("s") {
 		inds = append(inds, inds[len(inds)-1]+k*k)
 	}
 
-	if G != nil && !G.SizeMatch(cdim, c.Rows()) {
-		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
-		err = errors.New(estr)
-		return 
+	if G == nil {
+		err = errors.New("'G' must be non-nil MatrixG interface.")
+		return
 	}
-	Gf := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la.Option) error{
-		return sgemv(G, x, y, alpha, beta, dims, opts...)
+	Gf := func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
+		return G.Gf(x, y, alpha, beta, trans)
 	}
 
-	// Check A and set defaults if it is nil
+	var Af func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error = nil
+	var Adummy *matrix.FloatMatrix
+
+	// MatrixA  interface must exist.
 	if A == nil {
-		// zeros rows reduces Gemv to vector products
-		A = matrix.FloatZeros(0, c.Rows())
-	}
-	if A.Cols() != c.Rows() {
-		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
-		err = errors.New(estr)
-		return 
-	}
-
-	Af := func(x, y *matrix.FloatMatrix, alpha, beta float64, opts ...la.Option) error {
-		return blas.GemvFloat(A, x, y, alpha, beta, opts...)
+		//err = errors.New("'A' must be non-nil MatrixA interface.")
+		//return
+		Adummy = matrix.FloatZeros(0, c.Rows())
+		Af = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+			return blas.GemvFloat(Adummy, x, y, alpha, beta, trans)
+		}
+	} else {
+		Af = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+			return A.Af(x, y, alpha, beta, trans)
+		}
 	}
 
 	// Check b and set defaults if it is nil
@@ -186,10 +460,9 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		err = errors.New(estr)
 		return 
 	}
-	if b.Rows() != A.Rows() {
-		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
-		err = errors.New(estr)
-		return 
+	if b.Rows() > c.Rows() || b.Rows() + cdim_pckd < c.Rows() {
+		err = errors.New("Rank(A) < p or Rank([G; A]) < n")
+		return
 	}
 
     // kktsolver(W) returns a routine for solving 3x3 block KKT system 
@@ -197,17 +470,9 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
     //     [ 0   A'  G'*W^{-1} ] [ ux ]   [ bx ]
     //     [ A   0   0         ] [ uy ] = [ by ].
     //     [ G   0   -W'       ] [ uz ]   [ bz ]
-	var factor kktFactor
-	var kktsolver kktFactor = nil
-	if kktfunc, ok := solvers[solvername]; ok {
-		// kkt function returns us problem spesific factor function.
-		factor, err = kktfunc(G, dims, A, 0)
-		// solver is 
-		kktsolver = func(W *FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
-			return factor(W, nil, nil)
-		}
-	} else {
-		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
+
+	if kktsolver == nil {
+		err = errors.New("nil kktsolver not allowed.")
 		return
 	}
 
@@ -222,9 +487,11 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 	//       vkappa += lmbdg * (dtau + dkappa).
 	ws3 := matrix.FloatZeros(cdim, 1)
 	wz3 := matrix.FloatZeros(cdim, 1)
+	checkpnt.AddMatrixVar("ws3", ws3)
+	checkpnt.AddMatrixVar("wz3", wz3)
 
 	// 
-	res := func(ux, uy, uz, utau , us, ukappa, vx, vy, vz, vtau, vs, vkappa *matrix.FloatMatrix, W *FloatMatrixSet, dg float64, lmbda *matrix.FloatMatrix) (err error) {
+	res := func(ux, uy, uz, utau , us, ukappa, vx, vy, vz, vtau, vs, vkappa *matrix.FloatMatrix, W *sets.FloatMatrixSet, dg float64, lmbda *matrix.FloatMatrix) (err error) {
 
 		err = nil
 		// vx := vx - A'*uy - G'*W^{-1}*uz - c*utau/dg
@@ -236,11 +503,11 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		blas.AxpyFloat(c, vx, -utau.Float()/dg)
 
 		// vy := vy + A*ux - b*utau/dg
-		Af(ux, vy, 1.0, 1.0)
+		Af(ux, vy, 1.0, 1.0, la.OptNoTrans)
 		blas.AxpyFloat(b, vy, -utau.Float()/dg)
 
 		// vz := vz + G*ux - h*utau/dg + W'*us
-		Gf(ux, vz, 1.0, 1.0)
+		Gf(ux, vz, 1.0, 1.0, la.OptNoTrans)
 		blas.AxpyFloat(h, vz, -utau.Float()/dg)
 		blas.Copy(us, ws3)
 		scale(ws3, W, true, false)
@@ -258,7 +525,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		blas.AxpyFloat(ws3, vs, 1.0)
 
 		// vkappa += vkappa + lmbdag * (utau + ukappa)
-		lscale := lmbda.GetIndex(lmbda.NumElements()-1)
+		lscale := lmbda.GetIndex(-1)
 		var vkplus float64 = lscale * (utau.Float() + ukappa.Float())
 		vkappa.SetValue(vkappa.Float()+vkplus)
 		return 
@@ -286,7 +553,14 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 	dkappa := matrix.FloatValue(0.0)
 	dtau := matrix.FloatValue(0.0)
 
-	var W *FloatMatrixSet
+	checkpnt.AddMatrixVar("x", x)
+	checkpnt.AddMatrixVar("s", s)
+	checkpnt.AddMatrixVar("z", z)
+	checkpnt.AddMatrixVar("dx", dx)
+	checkpnt.AddMatrixVar("ds", ds)
+	checkpnt.AddMatrixVar("dz", dz)
+
+	var W *sets.FloatMatrixSet
 	var f KKTFunc
 	if primalstart == nil || dualstart == nil {
 		// Factor
@@ -295,7 +569,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		//     [ A   0   0  ].
 		//     [ G   0  -I  ]
 		//
-		W = FloatSetNew("d", "di", "v", "beta", "r", "rti")
+		W = sets.FloatSetNew("d", "di", "v", "beta", "r", "rti")
 		dd := dims.At("l")[0]
 		mat := matrix.FloatOnes(dd, 1)
 		W.Set("d", mat)
@@ -313,7 +587,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			W.Append("r", matrix.FloatIdentity(n))
 			W.Append("rti", matrix.FloatIdentity(n))
 		}
-		f, err = kktsolver(W, nil, nil)
+		f, err = kktsolver(W)
 		if err != nil {
 			fmt.Printf("kktsolver error: %s\n", err)
 			return
@@ -330,7 +604,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		//     [ A   0   0  ] * [ dy ] = [ b ].
 		//     [ G   0  -I  ]   [ -s ]   [ h ]
 		blas.ScalFloat(x, 0.0)
-		blas.CopyFloat(y, dy)
+		blas.CopyFloat(b, dy)
 		blas.CopyFloat(h, s)
 		err = f(x, dy, s)
 		if err != nil {
@@ -338,7 +612,6 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			return
 		}
 		blas.ScalFloat(s, -1.0)
-		//fmt.Printf("** initial s:\n%v\n", s)
 	} else {
 		blas.Copy(primalstart.At("x")[0], x)
 		blas.Copy(primalstart.At("s")[0], s)
@@ -419,11 +692,11 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			resx := math.Sqrt(blas.Dot(rx, rx).Float())
 			// ry = b - A*x 
 			ry := b.Copy()
-			Af(x, ry, -1.0, -1.0)
+			Af(x, ry, -1.0, -1.0, la.OptNoTrans)
 			resy := math.Sqrt(blas.Dot(ry, ry).Float())
 			// rz = s + G*x - h 
 			rz := matrix.FloatZeros(cdim, 1)
-			Gf(x, rz, 1.0, 0.0)
+			Gf(x, rz, 1.0, 0.0, la.OptNoTrans)
 			blas.AxpyFloat(s, rz, 1.0)
 			blas.AxpyFloat(h, rz, -1.0)
 			resz := snrm2(rz, dims, 0)
@@ -434,8 +707,8 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			by := blas.Dot(b, y).Float()
 			hz := sdot(h, z, dims, 0)
 
-			sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-			sol.Result = FloatSetNew("x", "y", "s", "x")
+			//sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+			sol.Result = sets.FloatSetNew("x", "y", "s", "x")
 			sol.Result.Append("x", x)
 			sol.Result.Append("y", y)
 			sol.Result.Append("s", s)
@@ -456,46 +729,59 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			a := 1.0 + ts  
 			is := make([]int, 0)
 			// indexes s[:dims['l']]
-			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			if dims.At("l")[0] > 0 {
+				is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			}
 			// indexes s[indq[:-1]]
-			is = append(is, indq[:len(indq)-1]...)
+			if len(indq) > 1 {
+				is = append(is, indq[:len(indq)-1]...)
+			}
 			// indexes s[ind:ind+m*m:m+1] (diagonal)
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
 				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
+				ind += m*m
 			}
 			for _, k := range is {
 				s.SetIndex(k, a + s.GetIndex(k))
 			}
-			//fmt.Printf("scaled s=\n%v\n", s.ConvertToString())
 		}
 
 		if tz >= -1e-8 * math.Max(nrmz, 1.0) {
 			a := 1.0 + tz
 			is := make([]int, 0)
 			// indexes z[:dims['l']]
-			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			if dims.At("l")[0] > 0 {
+				is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			}
 			// indexes z[indq[:-1]]
-			is = append(is, indq[:len(indq)-1]...)
+			if len(indq) > 1 {
+				is = append(is, indq[:len(indq)-1]...)
+			}
 			// indexes z[ind:ind+m*m:m+1] (diagonal)
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
 				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
+				ind += m*m
 			}
 			for _, k := range is {
 				z.SetIndex(k, a + z.GetIndex(k))
 			}
-			//fmt.Printf("scaled z=\n%v\n", z.ConvertToString())
 		}
 	} else if primalstart == nil && dualstart != nil {
 		if ts >= -1e-8 * math.Max(nrms, 1.0) {
 			a := 1.0 + ts  
 			is := make([]int, 0)
-			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
-			is = append(is, indq[:len(indq)-1]...)
+			if dims.At("l")[0] > 0 {
+				is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			}
+			if len(indq) > 1 {
+				is = append(is, indq[:len(indq)-1]...)
+			}
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
 				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
+				ind += m*m
 			}
 			for _, k := range is {
 				s.SetIndex(k, a + s.GetIndex(k))
@@ -505,11 +791,16 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		if tz >= -1e-8 * math.Max(nrmz, 1.0) {
 			a := 1.0 + tz
 			is := make([]int, 0)
-			is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
-			is = append(is, indq[:len(indq)-1]...)
+			if dims.At("l")[0] > 0 {
+				is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+			}
+			if len(indq) > 1 {
+				is = append(is, indq[:len(indq)-1]...)
+			}
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
 				is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
+				ind += m*m
 			}
 			for _, k := range is {
 				z.SetIndex(k, a + z.GetIndex(k))
@@ -539,49 +830,71 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 	var th *matrix.FloatMatrix
 	var WS fClosure
 	var f3 KKTFunc
+	var cx, by, hz, rt float64
+	var hresx, resx, hresy, resy, hresz, resz float64
+	var dres, pres, dinfres, pinfres float64
 
-	//fmt.Printf("preloop x=\n%v\n", x.ConvertToString())
-	//fmt.Printf("preloop z=\n%v\n", z.ConvertToString())
-	//fmt.Printf("preloop s=\n%v\n", s.ConvertToString())
+	// check point variables 
+	checkpnt.AddMatrixVar("lmbda", lmbda)
+	checkpnt.AddMatrixVar("lmbdasq", lmbdasq)
+	checkpnt.AddMatrixVar("rx", rx)
+	checkpnt.AddMatrixVar("ry", ry)
+	checkpnt.AddMatrixVar("rz", rz)
+	checkpnt.AddFloatVar("resx", &resx)
+	checkpnt.AddFloatVar("resy", &resy)
+	checkpnt.AddFloatVar("resz", &resz)
+	checkpnt.AddFloatVar("hresx", &hresx)
+	checkpnt.AddFloatVar("hresy", &hresy)
+	checkpnt.AddFloatVar("hresz", &hresz)
+	checkpnt.AddFloatVar("cx", &cx)
+	checkpnt.AddFloatVar("by", &by)
+	checkpnt.AddFloatVar("hz", &hz)
+	checkpnt.AddFloatVar("gap", &gap)
+	checkpnt.AddFloatVar("pres", &pres)
+	checkpnt.AddFloatVar("dres", &dres)
+
 	for iter := 0; iter < solopts.MaxIter+1; iter++ {
+		checkpnt.MajorNext()
+		checkpnt.Check("loop-start", 100)
+
 		// hrx = -A'*y - G'*z 
 		Af(y, hrx, -1.0, 0.0, la.OptTrans)
 		Gf(z, hrx, -1.0, 1.0, la.OptTrans)
-		hresx := math.Sqrt( blas.DotFloat(hrx, hrx) ) 
+		hresx = math.Sqrt( blas.DotFloat(hrx, hrx) ) 
 
 		// rx = hrx - c*tau 
 		//    = -A'*y - G'*z - c*tau
 		blas.Copy(hrx, rx)
 		err = blas.AxpyFloat(c, rx, -tau.Float())
-		resx := math.Sqrt( blas.DotFloat(rx, rx) ) / tau.Float()
+		resx = math.Sqrt( blas.DotFloat(rx, rx) ) / tau.Float()
 
 		// hry = A*x  
-		Af(x, hry, 1.0, 0.0)
-		hresy := math.Sqrt( blas.DotFloat(hry, hry) )
+		Af(x, hry, 1.0, 0.0, la.OptNoTrans)
+		hresy = math.Sqrt( blas.DotFloat(hry, hry) )
 
 		// ry = hry - b*tau 
 		//    = A*x - b*tau
 		blas.Copy(hry, ry)
 		blas.AxpyFloat(b, ry, -tau.Float())
-		resy := math.Sqrt( blas.DotFloat(ry, ry) ) / tau.Float()
+		resy = math.Sqrt( blas.DotFloat(ry, ry) ) / tau.Float()
 
 		// hrz = s + G*x  
-		Gf(x, hrz, 1.0, 0.0)
+		Gf(x, hrz, 1.0, 0.0, la.OptNoTrans)
 		blas.AxpyFloat(s, hrz, 1.0)
-		hresz := snrm2(hrz, dims, 0) 
+		hresz = snrm2(hrz, dims, 0) 
 
 		// rz = hrz - h*tau 
 		//    = s + G*x - h*tau
 		blas.ScalFloat(rz, 0.0)
 		blas.AxpyFloat(hrz, rz, 1.0)
 		blas.AxpyFloat(h, rz, -tau.Float())
-		resz := snrm2(rz, dims, 0) / tau.Float()
+		resz = snrm2(rz, dims, 0) / tau.Float()
 
 		// rt = kappa + c'*x + b'*y + h'*z '
-		cx := blas.DotFloat(c, x)
-		by := blas.DotFloat(b, y)
-		hz := sdot(h, z, dims, 0)
-		rt := kappa.Float() + cx + by + hz 
+		cx = blas.DotFloat(c, x)
+		by = blas.DotFloat(b, y)
+		hz = sdot(h, z, dims, 0)
+		rt = kappa.Float() + cx + by + hz 
 
 		// Statistics for stopping criteria
 		pcost = cx/tau.Float()
@@ -596,13 +909,13 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		}
 
 
-		pres := math.Max(resy/resy0, resz/resz0)
-		dres := resx/resx0
-		pinfres := math.NaN()
+		pres = math.Max(resy/resy0, resz/resz0)
+		dres = resx/resx0
+		pinfres = math.NaN()
 		if hz + by < 0.0 {
 			pinfres = hresx / resx0 / (-hz - by)
 		}
-		dinfres := math.NaN()
+		dinfres = math.NaN()
 		if cx < 0.0 {
 			dinfres = math.Max(hresy/resy0, hresz/resz0) / (-cx)
 		}
@@ -617,6 +930,8 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
             fmt.Printf("%2d: % 8.4e % 8.4e % 4.0e% 7.0e% 7.0e% 7.0e\n",
 				iter, pcost, dcost, gap, pres, dres, kappa.GetIndex(0)/tau.GetIndex(0))
 		}
+
+		checkpnt.Check("isready", 200)
 
 		if (pres <= feasTolerance && dres <= feasTolerance &&
 			(gap <= absTolerance || (!math.IsNaN(relgap) && relgap <= relTolerance))) ||
@@ -640,8 +955,8 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 					fmt.Printf("No solution. Max iterations exceeded\n")
 				}
 				err = errors.New("No solution. Max iterations exceeded")
-				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-				sol.Result = FloatSetNew("x", "y", "s", "x")
+				//sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Result = sets.FloatSetNew("x", "y", "s", "x")
 				sol.Result.Append("x", x)
 				sol.Result.Append("y", y)
 				sol.Result.Append("s", s)
@@ -664,8 +979,8 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 					fmt.Printf("Optimal solution.\n")
 				}
 				err = nil
-				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-				sol.Result = FloatSetNew("x", "y", "s", "x")
+				//sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Result = sets.FloatSetNew("x", "y", "s", "x")
 				sol.Result.Append("x", x)
 				sol.Result.Append("y", y)
 				sol.Result.Append("s", s)
@@ -699,7 +1014,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			}
 			tz, _ = maxStep(z, dims, 0, nil)
 			sol.Status = PrimalInfeasible
-			sol.Result = FloatSetNew("x", "y", "s", "x")
+			sol.Result = sets.FloatSetNew("x", "y", "s", "x")
 			sol.Result.Append("x", nil)
 			sol.Result.Append("y", nil)
 			sol.Result.Append("s", nil)
@@ -732,7 +1047,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			}
 			ts, _ = maxStep(s, dims, 0, nil)
 			sol.Status = PrimalInfeasible
-			sol.Result = FloatSetNew("x", "y", "s", "x")
+			sol.Result = sets.FloatSetNew("x", "y", "s", "x")
 			sol.Result.Append("x", nil)
 			sol.Result.Append("y", nil)
 			sol.Result.Append("s", nil)
@@ -756,7 +1071,11 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		//     W * z = W^{-T} * s = lambda
 		//     dg * tau = 1/dg * kappa = lambdag.
 		if iter == 0 {
+			//fmt.Printf("compute scaling: lmbda=\n%v\n", lmbda.ToString("%.17f"))
+			//fmt.Printf("s=\n%v\n", s.ToString("%.17f"))
+			//fmt.Printf("z=\n%v\n", z.ToString("%.17f"))
 			W, err = computeScaling(s, z, lmbda, dims, 0)
+			checkpnt.AddScaleVar(W)
 
 			//     dg = sqrt( kappa / tau )
 			//     dgi = sqrt( tau / kappa )
@@ -767,6 +1086,9 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			dg = math.Sqrt(kappa.Float()/tau.Float())
 			dgi = math.Sqrt(float64(tau.Float()/kappa.Float()))
 			lmbda.SetIndex(-1, math.Sqrt(float64(tau.Float()*kappa.Float())))
+			//fmt.Printf("lmbda=\n%v\n", lmbda.ToString("%.17f"))
+			//W.Print()
+			checkpnt.Check("compute_scaling", 300)
 		}
 		// lmbdasq := lmbda o lmbda 
 		ssqr(lmbdasq, lmbda, dims, 0)
@@ -787,7 +1109,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		//     [-A   0   0     ]*[ y1        ] = -dgi * [ b ].
 		//     [-G   0   W'*W  ] [ W^{-1}*z1 ]          [ h ]
 
-		f3, err = kktsolver(W, nil, nil)
+		f3, err = kktsolver(W)
 		if err != nil {
 			fmt.Printf("kktsolver error=%v\n", err)
 			return
@@ -796,6 +1118,8 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			x1 = c.Copy()
 			y1 = b.Copy()
 			z1 = matrix.FloatZeros(cdim, 1)
+			checkpnt.AddMatrixVar("x1", x1)
+			checkpnt.AddMatrixVar("z1", z1)
 		}
 		blas.Copy(c, x1)
 		blas.ScalFloat(x1, -1.0)
@@ -827,7 +1151,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 				tz,_ = maxStep(z, dims, 0, nil)
 				err = errors.New("Terminated (singular KKT matrix).")
 				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-				sol.Result = FloatSetNew("x", "y", "s", "x")
+				sol.Result = sets.FloatSetNew("x", "y", "s", "x")
 				sol.Result.Append("x", x)
 				sol.Result.Append("y", y)
 				sol.Result.Append("s", s)
@@ -861,6 +1185,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
         // th = W^{-T} * h
 		if iter == 0 {
 			th = matrix.FloatZeros(cdim, 1)
+			checkpnt.AddMatrixVar("th", th)
 		}
 
 		blas.Copy(h, th)
@@ -888,6 +1213,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
             // [ A  0  0    ] [ uy        ] = [ -by                    ]
             // [ G  0 -W'*W ] [ W^{-1}*uz ]   [ -bz + W'*(lmbda o\ bs) ]
 
+			minor := checkpnt.MinorTop()
 			err = nil
             // y := -y = -by
 			blas.ScalFloat(y, -1.0)
@@ -898,11 +1224,21 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 
             // z := -(z + W'*s) = -bz + W'*(lambda o\ bs)
 			blas.Copy(s, ws3)
+			checkpnt.Check("prescale", minor+5)
+			checkpnt.MinorPush(minor+5)
 			err = scale(ws3, W, true, false)
+			checkpnt.MinorPop()
+			if err != nil {
+				fmt.Printf("scale error: %s\n", err)
+			}
 			blas.AxpyFloat(ws3, z, 1.0)
 			blas.ScalFloat(z, -1.0)
 
+			checkpnt.Check("f3-call", minor+20)
+			checkpnt.MinorPush(minor+20)
 			err = f3(x, y, z)
+			checkpnt.MinorPop()
+			checkpnt.Check("f3-return", minor+40)
 
             // Combine with solution of 
             // 
@@ -951,6 +1287,9 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 				WS.ws = matrix.FloatZeros(cdim, 1)
 				WS.wtau = matrix.FloatValue(0.0)
 				WS.wkappa = matrix.FloatValue(0.0)
+				checkpnt.AddMatrixVar("wx", WS.wx)
+				checkpnt.AddMatrixVar("wz", WS.wz)
+				checkpnt.AddMatrixVar("ws", WS.ws)
 			}
 			if refinement > 0 {
 				WS.wx2 = c.Copy()
@@ -959,11 +1298,16 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 				WS.ws2 = matrix.FloatZeros(cdim, 1)
 				WS.wtau2 = matrix.FloatValue(0.0)
 				WS.wkappa2 = matrix.FloatValue(0.0)
+				checkpnt.AddMatrixVar("wx2", WS.wx2)
+				checkpnt.AddMatrixVar("wz2", WS.wz2)
+				checkpnt.AddMatrixVar("ws2", WS.ws2)
 			}
 		}
 
 		f6 := func(x, y, z, tau, s, kappa *matrix.FloatMatrix) error {
 			var err error =  nil
+			minor := checkpnt.MinorTop()
+			checkpnt.Check("startf6", minor+100)
 			if refinement > 0 || solopts.Debug {
 				blas.Copy(x, WS.wx)
 				blas.Copy(y, WS.wy)
@@ -972,7 +1316,9 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 				WS.wtau.SetValue(tau.Float())
 				WS.wkappa.SetValue(kappa.Float())
 			}
+			checkpnt.Check("pref6_no_ir", minor+200)
 			err = f6_no_ir(x, y, z, tau, s, kappa)
+			checkpnt.Check("postf6_no_ir", minor+399)
 			for i := 0; i < refinement; i++ {
 				blas.Copy(WS.wx, WS.wx2)
 				blas.Copy(WS.wy, WS.wy2)
@@ -980,8 +1326,18 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 				blas.Copy(WS.ws, WS.ws2)
 				WS.wtau2.SetValue(WS.wtau.Float())
 				WS.wkappa2.SetValue(WS.wkappa.Float())
+				checkpnt.Check("res-call", minor+400)
+
+				checkpnt.MinorPush(minor+400)
 				err = res(x, y, z, tau, s, kappa, WS.wx2, WS.wy2, WS.wz2, WS.wtau2, WS.ws2, WS.wkappa2, W, dg, lmbda)
+				checkpnt.MinorPop()
+
+				checkpnt.Check("refine_pref6_no_ir", minor+500)
+				checkpnt.MinorPush(minor+500)
 				err = f6_no_ir(WS.wx2, WS.wy2, WS.wz2, WS.wtau2, WS.ws2, WS.wkappa2)
+				checkpnt.MinorPop()
+
+				checkpnt.Check("refine_postf6_no_ir", minor+600)
 				blas.AxpyFloat(WS.wx2, x, 1.0)
 				blas.AxpyFloat(WS.wy2, y, 1.0)
 				blas.AxpyFloat(WS.wz2, z, 1.0)
@@ -990,13 +1346,21 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 				kappa.SetValue(kappa.Float() + WS.wkappa2.Float())
 			}
 			if solopts.Debug {
+				checkpnt.MinorPush(minor+700)
 				res(x, y, z, tau, s, kappa, WS.wx, WS.wy, WS.wz, WS.wtau, WS.ws, WS.wkappa, W, dg, lmbda)
+				checkpnt.MinorPop()
 				fmt.Printf("KKT residuals\n")
+				fmt.Printf("    'x'    : %.6e\n", math.Sqrt(blas.DotFloat(WS.wx, WS.wx)))
+				fmt.Printf("    'y'    : %.6e\n", math.Sqrt(blas.DotFloat(WS.wy, WS.wy)))
+				fmt.Printf("    'z'    : %.6e\n", snrm2(WS.wz, dims, 0))
+				fmt.Printf("    'tau'  : %.6e\n", math.Abs(WS.wtau.Float()))
+				fmt.Printf("    's'    : %.6e\n", snrm2(WS.ws, dims, 0))
+				fmt.Printf("    'kappa': %.6e\n", math.Abs(WS.wkappa.Float()))
 			}
 			return err
 		}
 
-		var nrm float64 = blas.Nrm2(lmbda).Float()
+		var nrm float64 = blas.Nrm2Float(lmbda)
         mu := math.Pow(nrm, 2.0) / (1.0 + float64(cdim_diag))
         sigma := 0.0
 		var step, tt, tk float64
@@ -1038,11 +1402,20 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 				blas.AxpyFloat(ws3, ds, 1.0)
 				ind = dims.Sum("l", "q")
 				is := make([]int, 0) 
-				is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
-				is = append(is, indq[:len(indq)-1]...)
+				// indexes: [:dims['l']]
+				if dims.At("l")[0] > 0 {
+					is = append(is, matrix.MakeIndexSet(0, dims.At("l")[0], 1)...)
+				}
+				// ...[indq[:-1]]
+				if len(indq) > 1 {
+					is = append(is, indq[:len(indq)-1]...)
+				}
+				// ...[ind : ind+m*m : m+1] (diagonal)
 				for _, m := range dims.At("s") {
 					is = append(is, matrix.MakeIndexSet(ind, ind+m*m, m+1)...)
+					ind += m*m
 				}
+				//ds.Add(-sigma*mu, is...)
 				for _, k := range is {
 					ds.SetIndex(k, ds.GetIndex(k) - sigma*mu)
 				}
@@ -1061,7 +1434,11 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
             // dtau[0] = (1.0 - sigma) * rt 
 			dtau.SetValue((1.0-sigma)*rt)
 
+			checkpnt.Check("pref6", (1+i)*1000)
+			checkpnt.MinorPush((1+i)*1000)
 			err = f6(dx, dy, dz, dtau, ds, dkappa)
+			checkpnt.MinorPop()
+			checkpnt.Check("postf6", (1+i)*1000+800)
 
 			// Save ds o dz and dkappa * dtau for Mehrotra correction
 			if i == 0 {
@@ -1077,8 +1454,11 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
             // dsk, dzk.  The eigenvalues are stored in sigs, sigz. 
 			var ts, tz float64
 
+			checkpnt.MinorPush((1+i)*1000+900)
 			scale2(lmbda, ds, dims, 0, false)
 			scale2(lmbda, dz, dims, 0, false)
+			checkpnt.MinorPop()
+			checkpnt.Check("post-scale2", (1+i)*1000+990)
 			if i == 0 {
 				ts,_ = maxStep(ds, dims, 0, nil)
 				tz,_ = maxStep(dz, dims, 0, nil)
@@ -1109,6 +1489,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		//fmt.Printf("** tau = %.17f, kappa = %.17f\n", tau.Float(), kappa.Float())
 		//fmt.Printf("** step = %.17f, sigma = %.17f\n", step, sigma)
 
+		checkpnt.Check("update-xy", 7000)
 		// Update x, y
 		blas.AxpyFloat(dx, x, step)
 		blas.AxpyFloat(dy, y, step)
@@ -1131,6 +1512,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			ds.SetIndex(k, 1.0+ds.GetIndex(k))
 			dz.SetIndex(k, 1.0+dz.GetIndex(k))
 		}
+		checkpnt.Check("update-dsdz", 7500)
 
         // ds := H(lambda)^{-1/2} * ds and dz := H(lambda)^{-1/2} * dz.
         // 
@@ -1140,8 +1522,10 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
         // 
         // diag(lmbda_k)^{1/2} * Qs * diag(lmbda_k)^{1/2} 
         // diag(lmbda_k)^{1/2} * Qz * diag(lmbda_k)^{1/2} 
+		checkpnt.MinorPush(7500)
 		scale2(lmbda, ds, dims, 0, true)
 		scale2(lmbda, dz, dims, 0, true)
+		checkpnt.MinorPop()
 
         // sigs := ( e + step*sigs ) ./ lambda for 's' blocks.
         // sigz := ( e + step*sigz ) ./ lambda for 's' blocks.
@@ -1170,7 +1554,9 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 			ind3 += m
 		}
 		
+		checkpnt.Check("pre-update-scaling", 7700)
 		err = updateScaling(W, lmbda, ds, dz)
+		checkpnt.Check("post-update-scaling", 7800)
 
         // For kappa, tau block: 
         //
@@ -1214,6 +1600,7 @@ func ConeLpOrig(c, G, h, A, b *matrix.FloatMatrix, dims *DimensionSet, solopts *
 		tau.SetValue(lmbda.GetIndex(-1)*dgi)
 		g := blas.Nrm2Float(lmbda, &la.IOpt{"n", lmbda.Rows()-1})/tau.Float()
 		gap = g*g
+		checkpnt.Check("end-of-loop", 8000)
 		//fmt.Printf(" ** kappa=%.10f, tau=%.10f, gap=%.10f\n", kappa.Float(), tau.Float(), gap)
 		
 	}
