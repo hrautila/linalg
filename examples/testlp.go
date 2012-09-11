@@ -59,7 +59,7 @@ func main() {
 		[]float64{ 1.0, 2.0,  0.0, -1.0 }}
 
 	c := matrix.FloatVector([]float64{-4.0, -5.0})
-	G := matrix.FloatMatrixStacked(gdata, matrix.ColumnOrder)
+	G := matrix.FloatMatrixFromTable(gdata, matrix.ColumnOrder)
 	h := matrix.FloatVector([]float64{3.0, 3.0, 0.0, 0.0})
 
 	var solopts cvx.SolverOptions

@@ -6,6 +6,7 @@ import (
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"fmt"
 	"flag"
 )
@@ -66,7 +67,7 @@ func (p *FloorPlan) F1(x *matrix.FloatMatrix)(f, Df *matrix.FloatMatrix, err err
 	// -( Amin ./ (x17 .* x17) )
 	diag := matrix.Div(p.Amin, matrix.Mul(x17, x17)).Scale(-1.0)
 	dk2.SetIndexes(matrix.MakeDiagonalSet(5), diag.FloatArray())
-	Df, _ = matrix.FloatMatrixCombined(matrix.StackRight, zeros, dk1, dk2)
+	Df, _ = matrix.FloatMatrixStacked(matrix.StackRight, zeros, dk1, dk2)
 
 	x12 := matrix.FloatVector(x.FloatArray()[12:17])
 	// f = -x[12:17] + div(Amin, x[17:]) == div(Amin, x[17:]) - x[12:17]
@@ -183,7 +184,7 @@ func floorplan(Amin *matrix.FloatMatrix) *matrix.FloatMatrix {
 	F := NewFloorPlan(Amin)
 
 	
-	var dims *cvx.DimensionSet = nil
+	var dims *sets.DimensionSet = nil
 	var solopts cvx.SolverOptions
 	solopts.MaxIter = 50
 	solopts.ShowProgress = true

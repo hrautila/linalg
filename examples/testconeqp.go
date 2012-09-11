@@ -12,6 +12,7 @@ import (
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"fmt"
 	"flag"
 )
@@ -71,7 +72,7 @@ func main() {
 		[]float64{ 0.6,  1.2, -1.7,  0.3, -0.3},
 		[]float64{-0.3,  0.0,  0.6, -1.2, -2.0}}
 		
-	A := matrix.FloatMatrixStacked(adata, matrix.ColumnOrder)
+	A := matrix.FloatMatrixFromTable(adata, matrix.ColumnOrder)
 	b := matrix.FloatVector([]float64{1.5, 0.0, -1.2, -0.7, 0.0})
 
 	_, n := A.Size()
@@ -82,13 +83,13 @@ func main() {
 
 	I0 := matrix.FloatDiagonal(n, -1.0)
 	I1 := matrix.FloatIdentity(n)
-	G, _ := matrix.FloatMatrixCombined(matrix.StackDown, I0, matrix.FloatZeros(1, n), I1)
+	G, _ := matrix.FloatMatrixStacked(matrix.StackDown, I0, matrix.FloatZeros(1, n), I1)
 
 	At := A.Transpose()
 	P := At.Times(A)
 	q := At.Times(b).Scale(-1.0)
 
-	dims := cvx.DSetNew("l", "q", "s")
+	dims := sets.DSetNew("l", "q", "s")
 	dims.Set("l", []int{n})
 	dims.Set("q", []int{n+1})
 

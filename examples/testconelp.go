@@ -5,13 +5,21 @@ import (
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
+	"github.com/hrautila/go.opt/cvx/sets"
+	"github.com/hrautila/go.opt/cvx/checkpnt"
 	"fmt"
 	"flag"
 )
 
 var xVal, sVal, zVal string
+var spPath string
+var maxIter int
+var spVerbose bool
 
 func init() {
+	flag.BoolVar(&spVerbose, "V", false, "Savepoint verbose reporting.")
+	flag.IntVar(&maxIter, "N", -1, "Max number of iterations.")
+	flag.StringVar(&spPath, "sp", "", "savepoint directory")
 	flag.StringVar(&xVal, "x", "", "Reference value for X")
 	flag.StringVar(&sVal, "s", "", "Reference value for S")
 	flag.StringVar(&zVal, "z", "", "Reference value for Z")
@@ -57,7 +65,12 @@ func check(x, s, z *matrix.FloatMatrix) {
 func main() {
 	
 	flag.Parse()
-	reftest := flag.NFlag() > 0
+	if len(spPath) > 0 {
+		checkpnt.Reset(spPath)
+		checkpnt.Activate()
+		checkpnt.Verbose(spVerbose)
+		checkpnt.Format("%.17f")
+	}
 
 	gdata := [][]float64{
 		[]float64{ 16., 7.,  24.,  -8.,   8.,  -1.,  0., -1.,  0.,  0.,   7.,  
@@ -73,10 +86,10 @@ func main() {
 
 
 	c := matrix.FloatVector([]float64{-6., -4., -5.})
-	G := matrix.FloatMatrixStacked(gdata)
+	G := matrix.FloatMatrixFromTable(gdata)
 	h := matrix.FloatVector(hdata)
 
-	dims := cvx.DSetNew("l", "q", "s")
+	dims := sets.DSetNew("l", "q", "s")
 	dims.Set("l", []int{2})
 	dims.Set("q", []int{4, 4})
 	dims.Set("s", []int{3})
@@ -84,6 +97,9 @@ func main() {
 
 	var solopts cvx.SolverOptions
 	solopts.MaxIter = 30
+	if maxIter > 0 {
+		solopts.MaxIter = maxIter
+	}
 	solopts.ShowProgress = true
 	sol, err := cvx.ConeLp(c, G, h, nil, nil, dims, &solopts, nil, nil)
 	if err == nil {
@@ -94,9 +110,7 @@ func main() {
 		fmt.Printf("x=\n%v\n", x.ToString("%.9f"))
 		fmt.Printf("s=\n%v\n", s.ToString("%.9f"))
 		fmt.Printf("z=\n%v\n", z.ToString("%.9f"))
-		if reftest {
-			check(x, s, z)
-		}
+		check(x, s, z)
 	} else {
 		fmt.Printf("status: %s\n", err)
 	}

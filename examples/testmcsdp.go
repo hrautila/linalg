@@ -7,6 +7,7 @@ import (
 	"github.com/hrautila/go.opt/linalg/lapack"
 	"github.com/hrautila/go.opt/linalg"
 	"github.com/hrautila/go.opt/cvx"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"fmt"
 	"flag"
 )
@@ -107,7 +108,7 @@ func mcsdp(w *matrix.FloatMatrix) (*cvx.Solution, error) {
 		return 
 	}
 
-	Fkkt := func(W *cvx.FloatMatrixSet) (cvx.KKTFunc, error) {
+	Fkkt := func(W *sets.FloatMatrixSet) (cvx.KKTFunc, error) {
 
         //    Solve
         //                  -diag(z)                           = bx
@@ -173,11 +174,11 @@ func mcsdp(w *matrix.FloatMatrix) (*cvx.Solution, error) {
 	z0 := matrix.FloatIdentity(n)
 	matrix.Reshape(z0, n*n, 1)
 	
-	dims := cvx.DSetNew("l", "q", "s")
+	dims := sets.DSetNew("l", "q", "s")
 	dims.Set("s", []int{n})
 
-	primalstart := cvx.FloatSetNew("x", "s")
-	dualstart := cvx.FloatSetNew("z")
+	primalstart := sets.FloatSetNew("x", "s")
+	dualstart := sets.FloatSetNew("z")
 	primalstart.Set("x", x0)
 	primalstart.Set("s", s0)
 	dualstart.Set("z", z0)
@@ -193,9 +194,7 @@ func mcsdp(w *matrix.FloatMatrix) (*cvx.Solution, error) {
 func main() {
 	var data *matrix.FloatMatrix = nil
 	flag.Parse()
-	dataCount := 0
 	if len(dataVal) > 0 {
-		dataCount = 1
 		data, _ = matrix.FloatParseSpe(dataVal)
 		if data == nil {
 			fmt.Printf("could not parse:\n%s\n", dataVal)
@@ -204,7 +203,6 @@ func main() {
 	} else {
 		data = matrix.FloatNormal(20, 20)
 	}
-	reftest := flag.NFlag() - dataCount > 0
 
 	sol, err := mcsdp(data)
 	if sol != nil && sol.Status == cvx.Optimal {
@@ -212,10 +210,8 @@ func main() {
 		z := sol.Result.At("z")[0]
 		matrix.Reshape(z, data.Rows(), data.Rows())
 		fmt.Printf("x=\n%v\n", x.ToString("%.9f"))
-		fmt.Printf("z=\n%v\n", z.ToString("%.9f"))
-		if reftest {
-			check(x, z)
-		}
+		//fmt.Printf("z=\n%v\n", z.ToString("%.9f"))
+		check(x, z)
 	} else {
 		fmt.Printf("status: %v\n", err)
 	}

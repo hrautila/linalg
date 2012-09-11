@@ -5,6 +5,7 @@ import (
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
+	"github.com/hrautila/go.opt/cvx/sets"
 	"fmt"
 	"flag"
 )
@@ -70,7 +71,6 @@ func check(x, sq0, sq1, zq0, zq1 *matrix.FloatMatrix) {
 
 func main() {
 	flag.Parse()
-	reftest := flag.NFlag() > 0
 	
 	gdata0 := [][]float64{
 		[]float64{12., 13.,  12.},
@@ -84,9 +84,9 @@ func main() {
 
 
 	c := matrix.FloatVector([]float64{-2.0, 1.0, 5.0})
-	g0 := matrix.FloatMatrixStacked(gdata0, matrix.ColumnOrder)
-	g1 := matrix.FloatMatrixStacked(gdata1, matrix.ColumnOrder)
-	Ghq := cvx.FloatSetNew("Gq", "hq")
+	g0 := matrix.FloatMatrixFromTable(gdata0, matrix.ColumnOrder)
+	g1 := matrix.FloatMatrixFromTable(gdata1, matrix.ColumnOrder)
+	Ghq := sets.FloatSetNew("Gq", "hq")
 	Ghq.Append("Gq", g0, g1)
 
 	h0 := matrix.FloatVector([]float64{-12.0, -3.0, -2.0})
@@ -108,13 +108,11 @@ func main() {
 		for i, m := range sol.Result.At("zq") {
 			fmt.Printf("zq[%d]=\n%v\n", i, m.ToString("%.9f"))
 		}
-		if reftest {
-			sq0 := sol.Result.At("sq")[0]
-			sq1 := sol.Result.At("sq")[1]
-			zq0 := sol.Result.At("zq")[0]
-			zq1 := sol.Result.At("zq")[1]
-			check(x, sq0, sq1, zq0, zq1)
-		}
+		sq0 := sol.Result.At("sq")[0]
+		sq1 := sol.Result.At("sq")[1]
+		zq0 := sol.Result.At("zq")[0]
+		zq1 := sol.Result.At("zq")[1]
+		check(x, sq0, sq1, zq0, zq1)
 	}
 }
 

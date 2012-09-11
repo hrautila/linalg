@@ -12,13 +12,21 @@ import (
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx"
+	"github.com/hrautila/go.opt/cvx/sets"
+	"github.com/hrautila/go.opt/cvx/checkpnt"
 	"fmt"
 	"flag"
 )
 
 var xVal, ss0Val, ss1Val, zs0Val, zs1Val string
+var spPath string
+var maxIter int 
+var spVerbose bool
 
 func init() {
+	flag.BoolVar(&spVerbose, "V", false, "Savepoint verbose reporting.")
+	flag.IntVar(&maxIter, "N", -1, "Max number of iterations.")
+	flag.StringVar(&spPath, "sp", "", "savepoint directory")
 	flag.StringVar(&xVal, "x", "", "Reference value for X")
 	flag.StringVar(&ss0Val, "ss0", "", "Reference value for SQ[0]")
 	flag.StringVar(&ss1Val, "ss1", "", "Reference value for SQ[1]")
@@ -77,7 +85,12 @@ func check(x, ss0, ss1, zs0, zs1 *matrix.FloatMatrix) {
 
 func main() {
 	flag.Parse()
-	reftest := flag.NFlag() > 0
+	if len(spPath) > 0 {
+		checkpnt.Reset(spPath)
+		checkpnt.Activate()
+		checkpnt.Verbose(spVerbose)
+		checkpnt.Format("%.17f")
+	}
 
 	gdata0 := [][]float64{
 		[]float64{-7., -11., -11., 3.},
@@ -98,23 +111,23 @@ func main() {
 		[]float64{  9., 91., 10.},
 		[]float64{ 40., 10., 15.}}
 
-	g0 := matrix.FloatMatrixStacked(gdata0, matrix.ColumnOrder)
-	g1 := matrix.FloatMatrixStacked(gdata1, matrix.ColumnOrder)
-	Ghs := cvx.FloatSetNew("Gs", "hs")
+	g0 := matrix.FloatMatrixFromTable(gdata0, matrix.ColumnOrder)
+	g1 := matrix.FloatMatrixFromTable(gdata1, matrix.ColumnOrder)
+	Ghs := sets.FloatSetNew("Gs", "hs")
 	Ghs.Append("Gs", g0, g1)
 
-	h0 := matrix.FloatMatrixStacked(hdata0, matrix.ColumnOrder)
-	h1 := matrix.FloatMatrixStacked(hdata1, matrix.ColumnOrder)
+	h0 := matrix.FloatMatrixFromTable(hdata0, matrix.ColumnOrder)
+	h1 := matrix.FloatMatrixFromTable(hdata1, matrix.ColumnOrder)
 	Ghs.Append("hs", h0, h1)
 
 	c := matrix.FloatVector([]float64{1.0, -1.0, 1.0})
-	//Ghs.Print()
-	//fmt.Printf("calling...\n")
-	// nil variables
-	var Gs, hs, A, b *matrix.FloatMatrix = nil, nil, nil, nil
 
+	var Gs, hs, A, b *matrix.FloatMatrix = nil, nil, nil, nil
 	var solopts cvx.SolverOptions
 	solopts.MaxIter = 30
+	if maxIter > 0 {
+		solopts.MaxIter = maxIter
+	}
 	solopts.ShowProgress = true
 	sol, err := cvx.Sdp(c, Gs, hs, A, b, Ghs, &solopts, nil, nil)
 	if sol != nil && sol.Status == cvx.Optimal {
@@ -128,16 +141,15 @@ func main() {
 		for i, m := range sol.Result.At("zs") {
 			fmt.Printf("zs[%d]=\n%v\n", i, m.ToString("%.9f"))
 		}
-		if reftest {
-			ss0 := sol.Result.At("ss")[0]
-			ss1 := sol.Result.At("ss")[1]
-			zs0 := sol.Result.At("zs")[0]
-			zs1 := sol.Result.At("zs")[1]
-			check(x, ss0, ss1, zs0, zs1)
-		}
+		ss0 := sol.Result.At("ss")[0]
+		ss1 := sol.Result.At("ss")[1]
+		zs0 := sol.Result.At("zs")[0]
+		zs1 := sol.Result.At("zs")[1]
+		check(x, ss0, ss1, zs0, zs1)
 	} else {
 		fmt.Printf("status: %v\n", err)
 	}
+	checkpnt.Report()
 }
 
 // Local Variables:

@@ -18,7 +18,7 @@ func main() {
         []float64{ 0.0,   0.0,   0.0,    0.0 }}
 
 	pbar := matrix.FloatVector([]float64{.12, .10, .07, .03})
-	S := matrix.FloatMatrixStacked(Sdata)
+	S := matrix.FloatMatrixFromTable(Sdata)
 	n := pbar.Rows()
 	G := matrix.FloatDiagonal(n, -1.0)
 	h := matrix.FloatZeros(n, 1)
