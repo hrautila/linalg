@@ -63,7 +63,7 @@ func Lp(c, G, h, A, b *matrix.FloatMatrix, solopts *SolverOptions, primalstart, 
 		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", p))
 		return
 	}
-	dims := sets.DSetNew("l", "q", "s")
+	dims := sets.NewDimensionSet("l", "q", "s")
 	dims.Set("l", []int{m})
 
 	return ConeLp(c, G, h, A, b, dims, solopts, primalstart, dualstart)
@@ -227,7 +227,7 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *sets.FloatMatrixSet, solopts
 		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", p))
 		return
 	}
-	dims := sets.DSetNew("l", "q", "s")
+	dims := sets.NewDimensionSet("l", "q", "s")
 	dims.Set("l", []int{ml})
 	dims.Set("q", mq)
 	//N := dims.Sum("l", "q")
@@ -244,7 +244,7 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *sets.FloatMatrixSet, solopts
 
 	var pstart, dstart *sets.FloatMatrixSet = nil, nil
 	if primalstart != nil {
-		pstart = sets.FloatSetNew("x", "s")
+		pstart = sets.NewFloatSet("x", "s")
 		pstart.Set("x", primalstart.At("x")[0])
 		slset := primalstart.At("sl")
 		margs := make([]*matrix.FloatMatrix, 0, len(slset)+1)
@@ -255,7 +255,7 @@ func Socp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghq *sets.FloatMatrixSet, solopts
 	}
 
 	if dualstart != nil {
-		dstart = sets.FloatSetNew("y", "z")
+		dstart = sets.NewFloatSet("y", "z")
 		dstart.Set("y", dualstart.At("y")[0])
 		zlset := primalstart.At("zl")
 		margs := make([]*matrix.FloatMatrix, 0, len(zlset)+1)
@@ -381,7 +381,7 @@ func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *sets.FloatMatrixSet, solopts 
 		err = errors.New(fmt.Sprintf("'b' must be matrix of size (%d,1)", p))
 		return
 	}
-	dims := sets.DSetNew("l", "q", "s")
+	dims := sets.NewDimensionSet("l", "q", "s")
 	dims.Set("l", []int{ml})
 	dims.Set("s", ms)
 	N := dims.Sum("l") + dims.SumSquared("s")
@@ -402,7 +402,7 @@ func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *sets.FloatMatrixSet, solopts 
 
 	var pstart, dstart *sets.FloatMatrixSet = nil, nil
 	if primalstart != nil {
-		pstart = sets.FloatSetNew("x", "s")
+		pstart = sets.NewFloatSet("x", "s")
 		pstart.Set("x", primalstart.At("x")[0])
 		slset := primalstart.At("sl")
 		margs := make([]*matrix.FloatMatrix, 0, len(slset)+1)
@@ -413,7 +413,7 @@ func Sdp(c, Gl, hl, A, b *matrix.FloatMatrix, Ghs *sets.FloatMatrixSet, solopts 
 	}
 
 	if dualstart != nil {
-		dstart = sets.FloatSetNew("y", "z")
+		dstart = sets.NewFloatSet("y", "z")
 		dstart.Set("y", dualstart.At("y")[0])
 		zlset := primalstart.At("zl")
 		margs := make([]*matrix.FloatMatrix, 0, len(zlset)+1)

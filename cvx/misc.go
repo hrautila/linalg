@@ -665,7 +665,7 @@ func updateScaling(W *sets.FloatMatrixSet, lmbda, s, z *matrix.FloatMatrix) (err
 func computeScaling(s, z, lmbda *matrix.FloatMatrix, dims *sets.DimensionSet, mnl int) (W *sets.FloatMatrixSet, err error) {
 	/*DEBUGGED*/
 	err = nil
-	W = sets.FloatSetNew("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
+	W = sets.NewFloatSet("dnl", "dnli", "d", "di", "v", "beta", "r", "rti")
 
     // For the nonlinear block:
     //

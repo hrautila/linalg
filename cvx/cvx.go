@@ -12,7 +12,6 @@ package cvx
 import (
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/cvx/sets"
-	"errors"
 )
 
 // kktFunc solves
@@ -24,16 +23,6 @@ type kktFactor func(*sets.FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatr
 // kktSolver creates problem spesific factor
 type kktSolver func(*matrix.FloatMatrix, *sets.DimensionSet, *matrix.FloatMatrix, int) (kktFactor, error)
 
-func kktNullFactor(W *sets.FloatMatrixSet, H, Df *matrix.FloatMatrix) (KKTFunc, error) {
-	nullsolver := func(x, y, z *matrix.FloatMatrix) error {
-		return errors.New("Null KTT Solver does not solve anything.")
-	}
-	return nullsolver, nil
-}
-
-func kktNullSolver(G *matrix.FloatMatrix, dims *sets.DimensionSet, A *matrix.FloatMatrix) (kktFactor, error) {
-	return kktNullFactor, nil
-}
 
 type solverMap map[string]kktSolver
 
@@ -55,10 +44,10 @@ const (
 
 type Solution struct {
 	Status StatusCode
-	X *matrix.FloatMatrix
-	Y *matrix.FloatMatrix
-	S *matrix.FloatMatrix
-	Z *matrix.FloatMatrix
+	//X *matrix.FloatMatrix
+	//Y *matrix.FloatMatrix
+	//S *matrix.FloatMatrix
+	//Z *matrix.FloatMatrix
 	Result *sets.FloatMatrixSet
 	PrimalObjective float64
 	DualObjective float64

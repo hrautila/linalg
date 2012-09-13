@@ -81,6 +81,32 @@ func (gmat *matG) Gf(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Opt
 	return sgemv(gmat.mG, x, y, alpha, beta, gmat.dims, trans)
 }
 
+type fClosure struct {
+	wx, wy, ws, wz *matrix.FloatMatrix
+	wx2, wy2, ws2, wz2 *matrix.FloatMatrix
+	// these are singleton matrices
+	wtau, wkappa, wtau2, wkappa2 *matrix.FloatMatrix
+}
+
+func checkConeLpDimensions(dims *sets.DimensionSet) error {
+	if len(dims.At("l")) == 0 {
+		dims.Set("l", []int{0})
+	} else if dims.At("l")[0] < 0 {
+		return errors.New("dimension 'l' must be nonnegative integer")
+	}
+	for _, m := range dims.At("q") {
+		if m < 1 {
+			return errors.New("dimension 'q' must be list of positive integers")
+		}
+	}
+	for _, m := range dims.At("s") {
+		if m < 1 {
+			return errors.New("dimension 's' must be list of positive integers")
+		}
+	}
+	return nil
+}
+
 // Solves a pair of primal and dual cone programs
 //
 //        minimize    c'*x
@@ -136,7 +162,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts 
 	}
 
 	if dims == nil {
-		dims = sets.DSetNew("l", "q", "s")
+		dims = sets.NewDimensionSet("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
 	}
 
@@ -296,7 +322,7 @@ func ConeLpKKT(c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, kktso
 	}
 
 	if dims == nil {
-		dims = sets.DSetNew("l", "q", "s")
+		dims = sets.NewDimensionSet("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
 	}
 	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
@@ -363,7 +389,8 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 	const STEP = 0.99
 
 	sol = &Solution{Unknown,
-		nil, nil, nil, nil, nil, 
+		/*nil, nil, nil, nil,*/
+		nil, 
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
@@ -569,7 +596,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 		//     [ A   0   0  ].
 		//     [ G   0  -I  ]
 		//
-		W = sets.FloatSetNew("d", "di", "v", "beta", "r", "rti")
+		W = sets.NewFloatSet("d", "di", "v", "beta", "r", "rti")
 		dd := dims.At("l")[0]
 		mat := matrix.FloatOnes(dd, 1)
 		W.Set("d", mat)
@@ -708,7 +735,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			hz := sdot(h, z, dims, 0)
 
 			//sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-			sol.Result = sets.FloatSetNew("x", "y", "s", "x")
+			sol.Result = sets.NewFloatSet("x", "y", "s", "x")
 			sol.Result.Append("x", x)
 			sol.Result.Append("y", y)
 			sol.Result.Append("s", s)
@@ -956,7 +983,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 				}
 				err = errors.New("No solution. Max iterations exceeded")
 				//sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-				sol.Result = sets.FloatSetNew("x", "y", "s", "x")
+				sol.Result = sets.NewFloatSet("x", "y", "s", "x")
 				sol.Result.Append("x", x)
 				sol.Result.Append("y", y)
 				sol.Result.Append("s", s)
@@ -980,7 +1007,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 				}
 				err = nil
 				//sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-				sol.Result = sets.FloatSetNew("x", "y", "s", "x")
+				sol.Result = sets.NewFloatSet("x", "y", "s", "x")
 				sol.Result.Append("x", x)
 				sol.Result.Append("y", y)
 				sol.Result.Append("s", s)
@@ -1006,7 +1033,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			err = errors.New("Primal infeasible")
 			blas.ScalFloat(y, 1.0/(-hz - by))
 			blas.ScalFloat(z, 1.0/(-hz - by))
-			sol.X = nil; sol.Y = nil; sol.S = nil; sol.Z = nil
+			//sol.X = nil; sol.Y = nil; sol.S = nil; sol.Z = nil
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
 				symm(z, m, ind)
@@ -1014,7 +1041,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			}
 			tz, _ = maxStep(z, dims, 0, nil)
 			sol.Status = PrimalInfeasible
-			sol.Result = sets.FloatSetNew("x", "y", "s", "x")
+			sol.Result = sets.NewFloatSet("x", "y", "s", "x")
 			sol.Result.Append("x", nil)
 			sol.Result.Append("y", nil)
 			sol.Result.Append("s", nil)
@@ -1039,7 +1066,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			err = errors.New("Primal infeasible")
 			blas.ScalFloat(x, 1.0/(-cx))
 			blas.ScalFloat(s, 1.0/(-cx))
-			sol.X = nil; sol.Y = nil; sol.S = nil; sol.Z = nil
+			//sol.X = nil; sol.Y = nil; sol.S = nil; sol.Z = nil
 			ind := dims.Sum("l", "q")
 			for _, m := range dims.At("s") {
 				symm(s, m, ind)
@@ -1047,7 +1074,7 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 			}
 			ts, _ = maxStep(s, dims, 0, nil)
 			sol.Status = PrimalInfeasible
-			sol.Result = sets.FloatSetNew("x", "y", "s", "x")
+			sol.Result = sets.NewFloatSet("x", "y", "s", "x")
 			sol.Result.Append("x", nil)
 			sol.Result.Append("y", nil)
 			sol.Result.Append("s", nil)
@@ -1150,8 +1177,8 @@ func ConeLpCustom(c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
 				ts,_ = maxStep(s, dims, 0, nil)
 				tz,_ = maxStep(z, dims, 0, nil)
 				err = errors.New("Terminated (singular KKT matrix).")
-				sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
-				sol.Result = sets.FloatSetNew("x", "y", "s", "x")
+				//sol.X = x; sol.Y = y; sol.S = s; sol.Z = z
+				sol.Result = sets.NewFloatSet("x", "y", "s", "x")
 				sol.Result.Append("x", x)
 				sol.Result.Append("y", y)
 				sol.Result.Append("s", s)
