@@ -34,6 +34,21 @@ func FloatSetNew(names ...string) *FloatMatrixSet {
 	return ms
 }
 
+// Create new FloatMatrix collection with with empty named sets. 
+func NewFloatSet(names ...string) *FloatMatrixSet {
+	sz := len(names)
+	if sz == 0 {
+		sz = 4
+	}
+	mcap := 2*sz
+	ms := new(FloatMatrixSet)
+	ms.sets = make(map[string][]*matrix.FloatMatrix, mcap)
+	for _, k := range names {
+		ms.sets[k] = nil
+	}
+	return ms
+}
+
 // Test if key is in the set.
 func (M *FloatMatrixSet) Exists(name string) bool {
 	_, ok := M.sets[name]
@@ -102,6 +117,23 @@ type DimensionSet struct {
 
 // Create new dimension set with empty dimension info.
 func DSetNew(names ...string) *DimensionSet {
+	sz := len(names)
+	if sz == 0 {
+		sz = 4
+	}
+	mcap := 2*sz
+	
+	ds := new(DimensionSet)
+	ds.sets = make(map[string][]int, mcap)
+	for _, k := range names {
+		nset := make([]int, 0, 16)
+		ds.sets[k] = nset
+	}
+	return ds
+}
+
+// Create new dimension set with empty dimension info.
+func NewDimensionSet(names ...string) *DimensionSet {
 	sz := len(names)
 	if sz == 0 {
 		sz = 4
