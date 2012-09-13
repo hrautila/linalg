@@ -57,6 +57,8 @@ type ConvexProg interface {
 	F2(x, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, err error)
 }
 
+type  CustomCvxKKT func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error)
+
 //    Solves a convex optimization problem with a linear objective
 //
 //        minimize    c'*x 
@@ -81,6 +83,130 @@ type ConvexProg interface {
 //
 func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts *SolverOptions) (sol *Solution, err error) {
 
+	if A == nil {
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+
+	var mnl int
+	var x0 *matrix.FloatMatrix
+
+	mnl, x0, err = F.F0()
+	if err != nil {
+		return
+	}
+
+	if x0.Cols() != 1 {
+		err = errors.New("'x0' must be matrix with one column")
+		return
+	}
+	if c == nil {
+		err = errors.New("'c' must be non nil matrix")
+		return
+	}
+	if ! c.SizeMatch(x0.Size()) {
+		err = errors.New(fmt.Sprintf("'c' must be matrix of size (%d,1)", x0.Rows()))
+		return 
+	}
+		
+	if h == nil {
+		h = matrix.FloatZeros(0, 1)
+	}
+	if h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
+	if dims == nil {
+		dims = sets.NewDimensionSet("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	//cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
+	//cdim_diag := dims.Sum("l", "q", "s")
+
+	if h.Rows() != cdim {
+		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
+		return 
+	}
+
+	if G == nil {
+		G = matrix.FloatZeros(0, c.Rows())
+	}
+	if !G.SizeMatch(cdim, c.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check A and set defaults if it is nil
+	if A == nil {
+		// zeros rows reduces Gemv to vector products
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if A.Cols() != c.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+	if b.Rows() != A.Rows() {
+		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	var matrixA = matA{A}
+	var matrixG = matG{G, dims}
+
+	solvername := solopts.KKTSolverName
+	if len(solvername) == 0 {
+		if len(dims.At("q")) > 0 || len(dims.At("s")) > 0 {
+			solvername = "qr"
+		} else {
+			solvername = "chol2"
+		}
+	}
+
+	var factor kktFactor
+	var kktsolver CustomCvxKKT = nil
+	if kktfunc, ok := solvers[solvername]; ok {
+		// kkt function returns us problem spesific factor function.
+		factor, err = kktfunc(G, dims, A, mnl)
+		// solver is 
+		kktsolver = func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error) {
+			_, Df, H, err := F.F2(x, z)
+			if err != nil { return nil, err }
+			return factor(W, H, Df)
+		}
+	} else {
+		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
+		return
+	}
+
+
+	return CplCustom(F, c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts)
+}
+
+
+
+
+
+func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix, A MatrixA,
+	b *matrix.FloatMatrix, dims *sets.DimensionSet, kktsolver CustomCvxKKT, solopts *SolverOptions) (sol *Solution, err error) {
+
 	const (
 		STEP = 0.99
 		BETA = 0.5
@@ -92,7 +218,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 	var refinement int
 
 	sol = &Solution{Unknown,
-		nil, nil, nil, nil, nil, 
+		/*nil, nil, nil, nil,*/ nil, 
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
@@ -148,7 +274,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 		h = matrix.FloatZeros(0, 1)
 	}
 	if dims == nil {
-		dims = sets.DSetNew("l", "q", "s")
+		dims = sets.NewDimensionSet("l", "q", "s")
 		dims.Set("l", []int{h.Rows()})
 	}
 	if err = checkConeLpDimensions(dims); err != nil {
@@ -164,33 +290,27 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 	}
 
 	if G == nil {
-		G = matrix.FloatZeros(0, c.Rows())
+		err = errors.New("'G' must be non-nil MatrixG interface.")
+		return
 	}
-
-	if ! G.SizeMatch(cdim, c.Rows()) {
-		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
-		err = errors.New(estr)
-		return 
-	}
-
 	fG := func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
-		return sgemv(G, x, y, alpha, beta, dims, trans)
+		return G.Gf(x, y, alpha, beta, trans)
 	}
 
+	var fA func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error = nil
+	var Adummy *matrix.FloatMatrix
 
 	// Check A and set defaults if it is nil
 	if A == nil {
 		// zeros rows reduces Gemv to vector products
-		A = matrix.FloatZeros(0, c.Rows())
-	}
-	if A.Cols() != c.Rows() {
-		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
-		err = errors.New(estr)
-		return 
-	}
-
-	fA := func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
-		return blas.GemvFloat(A, x, y, alpha, beta, trans)
+		Adummy = matrix.FloatZeros(0, c.Rows())
+		fA = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+			return blas.GemvFloat(Adummy, x, y, alpha, beta, trans)
+		}
+	} else {
+		fA = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+			return A.Af(x, y, alpha, beta, trans)
+		}
 	}
 
 	if b == nil {
@@ -200,24 +320,15 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 		err = errors.New("'b' must be matrix with one column.")
 		return
 	}
+	/*
 	if b.Rows() != A.Rows() {
 		err = errors.New(fmt.Sprintf("'b' must have length %d", A.Rows()))
 		return
 	}
+	 */
 
-	var factor kktFactor
-	var kktsolver kktFactor = nil
-	if kktfunc, ok := solvers[solvername]; ok {
-		// kkt function returns us problem spesific factor function.
-		factor, err = kktfunc(G, dims, A, mnl)
-		// solver is 
-		kktsolver = func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error) {
-			_, Df, H, err := F.F2(x, z)
-			if err != nil { return nil, err }
-			return factor(W, H, Df)
-		}
-	} else {
-		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
+	if kktsolver == nil {
+		err = errors.New("nil kktsolver not allowed.")
 		return
 	}
 
@@ -285,7 +396,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 	ds0 := matrix.FloatZeros(mnl+cdim, 1)
 	ds20 := matrix.FloatZeros(mnl+cdim, 1)
 	
-	W0 := sets.FloatSetNew("d", "di", "dnl", "dnli", "v", "r", "rti", "beta")
+	W0 := sets.NewFloatSet("d", "di", "dnl", "dnli", "v", "r", "rti", "beta")
 	W0.Set("dnl", matrix.FloatZeros(mnl, 1))
 	W0.Set("dnli", matrix.FloatZeros(mnl, 1))
 	W0.Set("d", matrix.FloatZeros(dims.At("l")[0], 1))
@@ -434,7 +545,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 				err = nil
 				sol.Status = Optimal
 			}
-			sol.Result = sets.FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
+			sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
 			sol.Result.Set("x", x)
 			sol.Result.Set("y", y)
 			sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
@@ -538,7 +649,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 
 				err = errors.New(msg)
 				sol.Status = Unknown
-				sol.Result = sets.FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
+				sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
 				sol.Result.Set("x", x)
 				sol.Result.Set("y", y)
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
@@ -759,7 +870,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 
 				err = errors.New(msg)
 				sol.Status = Unknown
-				sol.Result = sets.FloatSetNew("x", "y", "znl", "zl", "snl", "sl")
+				sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
 				sol.Result.Set("x", x)
 				sol.Result.Set("y", y)
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
