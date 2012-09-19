@@ -29,14 +29,14 @@ type Variable interface {
 //
 // If u is an object of type implementing MatrixArg interface, then
 type MatrixVariable interface {
-	// Embeds Variable interface
+	// embed Variable interface
 	Variable
 	// Create a new copy 
 	Copy() MatrixVariable
 	// Computes v := alpha*u + v for a scalar alpha and vectors u and v.
-	Axpy(v MatrixArg, alpha float64) 
+	Axpy(v MatrixVariable, alpha float64) 
 	// Return the inner product of two vectors u and v in a vector space.
-	Dot(v MatrixArg) float64
+	Dot(v MatrixVariable) float64
 	// Computes u := alpha*u for a scalar alpha and vectors u in a vector space.
 	Scal(alpha float64) 
 }
@@ -56,19 +56,19 @@ func (u *matrixArg) AsMatrix() *matrix.FloatMatrix {
 	return u.val
 }
 
-func (u *matrixArg) Copy() MatrixArg {
+func (u *matrixArg) Copy() MatrixVariable {
 	return &matrixArg{u.val.Copy()}
 }
 
-func (u *matrixArg) Dot(v MatrixArg) float64 {
-	if y, ok := v.(matrixArg); ok {
+func (u *matrixArg) Dot(v MatrixVariable) float64 {
+	if y, ok := v.(*matrixArg); ok {
 		return blas.DotFloat(u.val, y.val)
 	}
 	return 0.0
 }
 
-func (u *matrixArg) Axpy(v MatrixArg, alpha float64) {
-	if y, ok := v.(matrixArg); ok {
+func (u *matrixArg) Axpy(v MatrixVariable, alpha float64) {
+	if y, ok := v.(*matrixArg); ok {
 		blas.AxpyFloat(u.val, y.val, alpha)
 	}
 	return
@@ -78,7 +78,7 @@ func (u *matrixArg) Scal(alpha float64) {
 	blas.ScalFloat(u.val, alpha)
 }
 
-// Epigram structure for CP/GP programs.
+// Epigraph structure for CP/GP programs.
 
 type epigraph struct {
 	m *matrix.FloatMatrix
@@ -121,10 +121,13 @@ func (u *epigraph) ToString(format string) string {
 func newEpigraph(v interface{}, t float64) (e *epigraph, err error) {
 	err = nil
 	e = nil
-	if y, ok := v.(*matrix.FloatMatrix); ok {
-		e = &epigraph{y, t}
-	} else {
-		err = errors.New("'v' is not a FloatMatrix.")
+	switch v.(type) {
+	case *matrix.FloatMatrix:
+		e = &epigraph{v.(*matrix.FloatMatrix), t}
+	case Variable:
+		e = &epigraph{v.(Variable).AsMatrix(), t}
+	default:
+		err = errors.New("'v' is not a FloatMatrix or Variable type.")
 	}
 	return
 }
