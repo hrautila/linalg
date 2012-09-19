@@ -337,9 +337,11 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 	//var rx, ry, rznl, rzl *matrix.FloatMatrix
 	//var lmbda, lmbdasq *matrix.FloatMatrix
 
+	// -- here custom arguments.
 	x := x0.Copy()
 	y := b.Copy()
 	y.Scale(0.0)
+	// -- here custom args end
 	z := matrix.FloatZeros(mnl+cdim, 1)
 	s := matrix.FloatZeros(mnl+cdim, 1)
 	ind := mnl+dims.At("l")[0]
@@ -357,12 +359,14 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		ind += m*m
 	}
 
+	// -- here custom arguments.
 	rx := x0.Copy()
 	ry := b.Copy()
-	rznl := matrix.FloatZeros(mnl, 1)
-	rzl := matrix.FloatZeros(cdim, 1)
 	dx := x.Copy()
 	dy := y.Copy()
+	// -- here custom arguments.
+	rznl := matrix.FloatZeros(mnl, 1)
+	rzl := matrix.FloatZeros(cdim, 1)
 	dz := matrix.FloatZeros(mnl+cdim, 1)
 	ds := matrix.FloatZeros(mnl+cdim, 1)
 	lmbda := matrix.FloatZeros(mnl+cdim_diag, 1)
@@ -373,20 +377,27 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 	dz2 := matrix.FloatZeros(mnl+cdim, 1)
 	ds2 := matrix.FloatZeros(mnl+cdim, 1)
 
+	// -- here custom arguments.
 	newx := x.Copy()
 	newy := y.Copy()
+	newrx := x0.Copy()
+	// -- here custom arguments.
+
 	newz := matrix.FloatZeros(mnl+cdim, 1)
 	news := matrix.FloatZeros(mnl+cdim, 1)
-	newrx := x0.Copy()
 	newrznl := matrix.FloatZeros(mnl, 1)
 
+	// -- here custom arguments.
 	rx0 := x0.Copy()
 	ry0 := b.Copy()
+	// -- here custom arguments.
 	rznl0 := matrix.FloatZeros(mnl, 1)
 	rzl0 := matrix.FloatZeros(cdim, 1)
 	
+	// -- here custom arguments.
 	x0, dx0 := x.Copy(), dx.Copy()
 	y0, dy0 := y.Copy(), dy.Copy()
+	// -- here custom arguments.
 
 	z0 := matrix.FloatZeros(mnl+cdim, 1)
 	dz0 := matrix.FloatZeros(mnl+cdim, 1)
@@ -467,6 +478,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		s_mnl2 := matrix.FloatVector(s.FloatArray()[mnl:])
 
 		// rx = c + A'*y + Df'*z[:mnl] + G'*z[mnl:]
+		// -- y, rx MatrixArg
 		blas.Copy(c, rx)
 		fA(y, rx, 1.0, 1.0, la.OptTrans)
 		fDf(z_mnl, rx, 1.0, 1.0, la.OptTrans)
@@ -816,7 +828,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 
 			mu = gap / float64(mnl + dims.Sum("l", "s") + len(dims.At("q")))
 			blas.ScalFloat(ds, 0.0)
-			blas.AxpyFloat(lmbdasq, ds, -1.0, &la.IOpt{"n", mnl+dims.Sum("l", "s")})
+			blas.AxpyFloat(lmbdasq, ds, -1.0, &la.IOpt{"n", mnl+dims.Sum("l", "q")})
 
 			ind = mnl + dims.At("l")[0]
 			iset := matrix.MakeIndexSet(0, ind, 1)
@@ -1184,7 +1196,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 			&la.IOpt{"lda", 1}, &la.IOpt{"offseta", mnl+qdimsum})
 		
 
-		ind2 := qdimsum; ind3 := 0
+		ind2 := mnl + qdimsum; ind3 := 0
 		sdims := dims.At("s")
 		
 		for k := 0; k < len(sdims); k++ {
