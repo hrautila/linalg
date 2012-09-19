@@ -16,42 +16,14 @@ import (
 // is empty. Otherwise compute C[i] *= alpha for i in indexes array. 
 func Scale(A *FloatMatrix, alpha float64, indexes... int) *FloatMatrix {
 	C := A.Copy()
-	Cr := C.FloatArray()
-	if len(indexes) == 0 {
-		for k, _ := range Cr {
-			Cr[k] *= alpha
-		}
-	} else  {
-		N := A.NumElements()
-		for _, k := range indexes {
-			if k < 0 {
-				k = N + k
-			}
-			Cr[k] *= alpha
-		}
-	}
-	return C
+	return C.Scale(alpha, indexes...)
 }
 
 // Make a copy C of A and compute for all k in indexes: C[k] *= values[k].
 // Indexes are in column-major order.  Returns a new matrix
 func ScaleAt(A *FloatMatrix, values []float64, indexes []int) *FloatMatrix {
 	C := A.Copy()
-	if len(indexes) == 0 {
-		return C
-	}
-	Cr := C.FloatArray()
-	N := A.NumElements()
-	for i, k := range indexes {
-		if i >= len(values) {
-			return C
-		}
-		if k < 0 {
-			k = N + k
-		}
-		Cr[k] *= values[i]
-	}
-	return C
+	return C.ScaleIndexes(indexes, values)
 }
 
 
@@ -59,21 +31,7 @@ func ScaleAt(A *FloatMatrix, values []float64, indexes []int) *FloatMatrix {
 // all elements. Returns a new matrix.
 func Inv(A *FloatMatrix, indexes... int) *FloatMatrix {
 	C := A.Copy()
-	Cr := C.FloatArray()
-	if len(indexes) == 0 {
-		for k, _ := range Cr {
-			Cr[k] = 1.0/Cr[k]
-		}
-	} else  {
-		N := A.NumElements()
-		for _, k := range indexes {
-			if k < 0 {
-				k = N + k
-			}
-			Cr[k] = 1.0/Cr[k]
-		}
-	}
-	return C
+	return C.Inv(indexes...)
 }
 
 // Make a copy C of A and compute C += alpha for all elements in the matrix if list of indexes
@@ -88,21 +46,7 @@ func Add(A *FloatMatrix, alpha float64, indexes... int) *FloatMatrix {
 // Returns a new matrix.
 func AddAt(A *FloatMatrix, values []float64, indexes []int) *FloatMatrix {
 	C := A.Copy()
-	if len(indexes) == 0 {
-		return C
-	}
-	Cr := C.FloatArray()
-	N := A.NumElements()
-	for i, k := range indexes {
-		if i >= len(values) {
-			return C
-		}
-		if k < 0 {
-			k = N + k
-		}
-		Cr[k] += values[i]
-	}
-	return C
+	return C.AddIndexes(indexes, values)
 }
 
 
