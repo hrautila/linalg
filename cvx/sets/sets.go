@@ -91,6 +91,17 @@ func (M *FloatMatrixSet) Keys() []string {
 	return s
 }
 
+func (M *FloatMatrixSet) Copy() *FloatMatrixSet {
+	Mnew := NewFloatSet(M.Keys()...)
+	for _, key := range M.Keys() {
+		mset := M.At(key)
+		for _, m := range mset {
+			Mnew.Append(key, m.Copy())
+		}
+	}
+	return Mnew
+}
+
 func (M *FloatMatrixSet) Print() {
 	for key := range M.sets {
 		ms := M.sets[key]
