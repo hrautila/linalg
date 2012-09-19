@@ -3,22 +3,27 @@
 
 def str2(m, fmt='%7.2e', rowmajor=True):
     s = ''
-    if rowmajor:
-        for i in xrange(m.size[0]):
-            s += "["
-            for j in xrange(m.size[1]):
-                if j != 0:
-                    s += ", "
-                s += fmt % m[i, j]
-            s += "]\n"
+    if isinstance(m, list):
+        # cp epigraph thing
+        s = str2(m[0], fmt, rowmajor)
+        s += ("/"+fmt+"/\n") % m[1]
     else:
-        for i in xrange(m.size[1]):
-            s += "["
-            for j in xrange(m.size[0]):
-                if j != 0:
-                    s += ", "
-                s += fmt % m[j, i]
-            s += "]\n"
+        if rowmajor:
+            for i in xrange(m.size[0]):
+                s += "["
+                for j in xrange(m.size[1]):
+                    if j != 0:
+                        s += ", "
+                    s += fmt % m[i, j]
+                s += "]\n"
+        else:
+            for i in xrange(m.size[1]):
+                s += "["
+                for j in xrange(m.size[0]):
+                    if j != 0:
+                        s += ", "
+                    s += fmt % m[j, i]
+                s += "]\n"
     return s
 
 
@@ -163,6 +168,9 @@ def sp_create(name, minor, singletons={}):
                 if isinstance(v, matrix):
                     # normal matrix
                     fp.write("%s matrix 1: %s\n" % (k, strSpe(v)))
+                elif isinstance(v, list):
+                    # epigraph thing
+                    fp.write("%s epigraph 1: [%.17f %s]\n" % (k, v[1], strSpe(v[0])))
                 elif isinstance(v, dict):
                     # W scaling matrices
                     for key, data in v.items():
