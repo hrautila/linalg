@@ -538,9 +538,23 @@ func (A *FloatMatrix) SetSubMatrix(row, col int, mat *FloatMatrix) error {
 	return nil
 }
 
-// Get sub-matrix of size (nrows, ncols) starting at (row, col). Returns nil if
-// nrows+row >= A.Rows() or ncols+col >= A.Cols()
-func (A *FloatMatrix) GetSubMatrix(row, col, nrows, ncols int) (m *FloatMatrix) {
+// Get sub-matrix starting at (row, col). Sizes parameters define (nrows, ncols) number of
+// rows and number of columns. If len(sizes) is zero size is then (nrows, ncols) is
+// (Rows()-row, Cols()-col).If len(sizes) is one then (nrows, ncols) is (sizes[0], Cols()-col)
+// In all other cases (nrows, ncols) is (sizes[0], sizes[1]). 
+// Return nil if nrows+row >= A.Rows() or ncols+col >= A.Cols()
+func (A *FloatMatrix) GetSubMatrix(row, col int, sizes ...int) (m *FloatMatrix) {
+	var nrows, ncols int = 0, 0
+	switch len(sizes) {
+	case 0:
+		nrows = A.Rows() - row; ncols = A.Cols() - col
+	case 1:
+		nrows = sizes[0]
+		ncols = A.Cols() - col
+	default:
+		nrows = sizes[0]
+		ncols = sizes[1]
+	}
 	if row + nrows > A.Rows() || col + ncols > A.Cols() {
 		return nil
 	}
