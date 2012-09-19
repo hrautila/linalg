@@ -42,36 +42,66 @@ const (
 	Unknown
 )
 
+
+// If the exit status is 'Optimal', then the primal and dual
+// infeasibilities are guaranteed to be less than 
+// SolversOptions.FeasTol (default 1e-7).  The gap is less than
+// SolversOptions.AbsTol (default 1e-7) or the relative gap is 
+// less than SolversOptions.RelTol (defaults 1e-6).     
+//
+// Termination with status 'Unknown' indicates that the algorithm 
+// failed to find a solution that satisfies the specified tolerances.
+// In some cases, the returned solution may be fairly accurate.  If
+// the primal and dual infeasibilities, the gap, and the relative gap
+// are small, then x, y, snl, sl, znl, zl are close to optimal.
+//
 type Solution struct {
+	// Solution status
 	Status StatusCode
-	//X *matrix.FloatMatrix
-	//Y *matrix.FloatMatrix
-	//S *matrix.FloatMatrix
-	//Z *matrix.FloatMatrix
+	// Solution result set. 
 	Result *sets.FloatMatrixSet
+	// The primal objective c'*x
 	PrimalObjective float64
+	// The dual objective value
 	DualObjective float64
+	// Solution duality gap.
 	Gap float64
+	// Solution relative gap
 	RelativeGap float64
+	// Solution primal infeasibility
 	PrimalInfeasibility float64
+	// Solution dual infeasibility: the residual of the dual contraints
 	DualInfeasibility float64
+	// The smallest primal slack: min( min_k sl_k, sup{t | sl >= te}
 	PrimalSlack float64
+	// The smallest dual slack: min( min_k sl_k, sup{t | sl >= te}
 	DualSlack float64
 	PrimalResidualCert float64
 	DualResidualCert float64
+	// Number of iterations run
 	Iterations int
 }
 
+// Solver options.
 type SolverOptions struct {
+	// Absolute tolerance
 	AbsTol float64
+	// Relative tolerance
 	RelTol float64
+	// Feasibility tolerance
 	FeasTol float64
+	// Maximum number of iterations
 	MaxIter int
+	// Show progress flag
 	ShowProgress bool
+	// Debug flag
 	Debug bool
+	// Refinement count
 	Refinement int
+	// KKT solver function name; 'ldl', 'ldl2', 'qr', 'chol', 'chol2'
 	KKTSolverName string
 }
+
 
 const (
 	MAXITERS = 100
