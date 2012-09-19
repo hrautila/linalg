@@ -295,16 +295,55 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         print("% 10s% 12s% 10s% 8s% 7s" %("pcost", "dcost", "gap", "pres",
             "dres"))
 
+    #print "x", type(x)
+    #print "y", type(y)
+    #print "s", type(s)
+    #print "z", type(z)
+    #print "rx", type(rx)
+    #print "ry", type(ry)
+    #print "rzl", type(rzl)
+    #print "rznl", type(rznl)
+    #print "x0", type(x0)
+    #print "y0", type(y0)
+    #print "s0", type(s0)
+    #print "z0", type(z0)
 
+    helpers.sp_add_var("c", c)
+    helpers.sp_add_var("b", b)
+    helpers.sp_add_var("x", x)
+    helpers.sp_add_var("y", y)
+    helpers.sp_add_var("z", z)
+    helpers.sp_add_var("s", s)
+    helpers.sp_add_var("dx", dx)
+    helpers.sp_add_var("dy", dy)
+    helpers.sp_add_var("dz", dz)
+    helpers.sp_add_var("ds", ds)
+    helpers.sp_add_var("x0", x0)
+    helpers.sp_add_var("rx", rx)
+    helpers.sp_add_var("rznl", rznl)
+    helpers.sp_add_var("rzl", rzl)
+    helpers.sp_add_var("lmbda", lmbda)
+    helpers.sp_add_var("lmbdasq", lmbdasq)
+    
+    print "preloop c=\n", helpers.str2(c, "%.7f")
     relaxed_iters = 0
     for iters in range(MAXITERS + 1):  
+        helpers.sp_major_next()
+        helpers.sp_create("loopstart", 10)
 
         if refinement or DEBUG:  
             # We need H to compute residuals of KKT equations.
             f, Df, H = F(x, z[:mnl])
         else:
+            #print "%d get f, Df, ..." % iters
             f, Df = F(x)
        
+        if iters == 0:
+            #print "f", type(f)
+            #print "Df", type(Df)
+            #print "H", type(H)
+            pass
+
         f = matrix(f, tc='d')
         if f.typecode != 'd' or f.size != (mnl, 1):
             raise TypeError("first output argument of F() must be a "\
@@ -350,6 +389,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         fA(y, rx, beta = 1.0, trans = 'T')
         fDf(z[:mnl], rx, beta = 1.0, trans = 'T')
         fG(z[mnl:], rx, beta = 1.0, trans = 'T')
+        #print "3 rx=\n", helpers.str2(rx, "%.7f")
         resx = math.sqrt(xdot(rx, rx))
            
         # ry = A*x - b
@@ -406,6 +446,16 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             print("%2d: % 8.4e % 8.4e % 4.0e% 7.0e% 7.0e" \
                 %(iters, pcost, dcost, gap, pres, dres))
 
+        helpers.sp_create("checkgap", 50, {"gap": gap,
+                                           "pcost": pcost,
+                                           "dcost": dcost,
+                                           "pres": pres,
+                                           "dres": dres,
+                                           "resx": resx,
+                                           "resy": resy,
+                                           "reszl": reszl,
+                                           "resznl": resznl
+                                           })
         # Stopping criteria.    
         if ( pres <= FEASTOL and dres <= FEASTOL and ( gap <= ABSTOL or 
             (relgap is not None and relgap <= RELTOL) )) or \
@@ -444,9 +494,10 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
 
         if iters == 0:  
             W = misc.compute_scaling(s, z, lmbda, dims, mnl)
+            helpers.sp_add_var("W", W)
         misc.ssqr(lmbdasq, lmbda, dims, mnl)
         #print "lmbdasq=\n", helpers.str2(lmbda, "%.9f")
-
+        helpers.sp_create("lmbdasq", 90)
 
         # f3(x, y, z) solves
         #
@@ -459,6 +510,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         
         try:
             f3 = kktsolver(x, z[:mnl], W)
+            helpers.sp_create("f3", 100)
             #print "x=\n", helpers.str2(x,"%.7f")
             #print "z=\n", helpers.str2(z,"%.7f")
         except ArithmeticError: 
@@ -543,6 +595,8 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         if iters == 0:
             ws3 = matrix(0.0, (mnl + cdim, 1))
             wz3 = matrix(0.0, (mnl + cdim, 1))
+            helpers.sp_add_var("ws3", ws3)
+            helpers.sp_add_var("wz3", wz3)
 
         def f4_no_ir(x, y, z, s):
 
@@ -584,14 +638,19 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             #     [ vz ]     [ W'*us ]   [ GG 0  0   ] [ W^{-1}*uz ]
             #
             #     vs -= lmbda o (uz + us).
-
+            minor = helpers.sp_minor_top()
             # vx := vx - H*ux - A'*uy - GG'*W^{-1}*uz
             fH(ux, vx, alpha = -1.0, beta = 1.0)
+            helpers.sp_create("00res", minor+10)
             fA(uy, vx, alpha = -1.0, beta = 1.0, trans = 'T') 
             blas.copy(uz, wz3)
+            helpers.sp_create("02res", minor+10)
             misc.scale(wz3, W, inverse = 'I')
             fDf(wz3[:mnl], vx, alpha = -1.0, beta = 1.0, trans = 'T')
+            helpers.sp_create("04res", minor+10)
             fG(wz3[mnl:], vx, alpha = -1.0, beta = 1.0, trans = 'T') 
+
+            helpers.sp_create("10res", minor+10)
 
             # vy := vy - A*ux 
             fA(ux, vy, alpha = -1.0, beta = 1.0)
@@ -604,12 +663,14 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             blas.copy(us, ws3) 
             misc.scale(ws3, W, trans = 'T')
             blas.axpy(ws3, vz, alpha = -1.0)
+            helpers.sp_create("30res", minor+10)
 
             # vs -= lmbda o (uz + us)
             blas.copy(us, ws3)
             blas.axpy(uz, ws3)
             misc.sprod(ws3, lmbda, dims, mnl, diag = 'D')
             blas.axpy(ws3, vs, alpha = -1.0)
+            helpers.sp_create("90res", minor+10)
 
 
         # f4(x, y, z, s) solves the same system as f4_no_ir, but applies
@@ -620,12 +681,19 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
                 wx, wy = xnewcopy(c), ynewcopy(b)
                 wz = matrix(0.0, (mnl + cdim, 1))
                 ws = matrix(0.0, (mnl + cdim, 1))
+                helpers.sp_add_var("wx", wx)
+                helpers.sp_add_var("wz", wz)
+                helpers.sp_add_var("ws", ws)
             if refinement:
                 wx2, wy2 = xnewcopy(c), ynewcopy(b)
                 wz2 = matrix(0.0, (mnl + cdim, 1))
                 ws2 = matrix(0.0, (mnl + cdim, 1))
+                helpers.sp_add_var("wx2", wx2)
+                helpers.sp_add_var("wz2", wz2)
+                helpers.sp_add_var("ws2", ws2)
 
         def f4(x, y, z, s):
+            minor = helpers.sp_minor_top()
             if refinement or DEBUG: 
                 xcopy(x, wx)        
                 ycopy(y, wy)        
@@ -636,7 +704,11 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             #print "z=\n", helpers.str2(z,"%.7f")
             #print "s=\n", helpers.str2(s,"%.7f")
             #print "--- end of pre f4_no_ir"
+            helpers.sp_create("0_f4", minor+100)
+            helpers.sp_minor_push(minor+100)
             f4_no_ir(x, y, z, s)        
+            helpers.sp_minor_pop()
+            helpers.sp_create("1_f4", minor+200)
             #print "--- post f4_no_ir"
             #print "x=\n", helpers.str2(x,"%.7f")
             #print "z=\n", helpers.str2(z,"%.7f")
@@ -647,8 +719,16 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
                 ycopy(wy, wy2)        
                 blas.copy(wz, wz2)        
                 blas.copy(ws, ws2)        
+                helpers.sp_create("2_f4", minor+(1+i)*200)
+                helpers.sp_minor_push(minor+(1+i)*200)
+                #print "-- pre-res wx2=\n", helpers.str2(wx2,"%.7f")
                 res(x, y, z, s, wx2, wy2, wz2, ws2) 
+                helpers.sp_minor_pop()
+                helpers.sp_create("3_f4", minor+(1+i)*200+100)
+                helpers.sp_minor_push(minor+(1+i)*200+100)
                 f4_no_ir(wx2, wy2, wz2, ws2)
+                helpers.sp_minor_pop()
+                helpers.sp_create("4_f4", minor+(1+i)*200+199)
                 xaxpy(wx2, x)
                 yaxpy(wy2, y)
                 blas.axpy(wz2, z)
@@ -678,6 +758,9 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         #helpers.printW(W)
 
         for i in [0, 1]:
+            minor = (i+2)*1000
+            helpers.sp_minor_push(minor)
+            helpers.sp_create("loop01", minor)
             #print "beginning loop [0,1]"
 
             # Solve
@@ -719,7 +802,11 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             #print "dz=\n", helpers.str2(dz,"%.7f")
             #print "ds=\n", helpers.str2(ds,"%.7f")
             
-            try: f4(dx, dy, dz, ds)
+            helpers.sp_create("pref4", minor)
+            helpers.sp_minor_push(minor)
+
+            try:
+                f4(dx, dy, dz, ds)
             except ArithmeticError: 
                 if iters == 0:
                     raise ValueError("Rank(A) < p or "\
@@ -746,6 +833,9 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             #print "dx=\n", helpers.str2(dx,"%.7f")
             #print "dz=\n", helpers.str2(dz,"%.7f")
 
+            helpers.sp_minor_pop()
+            helpers.sp_create("postf4", minor+400)
+
             # Inner product ds'*dz and unscaled steps are needed in the 
             # line search.
             dsdz = misc.sdot(ds, dz, dims, mnl)
@@ -753,6 +843,8 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             misc.scale(dz2, W, inverse = 'I')
             blas.copy(ds, ds2)
             misc.scale(ds2, W, trans = 'T')
+
+            helpers.sp_create("dsdz", minor+410)
 
             # Maximum steps to boundary. 
             # 
@@ -770,6 +862,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             else:
                 step = min(1.0, STEP / t)
 
+            helpers.sp_create("maxstep", minor+420)
             #print "%d: ts=%.7f, tz=%.7f, t=%.7f, step=%.7f" %(iters, ts, tz, t, step)
 
             # Backtrack until newx is in domain of f.
@@ -1001,6 +1094,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
                             relaxed_iters = -1
                             #print "break 6: newphi=%.7f" % newphi
             
+            helpers.sp_create("eol", minor+900)
             #print "eol ds=\n", helpers.str2(ds,"%.7f")
             #print "eol dz=\n", helpers.str2(dz,"%.7f")
 
@@ -1009,7 +1103,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         xaxpy(dx, x, alpha = step)
         yaxpy(dy, y, alpha = step)
         #print "update x=\n", helpers.str2(x,"%.7f")
-
+        helpers.sp_create("updatexy", 5000)
 
         # Replace nonlinear, 'l' and 'q' blocks of ds and dz with the 
         # updated variables in the current scaling.
@@ -1032,6 +1126,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             ind += m
         #print "update ds=\n", helpers.str2(ds,"%.7f")
         #print "update dz=\n", helpers.str2(dz,"%.7f")
+        helpers.sp_create("updatedsdz", 5100)
 
 
         # ds := H(lambda)^{-1/2} * ds and dz := H(lambda)^{-1/2} * dz.
@@ -1046,6 +1141,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         misc.scale2(lmbda, ds, dims, mnl, inverse = 'I')
         misc.scale2(lmbda, dz, dims, mnl, inverse = 'I')
 
+        helpers.sp_create("scale2", 5200)
         # sigs := ( e + step*sigs ) ./ lambda for 's' blocks.
         # sigz := ( e + step*sigz ) ./ lambda for 's' blocks.
         blas.scal(step, sigs)
@@ -1057,23 +1153,27 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
         blas.tbsv(lmbda, sigz, n = sum(dims['s']), k = 0, ldA = 1, 
             offsetA = mnl + dims['l'] + sum(dims['q']) )
 
+        helpers.sp_create("sigs", 5300)
+
         # dsk := Ls = dsk * sqrt(sigs).
         # dzk := Lz = dzk * sqrt(sigz).
         ind2, ind3 = mnl + dims['l'] + sum(dims['q']), 0
         for k in range(len(dims['s'])):
             m = dims['s'][k]
             for i in range(m):
-                blas.scal(math.sqrt(sigs[ind3+i]), ds, offset = ind2 + m*i,
-                    n = m)
-                blas.scal(math.sqrt(sigz[ind3+i]), dz, offset = ind2 + m*i,
-                    n = m)
+                a = math.sqrt(sigs[ind3+i])
+                blas.scal(a, ds, offset = ind2 + m*i, n = m)
+                a = math.sqrt(sigz[ind3+i])
+                blas.scal(a, dz, offset = ind2 + m*i, n = m)
             ind2 += m*m
             ind3 += m
 
 
         # Update lambda and scaling.
 
+        helpers.sp_create("scaling", 5400)
         misc.update_scaling(W, lmbda, ds, dz)
+        helpers.sp_create("postscaling", 5500)
 
 
         # Unscale s, z (unscaled variables are used only to compute 
@@ -1089,6 +1189,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             ind += m
             ind2 += m*m
         misc.scale(s, W, trans = 'T')
+        helpers.sp_create("unscale_s", 5600)
 
         blas.copy(lmbda, z, n = mnl + dims['l'] + sum(dims['q']))
         ind = mnl + dims['l'] + sum(dims['q'])
@@ -1100,6 +1201,7 @@ def cpl(c, F, G = None, h = None, dims = None, A = None, b = None,
             ind += m
             ind2 += m*m
         misc.scale(z, W, inverse = 'I')
+        helpers.sp_create("unscale_z", 5700)
 
         gap = blas.dot(lmbda, lmbda) 
 
@@ -1133,262 +1235,6 @@ def cp(F, G = None, h = None, dims = None, A = None, b = None,
     The next M cones are positive semidefinite cones of order ms[0], ...,
     ms[M-1] >= 0.  
 
-
-    Input arguments (basic usage).
-
-        F is a function that handles the following arguments.
-
-            F() returns a tuple (mnl, x0).  mnl is the number of nonlinear 
-            inequality constraints.  x0 is a point in the domain of f.
-
-            F(x) returns a tuple (f, Df).
-
-                f is  a dense 'd' matrix of size (mnl+1,1) containing f(x).
-
-                Df is a dense or sparse 'd' matrix of size (mnl+1, n), 
-                containing the derivatives of f at x:  Df[k,:] is the 
-                transpose of the gradient of fk at x.  If x is not in 
-                dom f, F(x) returns None or (None, None).
-
-            F(x, z) with z a positive 'd' matrix of size (mnl+1,1), returns
-            a tuple (f, Df, H).
-            
-                f and Df are defined as above.
-                
-                H is a dense or sparse 'd' matrix of size (n,n).  The lower
-                triangular part of H contains the lower triangular part of
-                sum_k z[k] * Hk where Hk is the Hessian of fk at x.
-
-                If F is called with two arguments, it can be assumed that 
-                x is dom f. 
-
-            If Df and H are returned as sparse matrices, their sparsity
-            patterns must be the same for each call to F(x) or F(x,z). 
-
-        dims is a dictionary with the dimensions of the components of C.  
-        It has three fields.
-        - dims['l'] = ml, the dimension of the nonnegative orthant C_0.
-          (ml >= 0.)
-        - dims['q'] = mq = [ mq[0], mq[1], ..., mq[N-1] ], a list of N 
-          integers with the dimensions of the second order cones 
-          C_1, ..., C_N.  (N >= 0 and mq[k] >= 1.)
-        - dims['s'] = ms = [ ms[0], ms[1], ..., ms[M-1] ], a list of M  
-          integers with the orders of the semidefinite cones 
-          C_{N+1}, ..., C_{N+M}.  (M >= 0 and ms[k] >= 0.)
-        The default value of dims = {'l': G.size[0], 'q': [], 's': []}.
-
-        G is a dense or sparse 'd' matrix of size (K,n), where
-
-            K = ml + mq[0] + ... + mq[N-1] + ms[0]**2 + ... + ms[M-1]**2.
-
-        Each column of G describes a vector 
-
-            v = ( v_0, v_1, ..., v_N, vec(v_{N+1}), ..., vec(v_{N+M}) ) 
-
-        in V = R^ml x R^mq[0] x ... x R^mq[N-1] x S^ms[0] x ... x S^ms[M-1]
-        stored as a column vector
-
-            [ v_0; v_1; ...; v_N; vec(v_{N+1}); ...; vec(v_{N+M}) ].
-
-        Here, if u is a symmetric matrix of order m, then vec(u) is the 
-        matrix u stored in column major order as a vector of length m**2.
-        We use BLAS unpacked 'L' storage, i.e., the entries in vec(u) 
-        corresponding to the strictly upper triangular entries of u are 
-        not referenced.
-
-        h is a dense 'd' matrix of size (K,1), representing a vector in V,
-        in the same format as the columns of G.
-    
-        A is a dense or sparse 'd' matrix of size (p,n).   The default
-        value is a sparse 'd' matrix of size (0,n).
-
-        b is a dense 'd' matrix of size (p,1).  The default value is a 
-        dense 'd' matrix of size (0,1).
-
-        It is assumed that rank(A) = p and rank([H; A; Df; G]) = n at all 
-        x in dom f.
-
-        The other arguments are normally not needed.  They make it possible
-        to exploit certain types of structure, as described below.
-
-
-    Output arguments.
-
-        cp() returns a dictionary with keys 'status', 'x', 'snl', 'sl',
-        'znl', 'zl', 'y', 'primal objective', 'dual objective', 'gap',
-        'relative gap', 'primal infeasibility', 'dual infeasibility',
-        'primal slack', 'dual slack'.
-
-        The 'status' field has values 'optimal' or 'unknown'.
-        If status is 'optimal', x, snl, sl, y, znl, zl  are approximate 
-        solutions of the primal and dual optimality conditions
-
-            f(x)[1:] + snl = 0,  G*x + sl = h,  A*x = b 
-            Df(x)'*[1; znl] + G'*zl + A'*y + c = 0 
-            snl >= 0,  znl >= 0,  sl >= 0,  zl >= 0
-            snl'*znl + sl'* zl = 0.
-
-        If status is 'unknown', x, snl, sl, y, znl, zl are the last
-        iterates before termination.  They satisfy snl > 0, znl > 0, 
-        sl > 0, zl > 0, but are not necessarily feasible.
-
-        The values of the other fields are the values returned by cpl()
-        applied to the epigraph form problem
-
-            minimize   t 
-            subjec to  f0(x) <= t
-                       fk(x) <= 0, k = 1, ..., mnl
-                       G*x <= h
-                       A*x = b.
-
-        Termination with status 'unknown' indicates that the algorithm 
-        failed to find a solution that satisfies the specified tolerances.
-        In some cases, the returned solution may be fairly accurate.  If
-        the primal and dual infeasibilities, the gap, and the relative gap
-        are small, then x, y, snl, sl, znl, zl are close to optimal.
-
-
-    Advanced usage.
-
-        Three mechanisms are provided to express problem structure.
-
-        1.  The user can provide a customized routine for solving linear 
-        equations (`KKT systems')
-
-            [ sum_k zk*Hk(x)  A'  GG'   ] [ ux ]   [ bx ]
-            [ A               0   0     ] [ uy ] = [ by ]
-            [ GG              0   -W'*W ] [ uz ]   [ bz ]
-
-        where GG = [ Df[1:,:]; G ], uz = (uznl, uzl), bz = (bznl, bzl). 
-
-        z is a positive vector of length mnl+1 and x is a point in the 
-        domain of f.   W is a scaling matrix, a block diagonal mapping
-
-           W*u = ( Wnl*unl, W0*u_0, ..., W_{N+M}*u_{N+M} )
-
-        defined as follows.
-
-        - For the nonlinear block (Wnl):
-
-              Wnl = diag(dnl),
-
-          with dnl a positive vector of length mnl.
-
-        - For the 'l' block (W_0):
-
-              W_0 = diag(d),
-
-          with d a positive vector of length ml.
-
-        - For the 'q' blocks (W_{k+1}, k = 0, ..., N-1):
-
-              W_{k+1} = beta_k * ( 2 * v_k * v_k' - J )
-
-          where beta_k is a positive scalar, v_k is a vector in R^mq[k]
-          with v_k[0] > 0 and v_k'*J*v_k = 1, and J = [1, 0; 0, -I].
-
-        - For the 's' blocks (W_{k+N}, k = 0, ..., M-1):
-
-              W_k * u = vec(r_k' * mat(u) * r_k)
-
-          where r_k is a nonsingular matrix of order ms[k], and mat(x) is
-          the inverse of the vec operation.
-
-        The optional argument kktsolver is a Python function that will be
-        called as g = kktsolver(x, z, W).  W is a dictionary that contains
-        the parameters of the scaling:
-
-        - W['dnl'] is a positive 'd' matrix of size (mnl, 1).
-        - W['dnli'] is a positive 'd' matrix with the elementwise inverse 
-          of W['dnl'].
-        - W['d'] is a positive 'd' matrix of size (ml, 1).
-        - W['di'] is a positive 'd' matrix with the elementwise inverse of
-          W['d'].
-        - W['beta'] is a list [ beta_0, ..., beta_{N-1} ]
-        - W['v'] is a list [ v_0, ..., v_{N-1} ]
-        - W['r'] is a list [ r_0, ..., r_{M-1} ]
-        - W['rti'] is a list [ rti_0, ..., rti_{M-1} ], with rti_k the
-          inverse of the transpose of r_k.
-
-        The call g = kktsolver(x, z, W) should return a function g that
-        solves the KKT system by g(ux, uy, uz).  On entry, ux, uy, uz 
-        contain the righthand side bx, by, bz.  On exit, they contain the 
-        solution, with uz scaled: (Wnl*uznl, Wl*uzl) is returned instead 
-        of (uznl, uzl).
-
-        2.  The linear operators Df*u, H*u, G*u and A*u can be specified 
-        by providing Python functions instead of matrices.  This can only 
-        be done in combination with 1. above, i.e., it requires the 
-        kktsolver argument.
-        
-        If G is a function, the call G(u, v, alpha, beta, trans) should 
-        evaluate the matrix-vector products
-
-            v := alpha * G * u + beta * v  if trans is 'N'
-            v := alpha * G' * u + beta * v  if trans is 'T'.
-
-        The arguments u and v are required.  The other arguments have
-        default values alpha = 1.0, beta = 0.0, trans = 'N'.
-
-        If A is a function, the call A(u, v, alpha, beta, trans) should
-        evaluate the matrix-vectors products
-
-            v := alpha * A * u + beta * v if trans is 'N'
-            v := alpha * A' * u + beta * v if trans is 'T'.
-
-        The arguments u and v are required.  The other arguments
-        have default values alpha = 1.0, beta = 0.0, trans = 'N'.
-
-        If Df is a function, the call Df(u, v, alpha, beta, trans) should
-        evaluate the matrix-vectors products
-
-            v := alpha * Df(x) * u + beta * v if trans is 'N'
-            v := alpha * Df(x)' * u + beta * v if trans is 'T'.
-
-        If H is a function, the call H(u, v, alpha, beta) should evaluate 
-        the matrix-vectors product
-
-            v := alpha * H * u + beta * v.
-
-
-        3.  Instead of using the default representation of the primal 
-        variable x and the dual variable y as one-column 'd' matrices, 
-        we can represent these variables and the corresponding parameters 
-        c and b by arbitrary Python objects (matrices, lists, dictionaries,
-        etc).  This can only be done in combination with 1. and 2. above,
-        i.e., it requires a user-provided KKT solver and a function
-        description of the linear mappings.   It also requires the 
-        arguments xnewcopy, xdot, xscal, xaxpy, ynewcopy, ydot, yscal, 
-        yaxpy.  These arguments are functions defined as follows.
-   
-        If X is the vector space of primal variables x, then:
-        - xnewcopy(u) creates a new copy of the vector u in X.
-        - xdot(u, v) returns the inner product of two vectors u and v in X.
-        - xscal(alpha, u) computes u := alpha*u, where alpha is a scalar
-          and u is a vector in X.
-        - xaxpy(u, v, alpha = 1.0, beta = 0.0) computes v := alpha*u + v
-          for a scalar alpha and two vectors u and v in X.
-
-        If Y is the vector space of primal variables y:
-        - ynewcopy(u) creates a new copy of the vector u in Y.
-        - ydot(u, v) returns the inner product of two vectors u and v in Y.
-        - yscal(alpha, u) computes u := alpha*u, where alpha is a scalar
-          and u is a vector in Y.
-        - yaxpy(u, v, alpha = 1.0, beta = 0.0) computes v := alpha*u + v
-          for a scalar alpha and two vectors u and v in Y.
-
-
-    Control parameters.
-
-       The following control parameters can be modified by adding an
-       entry to the dictionary options.
-
-       options['show_progress'] True/False (default: True)
-       options['maxiters'] positive integer (default: 100)
-       options['refinement'] nonnegative integer (default: 1)
-       options['abstol'] scalar (default: 1e-7)
-       options['reltol'] scalar (default: 1e-6)
-       options['feastol'] scalar (default: 1e-7).
 
     """
 
@@ -1553,6 +1399,7 @@ def cp(F, G = None, h = None, dims = None, A = None, b = None,
             else:
                 if type(H) in (matrix, spmatrix):
                     def H_e(u, v, alpha = 1.0, beta = 1.0):
+                        #print "H_e:\n", helpers.str2(H, "%.3f")
                         base.symv(H, u[0], v[0], alpha = alpha, 
                             beta = beta) 
                         v[1] += beta*v[1]
@@ -1638,6 +1485,7 @@ def cp(F, G = None, h = None, dims = None, A = None, b = None,
         We = W.copy()
         We['dnl'] = W['dnl'][1:]
         We['dnli'] = W['dnli'][1:]
+        #helpers.printW(We)
         g = kktsolver(x[0], znl, We)
 
         f, Df = F(x[0])
@@ -1648,6 +1496,7 @@ def cp(F, G = None, h = None, dims = None, A = None, b = None,
             e0 = matrix(0.0, (mnl + 1, 1))
             e0[0] = 1.0
             Df(e0, gradf0, trans = 'T')
+        #print "kktsolve_e gradf0=\n", helpers.str2(gradf0, "%.17f")
 
         def solve(x, y, z):
 
@@ -1675,15 +1524,22 @@ def cp(F, G = None, h = None, dims = None, A = None, b = None,
             # Instead of uz we return the scaled solution W*uz.
 
             a = z[0]
+            #print "solve_e 0 a=%.7f x=\n" % a, helpers.str2(x[0], "%.17f")
+            #print "solve_e 0 z=\n", helpers.str2(z, "%.17f")
             xcopy(x[0], ux)
             xaxpy(gradf0, ux, alpha = x[1])
             blas.copy(z, uz, offsetx = 1)
+            #print "solve pre-g: uz=\n", helpers.str2(uz, "%.7f")
             g(ux, y, uz)
+            #print "solve post-g: ux=\n", helpers.str2(ux, "%.7f")
+            #print "solve post-g: uz=\n", helpers.str2(uz, "%.7f")
             z[0] = -x[1] * W['dnl'][0]
             blas.copy(uz, z, offsety = 1)
             xcopy(ux, x[0])
             x[1] = xdot(gradf0, x[0]) + W['dnl'][0]**2 * x[1] - a
-
+            #print "solve_e 1 x=\n", helpers.str2(x, "%.17f")
+            #print "solve_e 1 z=\n", helpers.str2(z, "%.17f")
+            
         return solve
 
     def xnewcopy_e(x):
@@ -1717,78 +1573,6 @@ def gp(K, F, g, G=None, h=None, A=None, b=None):
         subject to  log sum exp (Fi*x+gi) <= 0,  i=1,...,m
                     G*x <= h      
                     A*x = b
-
-    Input arguments.
-
-        K is a list of positive integers [K0, K1, K2, ..., Km].
-
-        F is a sum(K)xn dense or sparse 'd' matrix with block rows F0, 
-        F1, ..., Fm.  Each Fi is Kixn.
-
-        g is a sum(K)x1 dense or sparse 'd' matrix with blocks g0, g1, 
-        g2, ..., gm.  Each gi is Kix1.
-
-        G is an mxn dense or sparse 'd' matrix.
-
-        h is an mx1 dense 'd' matrix.
-
-        A is a pxn dense or sparse 'd' matrix.
-
-        b is a px1 dense 'd' matrix.
-
-        The default values for G, h, A and b are empty matrices with 
-        zero rows.
-
-
-    Output arguments.
-
-        Returns a dictionary with keys 'status', 'x', 'snl', 'sl',
-        'znl', 'zl', 'y', 'primal objective', 'dual objective', 'gap',
-        'relative gap', 'primal infeasibility', 'dual infeasibility',
-        'primal slack', 'dual slack'.
-
-        The 'status' field has values 'optimal' or 'unknown'.
-        If status is 'optimal', x, snl, sl, y, znl, zl  are approximate 
-        solutions of the primal and dual optimality conditions
-
-            f(x)[1:] + snl = 0,  G*x + sl = h,  A*x = b 
-            Df(x)'*[1; znl] + G'*zl + A'*y + c = 0 
-            snl >= 0,  znl >= 0,  sl >= 0,  zl >= 0
-            snl'*znl + sl'* zl = 0,
-
-        where fk(x) = log sum exp (Fk*x + gk). 
-
-        If status is 'unknown', x, snl, sl, y, znl, zl are the last
-        iterates before termination.  They satisfy snl > 0, znl > 0, 
-        sl > 0, zl > 0, but are not necessarily feasible.
-
-        The values of the other fields are the values returned by cpl()
-        applied to the epigraph form problem
-
-            minimize   t 
-            subjec to  f0(x) <= t
-                       fk(x) <= 0, k = 1, ..., mnl
-                       G*x <= h
-                       A*x = b.
-
-        Termination with status 'unknown' indicates that the algorithm 
-        failed to find a solution that satisfies the specified tolerances.
-        In some cases, the returned solution may be fairly accurate.  If
-        the primal and dual infeasibilities, the gap, and the relative gap
-        are small, then x, y, snl, sl, znl, zl are close to optimal.
-
-
-    Control parameters.
-
-       The following control parameters can be modified by adding an
-       entry to the dictionary options.
-
-       options['show_progress'] True/False (default: True)
-       options['maxiters'] positive integer (default: 100)
-       options['refinement'] nonnegative integer (default: 1)
-       options['abstol'] scalar (default: 1e-7)
-       options['reltol'] scalar (default: 1e-6)
-       options['feastol'] scalar (default: 1e-7).
     """
 
     import math 
