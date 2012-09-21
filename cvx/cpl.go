@@ -18,44 +18,6 @@ import (
 	"math"
 )
 
-// ConvexProg is an interface that handles the following functions.
-//
-// F0() returns a tuple (mnl, x0, error).  
-//
-//  * mnl is the number of nonlinear inequality constraints.
-//  * x0 is a point in the domain of f.
-//
-// F1(x) returns a tuple (f, Df, error).
-//
-//  * f is a matrix of size (mnl, 1) containing f(x). 
-//  * Df is a matrix of size (mnl, n), containing the derivatives of f at x.
-//    Df[k,:] is the transpose of the gradient of fk at x.
-//    If x is not in dom f, F1(x) returns (nil, nil, error)
-//
-// F2(x, z) with z a positive matrix of size (mnl,1), returns a tuple (f, Df, H, error).
-//            
-//   * f and Df are defined as above.
-//   * H is a matrix of size (n,n).  The lower triangular part of H contains the
-//     lower triangular part of sum_k z[k] * Hk where Hk is the Hessian of fk at x.
-//  
-// When F2() is called, it can be assumed that x is dom f. 
-//
-//
-type ConvexProg interface {
-	// Returns (mnl, x0) where mln number of nonlinear inequality constraints
-	// and x0 is a point in the domain of f.
-	F0() (mnl int, x0 *matrix.FloatMatrix, err error)
-
-	// Returns a tuple (f, Df) where f is of size (mnl, 1) containing f(x)
-	// Df is matrix of size (mnl, n) containing the derivatives of f at x:
-	// Df[k,:] is the transpose of the gradient of fk at x. If x is not in
-	// domf, return non-nil error.
-	F1(x *matrix.FloatMatrix)(f, Df *matrix.FloatMatrix, err error)
-	
-	// F(x, z) with z a positive  matrix of size (mnl, 1). Return a tuple
-	// (f, Df, H), where f, Df as above. H is matrix of size (n, n).
-	F2(x, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, err error)
-}
 
 type  CustomCvxKKT func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error)
 
@@ -168,8 +130,8 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 		return 
 	}
 
-	var matrixA = matA{A}
-	var matrixG = matG{G, dims}
+	var mA = matrixA{A}
+	var mG = matrixG{G, dims}
 
 	solvername := solopts.KKTSolverName
 	if len(solvername) == 0 {
@@ -197,7 +159,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 	}
 
 
-	return CplCustom(F, c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts)
+	return CplCustom(F, c, &mG, h, &mA, b, dims, kktsolver, solopts)
 }
 
 

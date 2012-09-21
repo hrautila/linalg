@@ -17,21 +17,12 @@ import (
 	"math"
 )
 
-// Public interface to provide custom P matrix-vector products
-type MatrixP interface {
-    // The call Pf(u, v, alpha, beta) should evaluate the matrix-vectors product.
-	//
-    //   v := alpha * P * u + beta * v.
-	//
-	Pf(u, v *matrix.FloatMatrix, alpha, beta float64) error
-}
-
-// internal type for presenting A as MatrixA interface.
-type matP struct {
+// Implements MatrixP interface for standard matrix valued P.
+type matrixP struct {
 	mP *matrix.FloatMatrix
 }
 
-func (m *matP) Pf(x, y *matrix.FloatMatrix, alpha, beta float64) error {
+func (m *matrixP) Pf(x, y *matrix.FloatMatrix, alpha, beta float64) error {
 	return blas.SymvFloat(m.mP, x, y, alpha, beta)
 }
 
@@ -154,9 +145,9 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solop
 		return 
 	}
 
-	var matrixA = matA{A}
-	var matrixG = matG{G, dims}
-	var matrixP = matP{P}
+	var mA = matrixA{A}
+	var mG = matrixG{G, dims}
+	var mP = matrixP{P}
 	
 	solvername := solopts.KKTSolverName
 	if len(solvername) == 0 {
@@ -179,8 +170,7 @@ func ConeQp(P, q, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solop
 		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
 		return
 	}
-	return ConeQpCustom(&matrixP, q, &matrixG, h, &matrixA, b, dims, kktsolver,
-		solopts, initvals)
+	return ConeQpCustom(&mP, q, &mG, h, &mA, b, dims, kktsolver, solopts, initvals)
 }
 
 
@@ -314,17 +304,16 @@ func ConeQpKKT(P, q, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, kk
 		return 
 	}
 
-	var matrixA = matA{A}
-	var matrixG = matG{G, dims}
-	var matrixP = matP{P}
+	var mA = matrixA{A}
+	var mG = matrixG{G, dims}
+	var mP = matrixP{P}
 	
 	if kktsolver == nil {
 		err = errors.New("nil kktsolver not allowed")
 		return
 	}
 
-	return ConeQpCustom(&matrixP, q, &matrixG, h, &matrixA, b, dims, kktsolver,
-		solopts, initvals)
+	return ConeQpCustom(&mP, q, &mG, h, &mA, b, dims, kktsolver, solopts, initvals)
 }
 
 // Solves a pair of primal and dual cone programs using custom KKT solver and custom

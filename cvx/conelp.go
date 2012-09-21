@@ -14,33 +14,11 @@ import (
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/cvx/sets"
 	"github.com/hrautila/go.opt/cvx/checkpnt"
-	//"github.com/hrautila/go.opt/helpers"
 	"errors"
 	"fmt"
 	"math"
 )
 
-// Public interface to provide custom G matrix-vector products
-type MatrixG interface {
-	//
-    //    The call Gf(u, v, alpha, beta, trans) should evaluate the matrix-vector products
-    //
-    //        v := alpha * G * u + beta * v  if trans is linalg.OptNoTrans
-    //        v := alpha * G' * u + beta * v  if trans is linalg.OptTrans
-    //
-	Gf(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
-}
-
-// Public interface to provide custom A matrix-vector products
-type MatrixA interface {
-	//
-    //    The call Af(u, v, alpha, beta, trans) should evaluate the matrix-vector products
-    //
-    //        v := alpha * A * u + beta * v  if trans is linalg.OptNoTrans
-    //        v := alpha * A' * u + beta * v  if trans is linalg.OptTrans
-    //
-	Af(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error
-}
 
 // Custom solver type for solving linear equations (`KKT systems')
 //        
@@ -62,23 +40,23 @@ type MatrixA interface {
 //
 type CustomKKT func(W *sets.FloatMatrixSet) (KKTFunc, error)
 
-// internal type for presenting A as MatrixA interface.
-type matA struct {
+// Implements MatrixA interface for standard matrix valued A.
+type matrixA struct {
 	mA *matrix.FloatMatrix
 }
 
-func (amat *matA) Af(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
-	return blas.GemvFloat(amat.mA, x, y, alpha, beta, trans)
+func (a *matrixA) Af(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
+	return blas.GemvFloat(a.mA, x, y, alpha, beta, trans)
 }
 
-// internal type for presenting G as MatrixG interface.
-type matG struct {
+// Implements MatrixG interface for standard matrix valued G.
+type matrixG struct {
 	mG *matrix.FloatMatrix
 	dims *sets.DimensionSet
 }
 
-func (gmat *matG) Gf(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
-	return sgemv(gmat.mG, x, y, alpha, beta, gmat.dims, trans)
+func (g *matrixG) Gf(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
+	return sgemv(g.mG, x, y, alpha, beta, g.dims, trans)
 }
 
 type fClosure struct {
@@ -215,8 +193,8 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts 
 		return
 	}
 
-	var matrixA = matA{A}
-	var matrixG = matG{G, dims}
+	var mA = matrixA{A}
+	var mG = matrixG{G, dims}
 
 	solvername := solopts.KKTSolverName
 	if len(solvername) == 0 {
@@ -239,7 +217,7 @@ func ConeLp(c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts 
 		err = errors.New(fmt.Sprintf("solver '%s' not known", solvername))
 		return
 	}
-	return ConeLpCustom(c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts, primalstart, dualstart)
+	return ConeLpCustom(c, &mG, h, &mA, b, dims, kktsolver, solopts, primalstart, dualstart)
 }
 
 // Solves a pair of primal and dual cone programs using custom KKT solver.
@@ -369,10 +347,10 @@ func ConeLpKKT(c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, kktso
 		return
 	}
 
-	var matrixA = matA{A}
-	var matrixG = matG{G, dims}
+	var mA = matrixA{A}
+	var mG = matrixG{G, dims}
 
-	return ConeLpCustom(c, &matrixG, h, &matrixA, b, dims, kktsolver, solopts, primalstart, dualstart)
+	return ConeLpCustom(c, &mG, h, &mA, b, dims, kktsolver, solopts, primalstart, dualstart)
 }
 
 //    Solves a pair of primal and dual cone programs using custom KKT solver and custom

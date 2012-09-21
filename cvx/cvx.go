@@ -14,8 +14,11 @@ import (
 	"github.com/hrautila/go.opt/cvx/sets"
 )
 
-// kktFunc solves
+// KKTFunc solves KKT equations.
 type KKTFunc func(x, y, z *matrix.FloatMatrix) error
+
+// KKTSolver produces solver function
+type KKTSolver func(*sets.FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
 
 // kktFactor produces solver function
 type kktFactor func(*sets.FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
