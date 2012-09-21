@@ -13,6 +13,11 @@ import (
 	"errors"
 )
 
+type Verifiable interface {
+	// Verify variable against reference values. Returns difference.
+	Verify(vals ...interface{}) float64
+}
+
 type checkpoint struct {
 	name string
 	filepath string
@@ -24,6 +29,7 @@ type dataPoint struct {
 	mtx *matrix.FloatMatrix
 	w *sets.FloatMatrixSet
 	fvar *float64
+	vvar Verifiable
 	panicVar bool
 	inErrorM bool
 	inErrorF bool
@@ -144,6 +150,16 @@ func AddFloatVar(name string, fptr *float64) {
 }
 
 // Add float variable as check point variable.
+func AddVerifiable(name string, vvar Verifiable) {
+	if ! active {
+		return
+	}
+	if _, ok := variables[name]; ! ok {
+		variables[name] = &dataPoint{vvar:vvar}
+	}
+}
+
+// Add float variable as check point variable.
 func AddCpVar(name string, mtx *matrix.FloatMatrix, fptr *float64) {
 	if ! active {
 		return
@@ -251,7 +267,28 @@ func Check(name string, minor int) {
 		}
 		// internal data value
 		mydp := variables[varname]
-		if dp.mtx != nil && dp.fvar == nil {
+		if mydp.vvar != nil {
+			diff := mydp.vvar.Verify(dp.mtx, dp.fvar)
+			//fmt.Printf("verify %s: Verifiable ... %10.4e\n", varname, diff)
+			if diff > diffError {
+				if ! mydp.inErrorM {
+					fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': normError = %9.2e\n",
+						checkp.major, checkp.minor, checkp.name, checkp.filepath, varname, diff)
+					mydp.ckp = checkp
+				}
+				mydp.inErrorM = true
+				if mydp.panicVar {
+					panic("variable divergence error ...")
+				}
+			} else {
+				if  mydp.inErrorM {
+					fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': returned to valid\n",
+						checkp.major, checkp.minor, checkp.name, checkp.filepath, varname)
+					mydp.ckp = nil
+				}
+			}
+			mydp.inErrorM = false
+		} else if dp.mtx != nil && dp.fvar == nil {
 			// std matrix
 			checkMatrix(varname, checkp, dp, mydp)
 		} else if dp.fvar != nil && dp.mtx == nil {
