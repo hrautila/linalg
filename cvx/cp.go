@@ -19,27 +19,6 @@ import (
 	"math"
 )
 
-type Variable interface {
-	// Provide internal matrix value
-	AsMatrix() *matrix.FloatMatrix
-}
-
-// Matrix argument interface for any type used to represent primal variable x
-// and the dual variable y as something else than one-column float matrices.
-//
-// If u is an object of type implementing MatrixArg interface, then
-type MatrixVariable interface {
-	// embed Variable interface
-	Variable
-	// Create a new copy 
-	Copy() MatrixVariable
-	// Computes v := alpha*u + v for a scalar alpha and vectors u and v.
-	Axpy(v MatrixVariable, alpha float64) 
-	// Return the inner product of two vectors u and v in a vector space.
-	Dot(v MatrixVariable) float64
-	// Computes u := alpha*u for a scalar alpha and vectors u in a vector space.
-	Scal(alpha float64) 
-}
 
 // Copies x to y.
 func mCopy(x, y MatrixVariable) {
@@ -47,264 +26,364 @@ func mCopy(x, y MatrixVariable) {
 	x.Axpy(y, 1.0)
 }
 
-// package internal type to represent standard matrix as MatrixArg type.
-type matrixArg struct {
+// Impelements MatrixVariable interface standard matrix valued variable
+type matrixVar struct {
 	val *matrix.FloatMatrix
 }
 
-func (u *matrixArg) AsMatrix() *matrix.FloatMatrix {
+// Internal matrix
+func (u *matrixVar) AsMatrix() *matrix.FloatMatrix {
 	return u.val
 }
 
-func (u *matrixArg) Copy() MatrixVariable {
-	return &matrixArg{u.val.Copy()}
+// New copy
+func (u *matrixVar) Copy() MatrixVariable {
+	return &matrixVar{u.val.Copy()}
 }
 
-func (u *matrixArg) Dot(v MatrixVariable) float64 {
-	if y, ok := v.(*matrixArg); ok {
+// Inner product
+func (u *matrixVar) Dot(v MatrixVariable) float64 {
+	if y, ok := v.(*matrixVar); ok {
 		return blas.DotFloat(u.val, y.val)
 	}
 	return 0.0
 }
 
-func (u *matrixArg) Axpy(v MatrixVariable, alpha float64) {
-	if y, ok := v.(*matrixArg); ok {
+func (u *matrixVar) Axpy(v MatrixVariable, alpha float64) {
+	if y, ok := v.(*matrixVar); ok {
 		blas.AxpyFloat(u.val, y.val, alpha)
 	}
 	return
 }
 
-func (u *matrixArg) Scal(alpha float64) {
+func (u *matrixVar) Scal(alpha float64) {
 	blas.ScalFloat(u.val, alpha)
 }
 
-// Epigraph structure for CP/GP programs.
+func (u *matrixVar) String() string {
+	return u.val.ToString("%.7f")
+}
 
+func (u *matrixVar) Verify(vals ...interface{}) float64 {
+	diff := 0.0
+	for _, v := range vals {
+		if vm, ok := v.(*matrix.FloatMatrix); ok {
+			diff += blas.Nrm2Float(matrix.Minus(vm, u.val))
+		}
+	}
+	return diff
+}
+
+
+// Implements MatrixVariable interface for for CP problem variables.
 type epigraph struct {
-	m *matrix.FloatMatrix
-	t float64
+	mt *matrix.FloatMatrix
+	tv float64
+}
+
+func newEpigraph(m *matrix.FloatMatrix, t float64) *epigraph {
+	return &epigraph{m.Copy(), t}
 }
 
 func (u *epigraph) AsMatrix() *matrix.FloatMatrix {
-	return u.m
+	return u.m()
 }
 
-func (u *epigraph) Copy() *epigraph {
-	return &epigraph{m:u.m.Copy(), t: u.t}
-}
-
-func (u *epigraph) CopyTo(v *epigraph) {
-	blas.Copy(u.m, v.m)
-	v.t = u.t
-}
-
-func (u *epigraph) Dot(v *epigraph) float64 {
-	return blas.DotFloat(u.m, v.m) + u.t * v.t
+func (u *epigraph) Dot(vArg MatrixVariable) float64 {
+	if v, ok := vArg.(*epigraph); ok {
+		return blas.DotFloat(u.m(), v.m()) + u.t() * v.t()
+	} 
+	// really this??
+	return blas.DotFloat(u.m(), vArg.AsMatrix())
 }
 
 func (u *epigraph) Scal(alpha float64) {
-	blas.ScalFloat(u.m, alpha)
-	u.t *= alpha
+	blas.ScalFloat(u.m(), alpha)
+	u.set(u.t() * alpha)
 }
 
-func (u *epigraph) Axpy(v *epigraph, alpha float64) {
-	blas.AxpyFloat(u.m, v.m, alpha)
-	v.t += alpha*u.t
+func (u *epigraph) Copy() MatrixVariable {
+	return newEpigraph(u.m(), u.t())
 }
 
-func (u *epigraph) ToString(format string) string {
-	s := fmt.Sprintf("%v\n", u.m.ToString(format))
-	s += fmt.Sprintf("/"+format+"/", u.t)
+func (u *epigraph) Axpy(vArg MatrixVariable, alpha float64) {
+	if v, ok := vArg.(*epigraph); ok {
+		blas.AxpyFloat(u.m(), v.m(), alpha)
+		v.set(u.t() * alpha + v.t())
+	} else {
+		//fmt.Printf("epigraph.Axpy() with non-epigraph argument...\n")
+		blas.AxpyFloat(u.m(), v.AsMatrix(), alpha)
+	}
+}
+
+func (u *epigraph) String() string {
+	s := fmt.Sprintf("%v\n", u.m().ToString("%.7f"))
+	s += fmt.Sprintf("/%.7f/", u.t())
 	return s
 }
 
-func newEpigraph(v interface{}, t float64) (e *epigraph, err error) {
-	err = nil
-	e = nil
-	switch v.(type) {
-	case *matrix.FloatMatrix:
-		e = &epigraph{v.(*matrix.FloatMatrix), t}
-	case Variable:
-		e = &epigraph{v.(Variable).AsMatrix(), t}
-	default:
-		err = errors.New("'v' is not a FloatMatrix or Variable type.")
+// Implement Verifiable interface
+func (u *epigraph) Verify(vals ...interface{}) float64 {
+	diff := 0.0
+	for _, v := range vals {
+		if vm, ok := v.(*matrix.FloatMatrix); ok {
+			diff += blas.Nrm2Float(matrix.Minus(vm, u.m()))
+		} else if vf, ok := v.(*float64); ok {
+			d := u.t() - *vf
+			diff += d*d
+		} else {
+			fmt.Printf("Warning: unknown verify reference value\n")
+		}
 	}
-	return
+	return diff
 }
 
-type epigraphConvexProg interface {
+func (u *epigraph) m() *matrix.FloatMatrix {
+	//return (*u)[0]
+	return u.mt
+}
+
+func (u *epigraph) t() float64 {
+	//return (*u)[1].Float()
+	return u.tv
+}
+
+func (u *epigraph) set(v float64)  {
+	//(*u)[1].SetIndex(0, v)
+	u.tv = v
+}
+
+// internal interface to map ConvexProg for epigraph version for CP solver.
+type cpConvexProg interface {
 	// Returns (mnl, x0) where mln number of nonlinear inequality constraints
 	// and x0 is a point in the domain of f.
-	F0() (mnl int, x0 *epigraph, err error)
+	F0() (mnl int, x0 MatrixVariable, err error)
 
 	// Returns a tuple (f, Df) where f is of size (mnl, 1) containing f(x)
 	// Df is matrix of size (mnl, n) containing the derivatives of f at x:
 	// Df[k,:] is the transpose of the gradient of fk at x. If x is not in
 	// domf, return non-nil error.
-	F1(x *epigraph)(f, Df *matrix.FloatMatrix, err error)
+	F1(x MatrixVariable)(f MatrixVariable, Df MatrixVarDf, err error)
 	
 	// F(x, z) with z a positive  matrix of size (mnl, 1). Return a tuple
 	// (f, Df, H), where f, Df as above. H is matrix of size (n, n).
-	F2(x *epigraph, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, err error)
+	F2(x, z MatrixVariable)(f MatrixVariable, Df MatrixVarDf, H MatrixVarH, err error)
 }
 
 
 // Wrap original ConvexProg 
-type epigraphProg struct {
+type cpProg struct {
 	convexF ConvexProg
 }
 
-func (F *epigraphProg) F0() (mnl int, x0 *epigraph, err error) {
+func (F *cpProg) F0() (mnl int, x0 MatrixVariable, err error) {
 	var m0 *matrix.FloatMatrix
 	mnl, m0, err = F.convexF.F0()
 	if err != nil { return }
 	mnl += 1
-	x0, err = newEpigraph(m0, 0.0)
+	x0 = newEpigraph(m0, 0.0)
 	return 
 }
 
-func (F *epigraphProg) F1(x *epigraph) (f, Df *matrix.FloatMatrix, err error) {
-	f, Df, err = F.convexF.F1(x.m)
+func (F *cpProg) F1(xa MatrixVariable) (f MatrixVariable, Df MatrixVarDf, err error) {
+	f = nil; Df = nil; err = nil
+	x, x_ok := xa.(*epigraph)
+	if ! x_ok {
+		err = errors.New("'x' argument not an epigraph")
+	}
+	var f0, Df0 *matrix.FloatMatrix
+	f0, Df0, err = F.convexF.F1(x.m())
+	if err != nil {
+		fmt.Printf("'cpProg.F1' error: %v\n%s\n", err, x)
+		return
+	}
+	f0.Add(-x.t(), 0)
+	f = &matrixVar{f0}
+	Df = &epigraphDf{Df0}
+	return 
+}
+
+func (F *cpProg) F2(xa, za MatrixVariable) (f MatrixVariable, Df MatrixVarDf, H MatrixVarH, err error) {
+	f = nil; Df = nil; H = nil; err = nil
+	x, x_ok := xa.(*epigraph)	
+	if ! x_ok {
+		err = errors.New("'x' argument not an epigraph")
+		return
+	}
+	z := za.AsMatrix()
+	var f0, Df0, H0 *matrix.FloatMatrix
+	f0, Df0, H0, err = F.convexF.F2(x.m(), z)
 	if err != nil { return }
-	f.Add(-x.t, 0)
+	f0.Add(-x.t(), 0)
+	f = &matrixVar{f0}
+	Df = &epigraphDf{Df0}
+	H = &epigraphH{H0}
 	return 
 }
 
-func (F *epigraphProg) F2(x *epigraph, z *matrix.FloatMatrix) (f, Df, H *matrix.FloatMatrix, err error) {
-	f, Df, H, err = F.convexF.F2(x.m, z)
-	if err != nil { return }
-	f.Add(-x.t, 0)
-	return 
-}
-
-type eDf struct {
+// Implement MatrixVarDf interface for standard matrix valued Df.
+type epigraphDf struct {
 	df *matrix.FloatMatrix
 }
 
-func (d *eDf) Df(u, v interface{}, alpha, beta float64, trans la.Option) error {
+func (d *epigraphDf) Df(u, v MatrixVariable, alpha, beta float64, trans la.Option) error {
 
 	if trans.Equal(la.OptNoTrans) {
 		u_e, u_ok := u.(*epigraph)
-		v_e, v_ok := v.(*matrix.FloatMatrix)
-		//fmt.Printf("Df.N: v_ok = %v, u_ok = %v\n", v_ok, u_ok)
+		v_e := v.AsMatrix()
 		if ! u_ok {
-			return errors.New("'u' not a matrix")
+			fmt.Printf("Df: not a epigraph\n")
+			return errors.New("'u' not a epigraph")
 		}
-		if ! v_ok {
-			return errors.New("'v' not a epigraph")
-		}
-		blas.GemvFloat(d.df, u_e.m, v_e, alpha, beta, la.OptNoTrans)
-		v_e.Add(-alpha*u_e.t)
+		blas.GemvFloat(d.df, u_e.m(), v_e, alpha, beta, la.OptNoTrans)
+		v_e.Add(-alpha*u_e.t())
 	} else {
 		v_e, v_ok := v.(*epigraph)
-		u_e, u_ok := u.(*matrix.FloatMatrix)
-		//fmt.Printf("Df.T: v_ok = %v, u_ok = %v\n", v_ok, u_ok)
-		if ! u_ok {
-			return errors.New("'u' not a matrix")
-		}
+		u_e := u.AsMatrix()
 		if ! v_ok {
+			fmt.Printf("Df: not a epigraph\n")
 			return errors.New("'v' not a epigraph")
 		}
-		blas.GemvFloat(d.df, u_e, v_e.m, alpha, beta, la.OptTrans)
-		v_e.t = -alpha*u_e.GetIndex(0) + beta*v_e.t
+		blas.GemvFloat(d.df, u_e, v_e.m(), alpha, beta, la.OptTrans)
+		v_e.set(-alpha*u_e.GetIndex(0) + beta*v_e.t())
 	}
 	return nil
 }
 
-type eH struct {
+// Implement MatrixVarH interface for standard matrix valued H.
+type epigraphH struct {
 	h *matrix.FloatMatrix
 }
 
-func (g *eH) Hf(u, v interface{}, alpha, beta float64) error {
+func (g *epigraphH) Hf(u, v MatrixVariable, alpha, beta float64) error {
 	u_e, u_ok := u.(*epigraph)
 	v_e, v_ok := v.(*epigraph)
-	//fmt.Printf("H: v_ok = %v, u_ok = %v\n", v_ok, u_ok)
 	if ! u_ok {
 		return errors.New("'u' not a epigraph")
 	}
 	if ! v_ok {
 		return errors.New("'v' not a epigraph")
 	}
-	//fmt.Printf("H_e:\n%v\n", g.h.ToString("%.3f"))
-	blas.SymvFloat(g.h, u_e.m, v_e.m, alpha, beta)
-	v_e.t += beta*v_e.t
+	blas.SymvFloat(g.h, u_e.m(), v_e.m(), alpha, beta)
+	v_e.set(v_e.t()+beta*v_e.t())
+
 	return nil
 }
 
-type epigraphG struct {
+
+// Implement MatrixVarG interface for CP epigraph parameters 
+type epMatrixG struct {
 	G *matrix.FloatMatrix
 	dims *sets.DimensionSet
 }
 
-func (g *epigraphG) Gf(u, v interface{}, alpha, beta float64, trans la.Option) (err error) {
+func (g *epMatrixG) Gf(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
 
 	err = nil
 	if trans.Equal(la.OptNoTrans) {
 		ue, u_ok := u.(*epigraph)
-		ve, v_ok := v.(*matrix.FloatMatrix)
-		//fmt.Printf("Gf.N: v_ok = %v, u_ok = %v\n", v_ok, u_ok)
+		ve := v.AsMatrix()
 		if ! u_ok {
+			fmt.Printf("Df: not a epigraph\n")
 			return errors.New("'u' not a epigraph")
 		}
-		if ! v_ok {
-			return errors.New("'v' not a matrix")
-		}
-		err = sgemv(g.G, ue.m, ve, alpha, beta, g.dims, trans)
+		err = sgemv(g.G, ue.m(), ve, alpha, beta, g.dims, trans)
 	} else {
 		ve, v_ok := v.(*epigraph)
-		ue, u_ok := u.(*matrix.FloatMatrix)
-		//fmt.Printf("Gf.T: v_ok = %v, u_ok = %v\n", v_ok, u_ok)
-		if ! u_ok {
-			return errors.New("'u' not a matrix")
-		}
+		ue := u.AsMatrix()
 		if ! v_ok {
 			return errors.New("'v' not a epigraph")
 		}
-		err = sgemv(g.G, ue, ve.m, alpha, beta, g.dims, trans)
-		ve.t *= beta 
-	}
-	if err != nil {
-		fmt.Printf("Gf: err = %v\n", err)
+		err = sgemv(g.G, ue, ve.m(), alpha, beta, g.dims, trans)
+		ve.set(beta * ve.t())
 	}
 	return 
 }
 
-type epigraphA struct {
+// Implement MatrixVarG interface for CP epigraph parameters over MatrixG variable
+type ifMatrixG struct {
+	G MatrixG
+	dims *sets.DimensionSet
+}
+
+func (g *ifMatrixG) Gf(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
+
+	err = nil
+	if trans.Equal(la.OptNoTrans) {
+		ue, u_ok := u.(*epigraph)
+		ve := v.AsMatrix()
+		if ! u_ok {
+			fmt.Printf("Df: not a epigraph\n")
+			return errors.New("'u' not a epigraph")
+		}
+		err = g.G.Gf(ue.m(), ve, alpha, beta, trans)
+	} else {
+		ve, v_ok := v.(*epigraph)
+		ue := u.AsMatrix()
+		if ! v_ok {
+			return errors.New("'v' not a epigraph")
+		}
+		err = g.G.Gf(ue, ve.m(), alpha, beta, trans)
+		ve.set(beta * ve.t())
+	}
+	return 
+}
+
+// Implements MatrixVarA interface for CP epigraph problems with matrix valued A
+type epMatrixA struct {
 	A *matrix.FloatMatrix
 }
 
-func (a *epigraphA) Af(u, v interface{}, alpha, beta float64, trans la.Option) (err error) {
+func (a *epMatrixA) Af(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
 	err = nil
 	if trans.Equal(la.OptNoTrans) {
 		ue, u_ok := u.(*epigraph)
-		ve, v_ok := v.(*matrix.FloatMatrix)
-		//fmt.Printf("Af.N: v_ok = %v, u_ok = %v\n", v_ok, u_ok)
+		ve := v.AsMatrix()
 		if ! u_ok {
 			return errors.New("'u' not a epigraph")
 		}
-		if ! v_ok {
-			return errors.New("'v' not a matrix")
-		}
-		err = blas.GemvFloat(a.A, ue.m, ve, alpha, beta) 
+		err = blas.GemvFloat(a.A, ue.m(), ve, alpha, beta) 
 	} else {
 		ve, v_ok := v.(*epigraph)
-		ue, u_ok := u.(*matrix.FloatMatrix)
-		//fmt.Printf("Af.T: v_ok = %v, u_ok = %v\n", v_ok, u_ok)
-		if ! u_ok {
-			return errors.New("'u' not a matrix")
-		}
+		ue := u.AsMatrix()
 		if ! v_ok {
 			return errors.New("'v' not a epigraph")
 		}
-		err = blas.GemvFloat(a.A, ue, ve.m, alpha, beta, trans)
-		ve.t *= beta 
+		err = blas.GemvFloat(a.A, ue, ve.m(), alpha, beta, trans)
+		ve.set(ve.t() * beta )
+	}
+	return 
+}
+
+// Implements MatrixVarA interface for CP epigraph problems with interface MatrixA
+type ifMatrixA struct {
+	A MatrixA
+}
+
+func (a *ifMatrixA) Af(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
+	err = nil
+	if trans.Equal(la.OptNoTrans) {
+		ue, u_ok := u.(*epigraph)
+		ve := v.AsMatrix()
+		if ! u_ok {
+			return errors.New("'u' not a epigraph")
+		}
+		err = a.A.Af(ue.m(), ve, alpha, beta, trans) 
+	} else {
+		ve, v_ok := v.(*epigraph)
+		ue := u.AsMatrix()
+		if ! v_ok {
+			return errors.New("'v' not a epigraph")
+		}
+		err = a.A.Af(ue, ve.m(), alpha, beta, trans)
+		ve.set(ve.t() * beta )
 	}
 	return 
 }
 
 
-type cpKKTFunc func(x *epigraph, y, z *matrix.FloatMatrix) error
-type cpCustomKKT func(W *sets.FloatMatrixSet, x *epigraph, znl *matrix.FloatMatrix)(cpKKTFunc, error)
+type KKTVarFunc func(x, y, z MatrixVariable) error
+type KKTVarSolver func(W *sets.FloatMatrixSet, x, znl MatrixVariable)(KKTVarFunc, error)
 
 //    Solves a convex optimization problem with a linear objective
 //
@@ -399,9 +478,6 @@ func Cp(F ConvexProg, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, s
 		return 
 	}
 
-	//var matrixA = matA{A}
-	//var matrixG = matG{G, dims}
-
 	solvername := solopts.KKTSolverName
 	if len(solvername) == 0 {
 		if len(dims.At("q")) > 0 || len(dims.At("s")) > 0 {
@@ -411,14 +487,15 @@ func Cp(F ConvexProg, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, s
 		}
 	}
 
-	c_e, _ := newEpigraph(x0, 1.0)
-	blas.ScalFloat(x0, 0.0)
-	F_e := &epigraphProg{F}
-	G_e := epigraphG{G, dims}
-	A_e := epigraphA{A}
+	c_e := newEpigraph(x0, 1.0)
+	blas.ScalFloat(c_e.m(), 0.0)
+	//F_e := &cpProg{F}
+	G_e := epMatrixG{G, dims}
+	A_e := epMatrixA{A}
+	b_e := matrixVar{b}
 
 	var factor kktFactor
-	var kktsolver CustomCvxKKT = nil
+	var kktsolver KKTSolver = nil
 	if kktfunc, ok := solvers[solvername]; ok {
 		// kkt function returns us problem spesific factor function.
 		factor, err = kktfunc(G, dims, A, mnl)
@@ -433,44 +510,268 @@ func Cp(F ConvexProg, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, s
 		return
 	}
 
+	/*
 	ux := x0.Copy()
 	uz := matrix.FloatZeros(mnl+cdim, 1)
 	
-	kktsolver_e := func(W *sets.FloatMatrixSet, x *epigraph, znl *matrix.FloatMatrix)(cpKKTFunc, error) {
+	kktsolver_e := func(W *sets.FloatMatrixSet, xa, znla MatrixVariable)(ecpKKTFunc, error) {
+		x, x_ok := xa.(*epigraph)
+		_ = x_ok
+		znl := znla.AsMatrix()
 		We := W.Copy()
 		// dnl is matrix
 		dnl := W.At("dnl")[0]
 		dnli := W.At("dnli")[0]
 		We.Set("dnl", matrix.FloatVector(dnl.FloatArray()[1:]))
 		We.Set("dnli", matrix.FloatVector(dnli.FloatArray()[1:]))
-		g, err := kktsolver(We, x.m, znl)
-		_, Df, _ := F.F1(x.m)
+		g, err := kktsolver(We, x.m(), znl)
+		_, Df, _ := F.F1(x.m())
 		gradf0 := Df.GetRow(0, nil).Transpose()
 
-		solve := func(x *epigraph, y, z *matrix.FloatMatrix) (err error){
+		solve := func(xa, ya, za MatrixVariable) (err error){
+			x, x_ok := xa.(*epigraph)
+			_ = x_ok // TODO: remove or use x_ok
+			y := ya.AsMatrix()
+			z := za.AsMatrix()
 			err = nil
 			a := z.GetIndex(0)
-			blas.Copy(x.m, ux)
-			blas.AxpyFloat(gradf0, ux, x.t)
+			blas.Copy(x.m(), ux)
+			blas.AxpyFloat(gradf0, ux, x.t())
 			blas.Copy(z, uz, &la.IOpt{"offsetx", 1})
 			err = g(ux, y, uz)
-			z.SetIndex(0, -x.t*dnl.GetIndex(0))
+			z.SetIndex(0, -x.t()*dnl.GetIndex(0))
 			blas.Copy(uz, z, &la.IOpt{"offsety", 1})
-			blas.Copy(ux, x.m)
-			x.t = blas.DotFloat(gradf0, x.m) + dnl.GetIndex(0)*dnl.GetIndex(0)*x.t - a
+			blas.Copy(ux, x.m())
+			val :=  blas.DotFloat(gradf0, x.m()) + dnl.GetIndex(0)*dnl.GetIndex(0)*x.t() - a
+			x.set(val)
 			return 
 		}
 		return solve, err
 	}
-	return cpl_e(F_e, c_e, &G_e, h, &A_e, b, dims, kktsolver_e, nil, nil, solopts)
+	return cpl_solver(F_e, c_e, &G_e, h, &A_e, &b_e, dims, kktsolver_e, solopts)
+	 */
+	return cp_problem(F, c_e, &G_e, h, &A_e, &b_e, dims, kktsolver, solopts, x0, mnl)
 }
 
 
 
 
+func CpCustomKKT(F ConvexProg, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet,
+	kktsolver KKTSolver, solopts *SolverOptions) (sol *Solution, err error) {
 
-func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatrix, A *epigraphA,
-	b *matrix.FloatMatrix, dims *sets.DimensionSet, kktsolver cpCustomKKT, customX, customY *epigraph, solopts *SolverOptions) (sol *Solution, err error) {
+	var mnl int
+	var x0 *matrix.FloatMatrix
+
+	mnl, x0, err = F.F0()
+	if err != nil {
+		return
+	}
+
+	if x0.Cols() != 1 {
+		err = errors.New("'x0' must be matrix with one column")
+		return
+	}
+	if h == nil {
+		h = matrix.FloatZeros(0, 1)
+	}
+	if h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
+	if dims == nil {
+		dims = sets.NewDimensionSet("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+	if err = checkConeLpDimensions(dims); err != nil {
+		return 
+	}
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+
+	if h.Rows() != cdim {
+		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
+		return 
+	}
+
+	if G == nil {
+		G = matrix.FloatZeros(0, x0.Rows())
+	}
+	if !G.SizeMatch(cdim, x0.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, x0.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check A and set defaults if it is nil
+	if A == nil {
+		// zeros rows reduces Gemv to vector products
+		A = matrix.FloatZeros(0, x0.Rows())
+	}
+	if A.Cols() != x0.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", x0.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+	if b.Rows() != A.Rows() {
+		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	if kktsolver == nil {
+		err = errors.New("'kktsolver' must be non-nil function.")
+		return
+	}
+
+	c_e := newEpigraph(x0, 1.0)
+	blas.ScalFloat(x0, 0.0)
+	G_e := epMatrixG{G, dims}
+	A_e := epMatrixA{A}
+	b_e := matrixVar{b}
+
+	return cp_problem(F, c_e, &G_e, h, &A_e, &b_e, dims, kktsolver, solopts, x0, mnl)
+}
+
+
+
+func CpCustomMatrix(F ConvexProg, G MatrixG, h *matrix.FloatMatrix, A MatrixA,
+	b *matrix.FloatMatrix, dims *sets.DimensionSet, kktsolver KKTSolver,
+	solopts *SolverOptions) (sol *Solution, err error) {
+
+	var mnl int
+	var x0 *matrix.FloatMatrix
+
+	mnl, x0, err = F.F0()
+	if err != nil {
+		return
+	}
+
+	if x0.Cols() != 1 {
+		err = errors.New("'x0' must be matrix with one column")
+		return
+	}
+	if h == nil {
+		h = matrix.FloatZeros(0, 1)
+	}
+	if h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
+	if dims == nil {
+		dims = sets.NewDimensionSet("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+	if err = checkConeLpDimensions(dims); err != nil {
+		return 
+	}
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+
+	if h.Rows() != cdim {
+		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
+		return 
+	}
+
+	var G_e MatrixVarG = nil
+	if G == nil {
+		G_e = &epMatrixG{matrix.FloatZeros(0, x0.Rows()), dims}
+	} else {
+		G_e = &ifMatrixG{G, dims}
+	}
+
+	var A_e MatrixVarA = nil
+	if A == nil {
+		A_e = &epMatrixA{matrix.FloatZeros(0, x0.Rows())}
+	} else {
+		A_e = &ifMatrixA{A}
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+
+	if kktsolver == nil {
+		err = errors.New("'kktsolver' must be non-nil function.")
+		return
+	}
+
+	c_e := newEpigraph(x0, 1.0)
+	blas.ScalFloat(c_e.m(), 0.0)
+	b_e := matrixVar{b}
+
+	return cp_problem(F, c_e, G_e, h, A_e, &b_e, dims, kktsolver, solopts, x0, mnl)
+
+}
+
+// Here problem is already translated to epigraph format except original convex problem.
+// We wrap it and create special CP epigraph kktsolver.
+func cp_problem(F ConvexProg, c MatrixVariable, G MatrixVarG, h *matrix.FloatMatrix, A MatrixVarA,
+	b MatrixVariable, dims *sets.DimensionSet, kktsolver KKTSolver,
+	solopts *SolverOptions, x0 *matrix.FloatMatrix, mnl int)(sol *Solution, err error) {
+
+	err = nil
+
+	F_e := &cpProg{F}
+
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+	ux := x0.Copy()
+	uz := matrix.FloatZeros(mnl+cdim, 1)
+	
+	kktsolver_e := func(W *sets.FloatMatrixSet, xa, znla MatrixVariable)(KKTVarFunc, error) {
+		x, x_ok := xa.(*epigraph)
+		_ = x_ok
+		znl := znla.AsMatrix()
+		We := W.Copy()
+		// dnl is matrix
+		dnl := W.At("dnl")[0]
+		dnli := W.At("dnli")[0]
+		We.Set("dnl", matrix.FloatVector(dnl.FloatArray()[1:]))
+		We.Set("dnli", matrix.FloatVector(dnli.FloatArray()[1:]))
+		g, err := kktsolver(We, x.m(), znl)
+		_, Df, _ := F.F1(x.m())
+		gradf0 := Df.GetRow(0, nil).Transpose()
+
+		solve := func(xa, ya, za MatrixVariable) (err error){
+			x, x_ok := xa.(*epigraph)
+			_ = x_ok // TODO: remove or use x_ok
+			y := ya.AsMatrix()
+			z := za.AsMatrix()
+			err = nil
+			a := z.GetIndex(0)
+			blas.Copy(x.m(), ux)
+			blas.AxpyFloat(gradf0, ux, x.t())
+			blas.Copy(z, uz, &la.IOpt{"offsetx", 1})
+			err = g(ux, y, uz)
+			z.SetIndex(0, -x.t()*dnl.GetIndex(0))
+			blas.Copy(uz, z, &la.IOpt{"offsety", 1})
+			blas.Copy(ux, x.m())
+			val :=  blas.DotFloat(gradf0, x.m()) + dnl.GetIndex(0)*dnl.GetIndex(0)*x.t() - a
+			x.set(val)
+			return 
+		}
+		return solve, err
+	}
+	return cpl_solver(F_e, c, G, h, A, b, dims, kktsolver_e, solopts)
+}
+
+func cpl_solver(F cpConvexProg, c MatrixVariable, G MatrixVarG, h *matrix.FloatMatrix, A MatrixVarA,
+	b MatrixVariable, dims *sets.DimensionSet, kktsolver KKTVarSolver, solopts *SolverOptions) (sol *Solution, err error) {
 
 	const (
 		STEP = 0.99
@@ -515,10 +816,9 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 	}
 
 	var mnl int
-	//var x0 *matrix.FloatMatrix
-	var xf0 *epigraph
+	var x0 MatrixVariable
 
-	mnl, xf0, err = F.F0()
+	mnl, x0, err = F.F0()
 	if err != nil {
 		return
 	}
@@ -551,28 +851,21 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 		err = errors.New("'G' must be non-nil MatrixG interface.")
 		return
 	}
-	fG := func(x, y interface{}, alpha, beta float64, trans la.Option) error{
+	fG := func(x, y MatrixVariable, alpha, beta float64, trans la.Option) error{
 		return G.Gf(x, y, alpha, beta, trans)
 	}
 
-	//var fA func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error = nil
-	//var Adummy *matrix.FloatMatrix
-
 	// Check A and set defaults if it is nil
 	if A == nil {
-		// zeros rows reduces Gemv to vector products
-		A = &epigraphA{matrix.FloatZeros(0, xf0.m.Rows())}
+		err = errors.New("'A' must be non-nil MatrixA interface.")
+		return
 	}
-	fA := func(x, y interface{}, alpha, beta float64, trans la.Option) error {
+	fA := func(x, y MatrixVariable, alpha, beta float64, trans la.Option) error {
 		return A.Af(x, y, alpha, beta, trans)
 	}
 
 	if b == nil {
-		b = matrix.FloatZeros(0, 1)
-	}
-	if b.Cols() != 1 {
-		err = errors.New("'b' must be matrix with one column.")
-		return
+		b = &matrixVar{matrix.FloatZeros(0, 1)}
 	}
 
 	if kktsolver == nil {
@@ -581,16 +874,9 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 	}
 
 
-	//var x, y, z, s *matrix.FloatMatrix
-	//var dx, dy, dz, ds *matrix.FloatMatrix
-	//var rx, ry, rznl, rzl *matrix.FloatMatrix
-	//var lmbda, lmbdasq *matrix.FloatMatrix
-
-	// -- here custom arguments.
-	x := xf0.Copy()
+	x := x0.Copy()
 	y := b.Copy()
-	y.Scale(0.0)
-	// -- here custom args end
+	y.Scal(0.0)
 	z := matrix.FloatZeros(mnl+cdim, 1)
 	s := matrix.FloatZeros(mnl+cdim, 1)
 	ind := mnl+dims.At("l")[0]
@@ -608,12 +894,10 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 		ind += m*m
 	}
 
-	// -- here custom arguments.
-	rx := xf0.Copy()
+	rx := x0.Copy()
 	ry := b.Copy()
 	dx := x.Copy()
 	dy := y.Copy()
-	// -- here custom arguments.
 	rznl := matrix.FloatZeros(mnl, 1)
 	rzl := matrix.FloatZeros(cdim, 1)
 	dz := matrix.FloatZeros(mnl+cdim, 1)
@@ -627,28 +911,22 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 	ds2 := matrix.FloatZeros(mnl+cdim, 1)
 
 
-	// -- here custom arguments.
 	newx := x.Copy()
 	newy := y.Copy()
-	newrx := xf0.Copy()
-	// -- here custom arguments.
+	newrx := x0.Copy()
 
 	newz := matrix.FloatZeros(mnl+cdim, 1)
 	news := matrix.FloatZeros(mnl+cdim, 1)
 	newrznl := matrix.FloatZeros(mnl, 1)
 
-	// -- here custom arguments.
 	rx0 := rx.Copy()
 	ry0 := ry.Copy()
-	// -- here custom arguments.
 	rznl0 := matrix.FloatZeros(mnl, 1)
 	rzl0 := matrix.FloatZeros(cdim, 1)
 	
 	
-	// -- here custom arguments.
 	x0, dx0 := x.Copy(), dx.Copy()
 	y0, dy0 := y.Copy(), dy.Copy()
-	// -- here custom arguments.
 
 	z0 := matrix.FloatZeros(mnl+cdim, 1)
 	dz0 := matrix.FloatZeros(mnl+cdim, 1)
@@ -658,10 +936,8 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 	ds0 := matrix.FloatZeros(mnl+cdim, 1)
 	ds20 := matrix.FloatZeros(mnl+cdim, 1)
 	
-	checkpnt.AddMatrixVar("y", y)
 	checkpnt.AddMatrixVar("z", z)
 	checkpnt.AddMatrixVar("s", s)
-	checkpnt.AddMatrixVar("dy", dy)
 	checkpnt.AddMatrixVar("dz", dz)
 	checkpnt.AddMatrixVar("ds", ds)
 	checkpnt.AddMatrixVar("rznl", rznl)
@@ -670,15 +946,17 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 	checkpnt.AddMatrixVar("lmbdasq", lmbdasq)
 	checkpnt.AddMatrixVar("z0", z0)
 	checkpnt.AddMatrixVar("dz0", dz0)
-	checkpnt.AddCpVar("c", c.m, &c.t)
-	checkpnt.AddCpVar("x", x.m, &x.t)
-	checkpnt.AddCpVar("rx", rx.m, &rx.t)
-	checkpnt.AddCpVar("dx", dx.m, &dx.t)
-	checkpnt.AddCpVar("newrx", newrx.m, &newrx.t)
-	checkpnt.AddCpVar("newx", newx.m, &newx.t)
-	checkpnt.AddCpVar("x0", x0.m, &x0.t)
-	checkpnt.AddCpVar("dx0", dx0.m, &dx0.t)
-	checkpnt.AddCpVar("rx0", rx0.m, &rx0.t)
+	checkpnt.AddVerifiable("c", c)
+	checkpnt.AddVerifiable("x", x)
+	checkpnt.AddVerifiable("rx", rx)
+	checkpnt.AddVerifiable("dx", dx)
+	checkpnt.AddVerifiable("newrx", newrx)
+	checkpnt.AddVerifiable("newx", newx)
+	checkpnt.AddVerifiable("x0", x0)
+	checkpnt.AddVerifiable("dx0", dx0)
+	checkpnt.AddVerifiable("rx0", rx0)
+	checkpnt.AddVerifiable("y", y)
+	checkpnt.AddVerifiable("dy", dy)
 
 	W0 := sets.NewFloatSet("d", "di", "dnl", "dnli", "v", "r", "rti", "beta")
 	W0.Set("dnl", matrix.FloatZeros(mnl, 1))
@@ -696,22 +974,20 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 	lmbda0 := matrix.FloatZeros(mnl+dims.Sum("l", "q", "s"), 1)
 	lmbdasq0 := matrix.FloatZeros(mnl+dims.Sum("l", "q", "s"), 1)
 
-	var f, Df, H *matrix.FloatMatrix = nil, nil, nil
-	var Df_e = eDf{nil}
-	var Hf_e = eH{nil}
+	var f MatrixVariable = nil
+	var Df MatrixVarDf = nil
+	var H MatrixVarH = nil
 
-	var ws3, wz3, /*ws2nl, ws2l,*/ wz2l, wz2nl *matrix.FloatMatrix
-	var wy, ws, wz, wy2, wz2, ws2 *matrix.FloatMatrix
-	var wx, wx2  *epigraph
-	//var sigz, sigs *matrix.FloatMatrix
+	var ws3, wz3, wz2l, wz2nl *matrix.FloatMatrix
+	var ws, wz, wz2, ws2 *matrix.FloatMatrix
+	var wx, wx2, wy, wy2  MatrixVariable
 	var gap, gap0, theta1, theta2, theta3, ts, tz, phi, phi0, mu, sigma, eta float64
 	var resx, resy, reszl, resznl, pcost, dcost, dres, pres, relgap float64
-	var resx0, /*resy0, reszl0,*/ resznl0, /*pcost0, dcost0,*/ dres0, pres0 float64
-	var dsdz, dsdz0, step, step0, dphi, dphi0, sigma0, /*mu0,*/ eta0 float64
+	var resx0, resznl0, dres0, pres0 float64
+	var dsdz, dsdz0, step, step0, dphi, dphi0, sigma0, eta0 float64
 	var newresx, newresznl, newgap, newphi float64
 	var W *sets.FloatMatrixSet
-	var f3 cpKKTFunc
-	//var f3 KKTFunc
+	var f3 KKTVarFunc
 	
 	checkpnt.AddFloatVar("gap", &gap)
 	checkpnt.AddFloatVar("pcost", &pcost)
@@ -729,12 +1005,8 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 	// Declare fDf and fH here, they bind to Df and H as they are already declared.
 	// ??really??
 	
-	fDf := func(u, v interface{}, alpha, beta float64, trans la.Option) error {
-		return Df_e.Df(u, v, alpha, beta, trans)
-	}
-	fH := func(u, v interface{}, alpha, beta float64) error {
-		return Hf_e.Hf(u, v, alpha, beta)
-	}
+	var fDf func(u, v MatrixVariable, alpha, beta float64, trans la.Option)error = nil
+	var fH func(u, v MatrixVariable, alpha, beta float64)error = nil
 
 	relaxed_iters := 0
 	for iters := 0; iters <= solopts.MaxIter+1; iters++ {
@@ -742,31 +1014,20 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 		checkpnt.Check("loopstart", 10)
 
 		if refinement != 0 || solopts.Debug {
-			f, Df, H, err = F.F2(x, matrix.FloatVector(z.FloatArray()[:mnl]))
-			Df_e.df = Df
-			Hf_e.h = H
+			f, Df, H, err = F.F2(x, &matrixVar{matrix.FloatVector(z.FloatArray()[:mnl])})
+			fDf = func(u, v MatrixVariable, alpha, beta float64, trans la.Option)error {
+				return Df.Df(u, v, alpha, beta, trans)
+			}
+			fH = func(u, v MatrixVariable, alpha, beta float64)error {
+				return H.Hf(u, v, alpha, beta)
+			}
 		} else {
 			f, Df, err = F.F1(x)
-			Df_e.df = Df
-		}
-
-		/*
-		if ! Df.SizeMatch(mnl, c.Rows()) {
-			s := fmt.Sprintf("2nd output of F.F2()/F.F1() must matrix of size (%d,%d)",
-				mnl, c.Rows())
-			err = errors.New(s)
-			return
-		}
-
-		if refinement != 0 || solopts.Debug {
-			if ! H.SizeMatch(c.Rows(), c.Rows()) {
-				msg := fmt.Sprintf("3rd output of F.F2() must matrix of size (%d,%d)",
-					c.Rows(), c.Rows())
-				err = errors.New(msg)
-				return
+			fDf = func(u, v MatrixVariable, alpha, beta float64, trans la.Option)error {
+				return Df.Df(u, v, alpha, beta, trans)
 			}
 		}
-		 */
+
 		gap = sdot(s, z, dims, mnl)
 
 		// these are helpers, copies of parts of z,s
@@ -777,23 +1038,22 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 
 		// rx = c + A'*y + Df'*z[:mnl] + G'*z[mnl:]
 		// -- y, rx MatrixArg
-		//blas.Copy(c, rx)
-		c.CopyTo(rx)
+		mCopy(c, rx)
 		fA(y, rx, 1.0, 1.0, la.OptTrans)
-		fDf(z_mnl, rx, 1.0, 1.0, la.OptTrans)
-		fG(z_mnl2, rx, 1.0, 1.0, la.OptTrans)
+		fDf(&matrixVar{z_mnl}, rx, 1.0, 1.0, la.OptTrans)
+		fG(&matrixVar{z_mnl2}, rx, 1.0, 1.0, la.OptTrans)
 		resx = math.Sqrt(rx.Dot(rx))
 
 
 		// rznl = s[:mnl] + f 
 		blas.Copy(s_mnl, rznl)
-		blas.AxpyFloat(f, rznl, 1.0)
+		blas.AxpyFloat(f.AsMatrix(), rznl, 1.0)
 		resznl = blas.Nrm2Float(rznl)
 
         // rzl = s[mnl:] + G*x - h
         blas.Copy(s_mnl2, rzl)
         blas.AxpyFloat(h, rzl, -1.0)
-        fG(x, rzl, 1.0, 1.0, la.OptNoTrans)
+        fG(x, &matrixVar{rzl}, 1.0, 1.0, la.OptNoTrans)
         reszl = snrm2(rzl, dims, 0)
 
 		// Statistics for stopping criteria
@@ -804,7 +1064,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
         //       = c'*x + y'*ry + znl'*rznl + zl'*rzl - gap
 		//pcost = blas.DotFloat(c, x)
 		pcost = c.Dot(x)
-		dcost = pcost + blas.DotFloat(y, ry) + blas.DotFloat(z_mnl, rznl)
+		dcost = pcost + blas.DotFloat(y.AsMatrix(), ry.AsMatrix()) + blas.DotFloat(z_mnl, rznl)
 		dcost += sdot(z_mnl2, rzl, dims, 0) - gap
 		
 		if pcost < 0.0 {
@@ -859,7 +1119,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 			}
 			sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
 			sol.Result.Set("x", x.AsMatrix())
-			sol.Result.Set("y", y)
+			sol.Result.Set("y", y.AsMatrix())
 			sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
 			sol.Result.Set("zl",  matrix.FloatVector(z.FloatArray()[mnl:]))
 			sol.Result.Set("sl",  matrix.FloatVector(s.FloatArray()[mnl:]))
@@ -895,7 +1155,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
         //
         // On entry, x, y, z contain bx, by, bz.
         // On exit, they contain ux, uy, uz.
-        f3, err = kktsolver(W, x, z_mnl)
+        f3, err = kktsolver(W, x, &matrixVar{z_mnl})
 		checkpnt.Check("f3", 100)
 		if err != nil {
 			// ?? z_mnl is really copy of z[:mnl] ... should we copy here back to z??
@@ -922,15 +1182,19 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 					blas.Copy(W0.At("rti")[k], W.At("rti")[k])
 				}
 				//blas.Copy(x0, x)
-				x0.CopyTo(x)
-				blas.Copy(y0, y)
+				//x0.CopyTo(x)
+				mCopy(x0, x)
+				//blas.Copy(y0, y)
+				mCopy(y0, y)
 				blas.Copy(s0, s)
 				blas.Copy(z0, z)
 				blas.Copy(lmbda0, lmbda)
 				blas.Copy(lmbdasq0, lmbdasq) // ???
 				//blas.Copy(rx0, rx)
-				rx0.CopyTo(rx)
-				blas.Copy(ry0, ry)
+				//rx0.CopyTo(rx)
+				mCopy(rx0, rx)
+				//blas.Copy(ry0, ry)
+				mCopy(ry0, ry)
 				//resx = math.Sqrt(blas.DotFloat(rx, rx))
 				resx = math.Sqrt(rx.Dot(rx))
 				blas.Copy(rznl0, rznl)
@@ -940,7 +1204,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				relaxed_iters = -1
 
 				// How about z_mnl here???
-				f3, err = kktsolver(W, x, z_mnl)
+				f3, err = kktsolver(W, x, &matrixVar{z_mnl})
 				if err != nil {
 					singular_kkt_matrix = true
 				}
@@ -969,7 +1233,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				sol.Status = Unknown
 				sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
 				sol.Result.Set("x", x.AsMatrix())
-				sol.Result.Set("y", y)
+				sol.Result.Set("y", y.AsMatrix())
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
 				sol.Result.Set("zl",  zl)
 				sol.Result.Set("sl",  sl)
@@ -1004,7 +1268,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 			checkpnt.AddMatrixVar("wz3", wz3)
 		}
 
-        f4_no_ir := func(x *epigraph, y, z, s *matrix.FloatMatrix) (err error) {
+        f4_no_ir := func(x, y MatrixVariable, z, s *matrix.FloatMatrix) (err error) {
 			// Solve 
             //
             //     [ H  A'  GG'  ] [ ux        ]   [ bx                    ]
@@ -1026,7 +1290,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
             blas.AxpyFloat(ws3, z, -1.0)
 
             // Solve for ux, uy, uz
-            f3(x, y, z)
+            err = f3(x, y, &matrixVar{z})
 
             // s := s - z 
             //    = lambda o\ bs - z.
@@ -1039,7 +1303,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
             wz2l = matrix.FloatZeros(cdim, 1)
 		}
 
-		res := func(ux *epigraph, uy, uz, us *matrix.FloatMatrix, vx *epigraph, vy, vz, vs *matrix.FloatMatrix)(err error) {
+		res := func(ux, uy MatrixVariable, uz, us *matrix.FloatMatrix, vx, vy MatrixVariable, vz, vs *matrix.FloatMatrix)(err error) {
 
             // Evaluates residuals in Newton equations:
             //
@@ -1057,8 +1321,8 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
             scale(wz3, W, false, true)
 			wz3_nl := matrix.FloatVector(wz3.FloatArray()[:mnl])
 			wz3_l := matrix.FloatVector(wz3.FloatArray()[mnl:])
-            fDf(wz3_nl, vx, -1.0, 1.0, la.OptTrans)
-            fG(wz3_l, vx, -1.0, 1.0, la.OptTrans) 
+            fDf(&matrixVar{wz3_nl}, vx, -1.0, 1.0, la.OptTrans)
+            fG(&matrixVar{wz3_l}, vx, -1.0, 1.0, la.OptTrans) 
 
 			checkpnt.Check("10res", minor+10)
 
@@ -1066,9 +1330,9 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
             fA(ux, vy, -1.0, 1.0, la.OptNoTrans)
 
             // vz := vz - W'*us - GG*ux 
-            fDf(ux, wz2nl, 1.0, 0.0, la.OptNoTrans)
+            fDf(ux, &matrixVar{wz2nl}, 1.0, 0.0, la.OptNoTrans)
             blas.AxpyFloat(wz2nl, vz, -1.0)
-            fG(ux, wz2l, 1.0, 0.0, la.OptNoTrans)
+            fG(ux, &matrixVar{wz2l}, 1.0, 0.0, la.OptNoTrans)
             blas.AxpyFloat(wz2l, vz, -1.0, &la.IOpt{"offsety", mnl})
             blas.Copy(us, ws3) 
             scale(ws3, W, true, false)
@@ -1095,7 +1359,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				wy = b.Copy()
 				wz = z.Copy()
 				ws = s.Copy()
-				checkpnt.AddCpVar("wx", wx.m, &wx.t)
+				checkpnt.AddVerifiable("wx", wx)
 				checkpnt.AddMatrixVar("ws", ws)
 				checkpnt.AddMatrixVar("wz", wz)
 			}
@@ -1104,17 +1368,16 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				wy2 = b.Copy()
 				wz2 = matrix.FloatZeros(mnl+cdim, 1)
 				ws2 = matrix.FloatZeros(mnl+cdim, 1)
-				checkpnt.AddCpVar("wx2", wx2.m, &wx2.t)
+				checkpnt.AddVerifiable("wx2", wx2)
 				checkpnt.AddMatrixVar("ws2", ws2)
 				checkpnt.AddMatrixVar("wz2", wz2)
 			}
 		}
 
-		f4 := func(x *epigraph, y, z, s *matrix.FloatMatrix)(err error) {
+		f4 := func(x, y MatrixVariable, z, s *matrix.FloatMatrix)(err error) {
 			if refinement > 0 || solopts.Debug {
-				//blas.Copy(x, wx)
-				x.CopyTo(wx)
-				blas.Copy(y, wy)
+				mCopy(x, wx)
+				mCopy(y, wy)
 				blas.Copy(z, wz)
 				blas.Copy(s, ws)
 			}
@@ -1127,9 +1390,8 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 			checkpnt.MinorPop()
 			checkpnt.Check("1_f4", minor+200)
 			for i := 0; i < refinement; i++ {
-				//blas.Copy(wx, wx2)
-				wx.CopyTo(wx2)
-				blas.Copy(wy, wy2)
+				mCopy(wx, wx2)
+				mCopy(wy, wy2)
 				blas.Copy(wz, wz2)
 				blas.Copy(ws, ws2)
 
@@ -1143,9 +1405,8 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				err = f4_no_ir(wx2, wy2, wz2, ws2)
 				checkpnt.MinorPop()
 				checkpnt.Check("4_f4", minor+(1+i)*200+199)
-				//blas.AxpyFloat(wx2, x, 1.0)
 				wx2.Axpy(x, 1.0)
-				blas.AxpyFloat(wy2, y, 1.0)
+				wy2.Axpy(y, 1.0)
 				blas.AxpyFloat(wz2, z, 1.0)
 				blas.AxpyFloat(ws2, s, 1.0)
 			}
@@ -1192,17 +1453,14 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				ind2 += m
 			}
 			
-			//dx.Scale(0.0)
-			//blas.AxpyFloat(rx, dx, -1.0+eta)
 			dx.Scal(0.0)
 			rx.Axpy(dx, -1.0+eta)
-
-			dy.Scale(0.0)
-			blas.AxpyFloat(ry, dy, -1.0+eta)
+			dy.Scal(0.0)
+			ry.Axpy(dy, -1.0+eta)
 			dz.Scale(0.0)
 			blas.AxpyFloat(rznl, dz, -1.0+eta)
 			blas.AxpyFloat(rzl, dz, -1.0+eta, &la.IOpt{"offsety", mnl})
-			//fmt.Printf("dx=\n%v\n", dx.ToString("%.7f"))
+			//fmt.Printf("dx=\n%v\n", dx)
 			//fmt.Printf("dz=\n%v\n", dz.ToString("%.7f"))
 			//fmt.Printf("ds=\n%v\n", ds.ToString("%.7f"))
 
@@ -1234,7 +1492,7 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				sol.Status = Unknown
 				sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
 				sol.Result.Set("x", x.AsMatrix())
-				sol.Result.Set("y", y)
+				sol.Result.Set("y", y.AsMatrix())
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
 				sol.Result.Set("zl",  zl)
 				sol.Result.Set("sl",  sl)
@@ -1282,15 +1540,13 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 
 			checkpnt.Check("maxstep", minor+400)
 
-			var newDf, newf *matrix.FloatMatrix
+			var newDf MatrixVarDf = nil
+			var newf MatrixVariable = nil
 
             // Backtrack until newx is in domain of f.
 			backtrack := true
-			//fmt.Printf("backtracking ...\n")
 			for backtrack {
-				//blas.Copy(x, newx)
-				//blas.AxpyFloat(dx, newx, step)
-				x.CopyTo(newx)
+				mCopy(x, newx)
 				dx.Axpy(newx, step)
 				newf, newDf, err = F.F1(newx)
 				if newf != nil {
@@ -1314,70 +1570,46 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 				dphi = -theta1*(1-sigma)*gap - theta2*(1-eta)*resx - theta3*(1-eta)*resznl
 			}
 
-			//var newfDf func(x, y *matrix.FloatMatrix, a, b float64, trans la.Option)(error)
-			var newfDf func(x, y interface{}, a, b float64, trans la.Option)(error)
+			var newfDf func(x, y MatrixVariable, a, b float64, trans la.Option)(error)
 
 			// Line search
 			backtrack = true
-			//fmt.Printf("start line search ...\n")
 			for backtrack {
-
-				var newDf_e = eDf{nil}
-
-				//blas.Copy(x, newx)
-				//blas.AxpyFloat(dx, newx, step)
-				x.CopyTo(newx)
+				mCopy(x, newx)
 				dx.Axpy(newx, step)
-				blas.Copy(y, newy)
-				blas.AxpyFloat(dy, newy, step)
+				mCopy(y, newy)
+				dy.Axpy(newy, step)
 				blas.Copy(z, newz)
 				blas.AxpyFloat(dz2, newz, step)
 				blas.Copy(s, news)
 				blas.AxpyFloat(ds2, news, step)
 				
 				newf, newDf, err = F.F1(newx)
-				newDf_e.df = newDf
-				/*
-				if newDf == nil || ! newDf.SizeMatch(mnl, c.Rows()) {
-					msg := fmt.Sprintf("2nd output argument of F.F1() must be of size"+
-						" (%d,%d), has size (%d,%d)", mnl, c.Rows(), newDf.Rows(), newDf.Cols())
-					err = errors.New(msg)
-					return
-				}
-				newfDf = func(u, v *matrix.FloatMatrix, a, b float64, trans la.Option)(error) {
-					return blas.GemvFloat(newDf, u, v, a, b, trans)
-				}
-				 */
-				newfDf = func(u, v interface{}, a, b float64, trans la.Option)(error) {
-					return newDf_e.Df(u, v, a, b, trans)
+				newfDf = func(u, v MatrixVariable, a, b float64, trans la.Option)(error) {
+					return newDf.Df(u, v, a, b, trans)
 				}
 				
-				//fmt.Printf("news=\n%v\n", news.ToString("%.7f"))
-				//fmt.Printf("newf=\n%v\n", newf.ToString("%.7f"))
-
                 // newrx = c + A'*newy + newDf'*newz[:mnl] + G'*newz[mnl:]
 				newz_mnl := matrix.FloatVector(newz.FloatArray()[:mnl])
 				newz_ml := matrix.FloatVector(newz.FloatArray()[mnl:])
 				//blas.Copy(c, newrx)
-				c.CopyTo(newrx)
+				//c.CopyTo(newrx)
+				mCopy(c, newrx)
 				fA(newy, newrx, 1.0, 1.0, la.OptTrans)
-				newfDf(newz_mnl, newrx, 1.0, 1.0, la.OptTrans)
-				fG(newz_ml, newrx, 1.0, 1.0, la.OptTrans)
-				//newresx = math.Sqrt(blas.DotFloat(newrx, newrx))
+				newfDf(&matrixVar{newz_mnl}, newrx, 1.0, 1.0, la.OptTrans)
+				fG(&matrixVar{newz_ml}, newrx, 1.0, 1.0, la.OptTrans)
 				newresx = math.Sqrt(newrx.Dot(newrx))
 				
                 // newrznl = news[:mnl] + newf 
 				news_mnl := matrix.FloatVector(news.FloatArray()[:mnl])
 				//news_ml := matrix.FloatVector(news.FloatArray()[mnl:])
 				blas.Copy(news_mnl, newrznl)
-				blas.AxpyFloat(newf, newrznl, 1.0)
+				blas.AxpyFloat(newf.AsMatrix(), newrznl, 1.0)
 				newresznl = blas.Nrm2Float(newrznl)
 				
 				newgap = (1.0 - (1.0-sigma)*step)*gap + step*step*dsdz
 				newphi = theta1*newgap + theta2*newresx + theta3*newresznl
 
-				//fmt.Printf("theta1=%.7f theta2=%.7f theta3=%.7f\n", theta1, theta2, theta3)
-				//fmt.Printf("newgap=%.7f, newphi=%.7f nresx=%.7f nresznl=%.7f\n", newgap, newphi, newresx, newresznl)
 				if i == 0 {
 					if newgap <= (1.0-ALPHA*step)*gap &&
 						(relaxed_iters > 0 && relaxed_iters < MAX_RELAXED_ITERS ||
@@ -1420,13 +1652,10 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 								blas.Copy(W.At("r")[k],   W0.At("r")[k])
 								blas.Copy(W.At("rti")[k], W0.At("rti")[k])
 							}
-							//blas.Copy(x, x0)
-							x.CopyTo(x0)
-							blas.Copy(y, y0)
-							//blas.Copy(dx, dx0)
-							dx.CopyTo(dx0)
-
-							blas.Copy(dy, dy0)
+							mCopy(x, x0)
+							mCopy(y, y0)
+							mCopy(dx, dx0)
+							mCopy(dy, dy0)
 							blas.Copy(s, s0)
 							blas.Copy(z, z0)
 							blas.Copy(ds, ds0)
@@ -1435,9 +1664,8 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 							blas.Copy(dz2, dz20)
 							blas.Copy(lmbda, lmbda0)
 							blas.Copy(lmbdasq, lmbdasq0) // ???
-							//blas.Copy(rx, rx0)
-							rx.CopyTo(rx0)
-							blas.Copy(ry, ry0)
+							mCopy(rx, rx0)
+							mCopy(ry, ry0)
 							blas.Copy(rznl, rznl0)
 							blas.Copy(rzl, rzl0)
 							dsdz0 = dsdz
@@ -1482,21 +1710,18 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 								blas.Copy(W0.At("r")[k],   W.At("r")[k])
 								blas.Copy(W0.At("rti")[k], W.At("rti")[k])
 							}
-							//blas.Copy(x, x0)
-							x.CopyTo(x0)
-							blas.Copy(y, y0)
-							//blas.Copy(dx, dx0)
-							dx.CopyTo(dx0)
-							blas.Copy(dy, dy0)
+							mCopy(x, x0)
+							mCopy(y, y0)
+							mCopy(dx, dx0)
+							mCopy(dy, dy0)
 							blas.Copy(s, s0)
 							blas.Copy(z, z0)
 							blas.Copy(ds2, ds20)
 							blas.Copy(dz2, dz20)
 							blas.Copy(lmbda, lmbda0)
 							blas.Copy(lmbdasq, lmbdasq0) // ???
-							//blas.Copy(rx, rx0)
-							rx.CopyTo(rx0)
-							blas.Copy(ry, ry0)
+							mCopy(rx, rx0)
+							mCopy(ry, ry0)
 							blas.Copy(rznl, rznl0)
 							blas.Copy(rzl, rzl0)
 							dsdz = dsdz0
@@ -1519,9 +1744,8 @@ func cpl_e(F epigraphConvexProg, c *epigraph, G *epigraphG, h *matrix.FloatMatri
 		} // end for [0,1]
 
 		// Update x, y
-		//blas.AxpyFloat(dx, x, step)
 		dx.Axpy(x, step)
-		blas.AxpyFloat(dy, y, step)
+		dy.Axpy(y, step)
 		checkpnt.Check("updatexy", 5000)
 
 		// Replace nonlinear, 'l' and 'q' blocks of ds and dz with the 
