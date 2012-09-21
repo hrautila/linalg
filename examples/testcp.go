@@ -43,23 +43,23 @@ func check(x *matrix.FloatMatrix) {
 }
 
 
-// FloorPlan implements interface cvx.ConvexProg.
-type Acenter struct {
+type acenterProg struct {
 	rows, cols int
 }
 
 
-func (p *Acenter) F0() (mnl int, x0 *matrix.FloatMatrix, err error) {
+func (p *acenterProg) F0() (mnl int, x0 *matrix.FloatMatrix, err error) {
 	err = nil
 	mnl = 0
 	x0 = matrix.FloatZeros(p.rows, p.cols)
 	return 
 }
 
-func (p *Acenter) F1(x *matrix.FloatMatrix)(f, Df *matrix.FloatMatrix, err error) {
+func (p *acenterProg) F1(x *matrix.FloatMatrix)(f, Df *matrix.FloatMatrix, err error) {
 	f = nil; Df = nil
 	err = nil
 	max := matrix.Abs(x).Max()
+	//fmt.Printf("F1: max=%.3f x=\n%s\n", max, x)
 	if max >= 1.0 {
 		err = errors.New("max(abs(x)) >= 1.0")
 		return
@@ -72,7 +72,7 @@ func (p *Acenter) F1(x *matrix.FloatMatrix)(f, Df *matrix.FloatMatrix, err error
 	return 
 }
 
-func (p *Acenter) F2(x, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, err error) {
+func (p *acenterProg) F2(x, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, err error) {
 	f, Df, err = p.F1(x)
 	u := matrix.Pow(x, 2.0).Scale(-1.0).Add(1.0)
 	z0 := z.GetIndex(0)
@@ -84,7 +84,7 @@ func (p *Acenter) F2(x, z *matrix.FloatMatrix)(f, Df, H *matrix.FloatMatrix, err
 
 func acenter() *matrix.FloatMatrix {
 
-	F := &Acenter{3, 1}
+	F := &acenterProg{3, 1}
 
 	gdata := [][]float64{
 		[]float64{0., -1.,  0.,  0., -21., -11.,   0., -11.,  10.,   8.,   0.,   8., 5.},
@@ -107,7 +107,10 @@ func acenter() *matrix.FloatMatrix {
 	dims.Set("q", []int{4})
 	dims.Set("s", []int{3})
 
-	sol, err := cvx.Cp(F, G, h, nil, nil, dims, &solopts)
+	var err error
+	var sol *cvx.Solution
+
+	sol, err = cvx.Cp(F, G, h, nil, nil, dims, &solopts)
 	if err == nil && sol.Status == cvx.Optimal {
 		return sol.Result.At("x")[0]
 	} else {
