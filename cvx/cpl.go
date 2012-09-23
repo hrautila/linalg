@@ -13,11 +13,11 @@ import (
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/cvx/sets"
+	"github.com/hrautila/go.opt/cvx/checkpnt"
 	"errors"
 	"fmt"
 	"math"
 )
-
 
 type  CustomCvxKKT func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error)
 
@@ -44,13 +44,6 @@ type  CustomCvxKKT func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFu
 //    ms[M-1] >= 0.  
 //
 func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSet, solopts *SolverOptions) (sol *Solution, err error) {
-
-	if A == nil {
-		A = matrix.FloatZeros(0, c.Rows())
-	}
-	if b == nil {
-		b = matrix.FloatZeros(0, 1)
-	}
 
 	var mnl int
 	var x0 *matrix.FloatMatrix
@@ -130,8 +123,10 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 		return 
 	}
 
-	var mA = matrixA{A}
-	var mG = matrixG{G, dims}
+	var mc = matrixVar{c}
+	var mb = matrixVar{b}
+	var mA = matrixVarA{A}
+	var mG = matrixVarG{G, dims}
 
 	solvername := solopts.KKTSolverName
 	if len(solvername) == 0 {
@@ -143,7 +138,7 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 	}
 
 	var factor kktFactor
-	var kktsolver CustomCvxKKT = nil
+	var kktsolver KKTSolver = nil
 	if kktfunc, ok := solvers[solvername]; ok {
 		// kkt function returns us problem spesific factor function.
 		factor, err = kktfunc(G, dims, A, mnl)
@@ -158,16 +153,201 @@ func Cpl(F ConvexProg, c, G, h, A, b *matrix.FloatMatrix, dims *sets.DimensionSe
 		return
 	}
 
+	//return CplCustom(F, c, &mG, h, &mA, b, dims, kktsolver, solopts)
+	return cpl_problem(F, &mc, &mG, h, &mA, &mb, dims, kktsolver, solopts, x0, mnl)
+}
 
-	return CplCustom(F, c, &mG, h, &mA, b, dims, kktsolver, solopts)
+func CplCustomKKT(F ConvexProg, c *matrix.FloatMatrix, G, h, A,	b *matrix.FloatMatrix,
+	dims *sets.DimensionSet, kktsolver KKTSolver,
+	solopts *SolverOptions) (sol *Solution, err error) {
+
+	var mnl int
+	var x0 *matrix.FloatMatrix
+
+	mnl, x0, err = F.F0()
+	if err != nil {
+		return
+	}
+
+	if x0.Cols() != 1 {
+		err = errors.New("'x0' must be matrix with one column")
+		return
+	}
+	if c == nil {
+		err = errors.New("'c' must be non nil matrix")
+		return
+	}
+	if ! c.SizeMatch(x0.Size()) {
+		err = errors.New(fmt.Sprintf("'c' must be matrix of size (%d,1)", x0.Rows()))
+		return 
+	}
+		
+	if h == nil {
+		h = matrix.FloatZeros(0, 1)
+	}
+	if h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
+	if dims == nil {
+		dims = sets.NewDimensionSet("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+
+	if h.Rows() != cdim {
+		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
+		return 
+	}
+
+	if G == nil {
+		G = matrix.FloatZeros(0, c.Rows())
+	}
+	if !G.SizeMatch(cdim, c.Rows()) {
+		estr := fmt.Sprintf("'G' must be of size (%d,%d)", cdim, c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check A and set defaults if it is nil
+	if A == nil {
+		// zeros rows reduces Gemv to vector products
+		A = matrix.FloatZeros(0, c.Rows())
+	}
+	if A.Cols() != c.Rows() {
+		estr := fmt.Sprintf("'A' must have %d columns", c.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+	if b.Rows() != A.Rows() {
+		estr := fmt.Sprintf("'b' must have length %d", A.Rows())
+		err = errors.New(estr)
+		return 
+	}
+
+	var mc = matrixVar{c}
+	var mb = matrixVar{b}
+	var mA = matrixVarA{A}
+	var mG = matrixVarG{G, dims}
+
+	return cpl_problem(F, &mc, &mG, h, &mA, &mb, dims, kktsolver, solopts, x0, mnl)
+}
+
+
+func CplCustomMatrix(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix,
+	A MatrixA, b *matrix.FloatMatrix, dims *sets.DimensionSet, kktsolver KKTSolver,
+	solopts *SolverOptions) (sol *Solution, err error) {
+
+	var mnl int
+	var x0 *matrix.FloatMatrix
+
+	mnl, x0, err = F.F0()
+	if err != nil {
+		return
+	}
+
+	if x0.Cols() != 1 {
+		err = errors.New("'x0' must be matrix with one column")
+		return
+	}
+	if c == nil {
+		err = errors.New("'c' must be non nil matrix")
+		return
+	}
+	if ! c.SizeMatch(x0.Size()) {
+		err = errors.New(fmt.Sprintf("'c' must be matrix of size (%d,1)", x0.Rows()))
+		return 
+	}
+		
+	if h == nil {
+		h = matrix.FloatZeros(0, 1)
+	}
+	if h.Cols() > 1 {
+		err = errors.New("'h' must be matrix with 1 column")
+		return 
+	}
+
+	if dims == nil {
+		dims = sets.NewDimensionSet("l", "q", "s")
+		dims.Set("l", []int{h.Rows()})
+	}
+
+	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
+
+	if h.Rows() != cdim {
+		err = errors.New(fmt.Sprintf("'h' must be float matrix of size (%d,1)", cdim))
+		return 
+	}
+
+	// Check b and set defaults if it is nil
+	if b == nil {
+		b = matrix.FloatZeros(0, 1)
+	}
+	if b.Cols() != 1 {
+		estr := fmt.Sprintf("'b' must be a matrix with 1 column")
+		err = errors.New(estr)
+		return 
+	}
+
+	mc := matrixVar{c}
+	mb := matrixVar{b}
+	var mG MatrixVarG
+	var mA MatrixVarA
+
+	if G == nil {
+		mG = &matrixVarG{matrix.FloatZeros(0, c.Rows()), dims}
+	} else {
+		mG = &matrixIfG{G}
+	}
+	if A == nil {
+		mA = &matrixVarA{matrix.FloatZeros(0, c.Rows())}
+	} else {
+		mA = &matrixIfA{A}
+	}
+
+	return cpl_problem(F, &mc, mG, h, mA, &mb, dims, kktsolver, solopts, x0, mnl)
+}
+
+
+
+func cpl_problem(F ConvexProg, c MatrixVariable, G MatrixVarG, h *matrix.FloatMatrix, A MatrixVarA,
+	b MatrixVariable, dims *sets.DimensionSet, kktsolver KKTSolver,
+	solopts *SolverOptions, x0 *matrix.FloatMatrix, mnl int)(sol *Solution, err error) {
+
+	err = nil
+
+	F_e := &convexVarProg{F}
+	mx0 := &matrixVar{x0.Copy()}
+
+	kktsolver_u := func(W *sets.FloatMatrixSet, x, z MatrixVariable)(KKTVarFunc, error) {
+		g, err := kktsolver(W, x.Matrix(), z.Matrix())
+		solver := func(x, y, z MatrixVariable)(error) {
+			return g(x.Matrix(), y.Matrix(), z.Matrix())
+		}
+		return solver, err
+	}
+	return cpl_solver(F_e, c, G, h, A, b, dims, kktsolver_u, solopts, mx0, mnl)
 }
 
 
 
 
-
-func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMatrix, A MatrixA,
-	b *matrix.FloatMatrix, dims *sets.DimensionSet, kktsolver CustomCvxKKT, solopts *SolverOptions) (sol *Solution, err error) {
+// Internal CPL solver for CP and CLP problems. Everything is wrapped to proper interfaces
+func cpl_solver(F ConvexVarProg, c MatrixVariable, G MatrixVarG, h *matrix.FloatMatrix,
+	A MatrixVarA, b MatrixVariable, dims *sets.DimensionSet, kktsolver KKTVarSolver,
+	solopts *SolverOptions, x0 MatrixVariable, mnl int) (sol *Solution, err error) {
 
 	const (
 		STEP = 0.99
@@ -180,7 +360,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 	var refinement int
 
 	sol = &Solution{Unknown,
-		/*nil, nil, nil, nil,*/ nil, 
+		nil, 
 		0.0, 0.0, 0.0, 0.0, 0.0,
 		0.0, 0.0, 0.0, 0.0, 0.0, 0}
 
@@ -211,33 +391,27 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		}
 	}
 
-	var mnl int
-	var x0 *matrix.FloatMatrix
+	//var mnl int
+	//var x0 MatrixVariable
 
-	mnl, x0, err = F.F0()
-	if err != nil {
-		return
+	if x0 == nil {
+		mnl, x0, err = F.F0()
+		if err != nil { return }
 	}
 
-	if x0.Cols() != 1 {
-		err = errors.New("'x0' must be matrix with one column")
-		return
-	}
 	if c == nil {
-		err = errors.New("'c' must be non nil matrix")
+		err = errors.New("Must define objective.")
 		return
 	}
-	if ! c.SizeMatch(x0.Size()) {
-		err = errors.New(fmt.Sprintf("'c' must be matrix of size (%d,1)", x0.Rows()))
-		return 
-	}
-		
+
 	if h == nil {
 		h = matrix.FloatZeros(0, 1)
 	}
 	if dims == nil {
-		dims = sets.NewDimensionSet("l", "q", "s")
-		dims.Set("l", []int{h.Rows()})
+		err = errors.New("Problem dimensions not defined.")
+		return
+		//dims = sets.NewDimensionSet("l", "q", "s")
+		//dims.Set("l", []int{h.Rows()})
 	}
 	if err = checkConeLpDimensions(dims); err != nil {
 		return 
@@ -255,55 +429,34 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		err = errors.New("'G' must be non-nil MatrixG interface.")
 		return
 	}
-	fG := func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error{
+	fG := func(x, y MatrixVariable, alpha, beta float64, trans la.Option) error{
 		return G.Gf(x, y, alpha, beta, trans)
 	}
 
-	var fA func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error = nil
-	var Adummy *matrix.FloatMatrix
-
 	// Check A and set defaults if it is nil
 	if A == nil {
-		// zeros rows reduces Gemv to vector products
-		Adummy = matrix.FloatZeros(0, c.Rows())
-		fA = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
-			return blas.GemvFloat(Adummy, x, y, alpha, beta, trans)
-		}
-	} else {
-		fA = func(x, y *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
-			return A.Af(x, y, alpha, beta, trans)
-		}
+		err = errors.New("'A' must be non-nil MatrixA interface.")
+		return
+	}
+	fA := func(x, y MatrixVariable, alpha, beta float64, trans la.Option) error {
+		return A.Af(x, y, alpha, beta, trans)
 	}
 
 	if b == nil {
-		b = matrix.FloatZeros(0, 1)
-	}
-	if b.Cols() != 1 {
-		err = errors.New("'b' must be matrix with one column.")
+		err = errors.New("'b' must be non-nil MatrixVariable interface.")
 		return
+		//b = &matrixVar{matrix.FloatZeros(0, 1)}
 	}
-	/*
-	if b.Rows() != A.Rows() {
-		err = errors.New(fmt.Sprintf("'b' must have length %d", A.Rows()))
-		return
-	}
-	 */
 
 	if kktsolver == nil {
 		err = errors.New("nil kktsolver not allowed.")
 		return
 	}
 
-	//var x, y, z, s *matrix.FloatMatrix
-	//var dx, dy, dz, ds *matrix.FloatMatrix
-	//var rx, ry, rznl, rzl *matrix.FloatMatrix
-	//var lmbda, lmbdasq *matrix.FloatMatrix
 
-	// -- here custom arguments.
 	x := x0.Copy()
 	y := b.Copy()
-	y.Scale(0.0)
-	// -- here custom args end
+	y.Scal(0.0)
 	z := matrix.FloatZeros(mnl+cdim, 1)
 	s := matrix.FloatZeros(mnl+cdim, 1)
 	ind := mnl+dims.At("l")[0]
@@ -321,12 +474,10 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		ind += m*m
 	}
 
-	// -- here custom arguments.
 	rx := x0.Copy()
 	ry := b.Copy()
 	dx := x.Copy()
 	dy := y.Copy()
-	// -- here custom arguments.
 	rznl := matrix.FloatZeros(mnl, 1)
 	rzl := matrix.FloatZeros(cdim, 1)
 	dz := matrix.FloatZeros(mnl+cdim, 1)
@@ -339,27 +490,23 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 	dz2 := matrix.FloatZeros(mnl+cdim, 1)
 	ds2 := matrix.FloatZeros(mnl+cdim, 1)
 
-	// -- here custom arguments.
+
 	newx := x.Copy()
 	newy := y.Copy()
 	newrx := x0.Copy()
-	// -- here custom arguments.
 
 	newz := matrix.FloatZeros(mnl+cdim, 1)
 	news := matrix.FloatZeros(mnl+cdim, 1)
 	newrznl := matrix.FloatZeros(mnl, 1)
 
-	// -- here custom arguments.
-	rx0 := x0.Copy()
-	ry0 := b.Copy()
-	// -- here custom arguments.
+	rx0 := rx.Copy()
+	ry0 := ry.Copy()
 	rznl0 := matrix.FloatZeros(mnl, 1)
 	rzl0 := matrix.FloatZeros(cdim, 1)
 	
-	// -- here custom arguments.
+	
 	x0, dx0 := x.Copy(), dx.Copy()
 	y0, dy0 := y.Copy(), dy.Copy()
-	// -- here custom arguments.
 
 	z0 := matrix.FloatZeros(mnl+cdim, 1)
 	dz0 := matrix.FloatZeros(mnl+cdim, 1)
@@ -369,6 +516,28 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 	ds0 := matrix.FloatZeros(mnl+cdim, 1)
 	ds20 := matrix.FloatZeros(mnl+cdim, 1)
 	
+	checkpnt.AddMatrixVar("z", z)
+	checkpnt.AddMatrixVar("s", s)
+	checkpnt.AddMatrixVar("dz", dz)
+	checkpnt.AddMatrixVar("ds", ds)
+	checkpnt.AddMatrixVar("rznl", rznl)
+	checkpnt.AddMatrixVar("rzl", rzl)
+	checkpnt.AddMatrixVar("lmbda", lmbda)
+	checkpnt.AddMatrixVar("lmbdasq", lmbdasq)
+	checkpnt.AddMatrixVar("z0", z0)
+	checkpnt.AddMatrixVar("dz0", dz0)
+	checkpnt.AddVerifiable("c", c)
+	checkpnt.AddVerifiable("x", x)
+	checkpnt.AddVerifiable("rx", rx)
+	checkpnt.AddVerifiable("dx", dx)
+	checkpnt.AddVerifiable("newrx", newrx)
+	checkpnt.AddVerifiable("newx", newx)
+	checkpnt.AddVerifiable("x0", x0)
+	checkpnt.AddVerifiable("dx0", dx0)
+	checkpnt.AddVerifiable("rx0", rx0)
+	checkpnt.AddVerifiable("y", y)
+	checkpnt.AddVerifiable("dy", dy)
+
 	W0 := sets.NewFloatSet("d", "di", "dnl", "dnli", "v", "r", "rti", "beta")
 	W0.Set("dnl", matrix.FloatZeros(mnl, 1))
 	W0.Set("dnli", matrix.FloatZeros(mnl, 1))
@@ -385,49 +554,57 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 	lmbda0 := matrix.FloatZeros(mnl+dims.Sum("l", "q", "s"), 1)
 	lmbdasq0 := matrix.FloatZeros(mnl+dims.Sum("l", "q", "s"), 1)
 
-	var f, Df, H *matrix.FloatMatrix = nil, nil, nil
-	var ws3, wz3, /*ws2nl, ws2l,*/ wz2l, wz2nl *matrix.FloatMatrix
-	var wx, wy, ws, wz, wx2, wy2, wz2, ws2 *matrix.FloatMatrix
-	//var sigz, sigs *matrix.FloatMatrix
+	var f MatrixVariable = nil
+	var Df MatrixVarDf = nil
+	var H MatrixVarH = nil
+
+	var ws3, wz3, wz2l, wz2nl *matrix.FloatMatrix
+	var ws, wz, wz2, ws2 *matrix.FloatMatrix
+	var wx, wx2, wy, wy2  MatrixVariable
 	var gap, gap0, theta1, theta2, theta3, ts, tz, phi, phi0, mu, sigma, eta float64
 	var resx, resy, reszl, resznl, pcost, dcost, dres, pres, relgap float64
-	var resx0, /*resy0, reszl0,*/ resznl0, /*pcost0, dcost0,*/ dres0, pres0 float64
-	var dsdz, dsdz0, step, step0, dphi, dphi0, sigma0, /*mu0,*/ eta0 float64
+	var resx0, resznl0, dres0, pres0 float64
+	var dsdz, dsdz0, step, step0, dphi, dphi0, sigma0, eta0 float64
 	var newresx, newresznl, newgap, newphi float64
 	var W *sets.FloatMatrixSet
-	var f3 KKTFunc
+	var f3 KKTVarFunc
 	
+	checkpnt.AddFloatVar("gap", &gap)
+	checkpnt.AddFloatVar("pcost", &pcost)
+	checkpnt.AddFloatVar("dcost", &dcost)
+	checkpnt.AddFloatVar("pres", &pres)
+	checkpnt.AddFloatVar("dres", &dres)
+	checkpnt.AddFloatVar("relgap", &relgap)
+	checkpnt.AddFloatVar("step", &step)
+	checkpnt.AddFloatVar("dsdz", &dsdz)
+	checkpnt.AddFloatVar("resx", &resx)
+	checkpnt.AddFloatVar("resy", &resy)
+	checkpnt.AddFloatVar("reszl", &reszl)
+	checkpnt.AddFloatVar("resznl", &resznl)
+
 	// Declare fDf and fH here, they bind to Df and H as they are already declared.
 	// ??really??
-	fDf := func(u, v *matrix.FloatMatrix, alpha, beta float64, trans la.Option) error {
-		return blas.GemvFloat(Df, u, v, alpha, beta, trans)
-	}
-	fH := func(u, v *matrix.FloatMatrix, alpha, beta float64) error {
-		return blas.SymvFloat(H, u, v, alpha, beta)
-	}
+	
+	var fDf func(u, v MatrixVariable, alpha, beta float64, trans la.Option)error = nil
+	var fH func(u, v MatrixVariable, alpha, beta float64)error = nil
 
 	relaxed_iters := 0
 	for iters := 0; iters <= solopts.MaxIter+1; iters++ {
+		checkpnt.MajorNext()
+		checkpnt.Check("loopstart", 10)
 
 		if refinement != 0 || solopts.Debug {
-			f, Df, H, err = F.F2(x, matrix.FloatVector(z.FloatArray()[:mnl]))
+			f, Df, H, err = F.F2(x, &matrixVar{matrix.FloatVector(z.FloatArray()[:mnl])})
+			fDf = func(u, v MatrixVariable, alpha, beta float64, trans la.Option)error {
+				return Df.Df(u, v, alpha, beta, trans)
+			}
+			fH = func(u, v MatrixVariable, alpha, beta float64)error {
+				return H.Hf(u, v, alpha, beta)
+			}
 		} else {
 			f, Df, err = F.F1(x)
-		}
-
-		if ! Df.SizeMatch(mnl, c.Rows()) {
-			s := fmt.Sprintf("2nd output of F.F2()/F.F1() must matrix of size (%d,%d)",
-				mnl, c.Rows())
-			err = errors.New(s)
-			return
-		}
-
-		if refinement != 0 || solopts.Debug {
-			if ! H.SizeMatch(c.Rows(), c.Rows()) {
-				msg := fmt.Sprintf("3rd output of F.F2() must matrix of size (%d,%d)",
-					c.Rows(), c.Rows())
-				err = errors.New(msg)
-				return
+			fDf = func(u, v MatrixVariable, alpha, beta float64, trans la.Option)error {
+				return Df.Df(u, v, alpha, beta, trans)
 			}
 		}
 
@@ -441,24 +618,23 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 
 		// rx = c + A'*y + Df'*z[:mnl] + G'*z[mnl:]
 		// -- y, rx MatrixArg
-		blas.Copy(c, rx)
+		mCopy(c, rx)
 		fA(y, rx, 1.0, 1.0, la.OptTrans)
-		fDf(z_mnl, rx, 1.0, 1.0, la.OptTrans)
-		fG(z_mnl2, rx, 1.0, 1.0, la.OptTrans)
-		resx = math.Sqrt(blas.Dot(rx, rx).Float())
+		fDf(&matrixVar{z_mnl}, rx, 1.0, 1.0, la.OptTrans)
+		fG(&matrixVar{z_mnl2}, rx, 1.0, 1.0, la.OptTrans)
+		resx = math.Sqrt(rx.Dot(rx))
+
 
 		// rznl = s[:mnl] + f 
 		blas.Copy(s_mnl, rznl)
-		blas.AxpyFloat(f, rznl, 1.0)
+		blas.AxpyFloat(f.Matrix(), rznl, 1.0)
 		resznl = blas.Nrm2Float(rznl)
 
         // rzl = s[mnl:] + G*x - h
         blas.Copy(s_mnl2, rzl)
         blas.AxpyFloat(h, rzl, -1.0)
-        fG(x, rzl, 1.0, 1.0, la.OptNoTrans)
+        fG(x, &matrixVar{rzl}, 1.0, 1.0, la.OptNoTrans)
         reszl = snrm2(rzl, dims, 0)
-
-		//fmt.Printf("%d: resx=%.9f, resznl=%.9f, reszl=%.9f\n", iters, resx, resznl, reszl)
 
 		// Statistics for stopping criteria
         // pcost = c'*x
@@ -466,8 +642,9 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
         //       = c'*x + y'*(A*x-b) + znl'*(f(x)+snl) + zl'*(G*x-h+sl) 
         //         - z'*s
         //       = c'*x + y'*ry + znl'*rznl + zl'*rzl - gap
-		pcost = blas.DotFloat(c, x)
-		dcost = pcost + blas.DotFloat(y, ry) + blas.DotFloat(z_mnl, rznl)
+		//pcost = blas.DotFloat(c, x)
+		pcost = c.Dot(x)
+		dcost = pcost + blas.DotFloat(y.Matrix(), ry.Matrix()) + blas.DotFloat(z_mnl, rznl)
 		dcost += sdot(z_mnl2, rzl, dims, 0) - gap
 		
 		if pcost < 0.0 {
@@ -503,6 +680,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				iters, pcost, dcost, gap, pres, dres)
 		}
 			
+		checkpnt.Check("checkgap", 50)
 		// Stopping criteria
 		if ( pres <= feasTolerance && dres <= feasTolerance &&
 			( gap <= absTolerance || (!math.IsNaN(relgap) && relgap <= relTolerance))) ||
@@ -520,8 +698,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				sol.Status = Optimal
 			}
 			sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
-			sol.Result.Set("x", x)
-			sol.Result.Set("y", y)
+			sol.Result.Set("x", x.Matrix())
+			sol.Result.Set("y", y.Matrix())
 			sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
 			sol.Result.Set("zl",  matrix.FloatVector(z.FloatArray()[mnl:]))
 			sol.Result.Set("sl",  matrix.FloatVector(s.FloatArray()[mnl:]))
@@ -544,8 +722,10 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
         // lmbdasq = lambda o lambda 
         if iters == 0 {
             W, _ = computeScaling(s, z, lmbda, dims, mnl)
+			checkpnt.AddScaleVar(W)
 		}
         ssqr(lmbdasq, lmbda, dims, mnl)
+		checkpnt.Check("lmbdasq", 90)
 
         // f3(x, y, z) solves
         //
@@ -555,7 +735,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
         //
         // On entry, x, y, z contain bx, by, bz.
         // On exit, they contain ux, uy, uz.
-        f3, err = kktsolver(W, x, z_mnl)
+        f3, err = kktsolver(W, x, &matrixVar{z_mnl})
+		checkpnt.Check("f3", 100)
 		if err != nil {
 			// ?? z_mnl is really copy of z[:mnl] ... should we copy here back to z??
 			singular_kkt_matrix := false
@@ -580,15 +761,22 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 					blas.Copy(W0.At("r")[k], W.At("r")[k])
 					blas.Copy(W0.At("rti")[k], W.At("rti")[k])
 				}
-				blas.Copy(x0, x)
-				blas.Copy(y0, y)
+				//blas.Copy(x0, x)
+				//x0.CopyTo(x)
+				mCopy(x0, x)
+				//blas.Copy(y0, y)
+				mCopy(y0, y)
 				blas.Copy(s0, s)
 				blas.Copy(z0, z)
 				blas.Copy(lmbda0, lmbda)
 				blas.Copy(lmbdasq0, lmbdasq) // ???
-				blas.Copy(rx0, rx)
-				blas.Copy(ry0, ry)
-				resx = math.Sqrt(blas.DotFloat(rx, rx))
+				//blas.Copy(rx0, rx)
+				//rx0.CopyTo(rx)
+				mCopy(rx0, rx)
+				//blas.Copy(ry0, ry)
+				mCopy(ry0, ry)
+				//resx = math.Sqrt(blas.DotFloat(rx, rx))
+				resx = math.Sqrt(rx.Dot(rx))
 				blas.Copy(rznl0, rznl)
 				blas.Copy(rzl0, rzl)
 				resznl = blas.Nrm2Float(rznl)
@@ -596,7 +784,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				relaxed_iters = -1
 
 				// How about z_mnl here???
-				f3, err = kktsolver(W, x, z_mnl)
+				f3, err = kktsolver(W, x, &matrixVar{z_mnl})
 				if err != nil {
 					singular_kkt_matrix = true
 				}
@@ -624,8 +812,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				err = errors.New(msg)
 				sol.Status = Unknown
 				sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
-				sol.Result.Set("x", x)
-				sol.Result.Set("y", y)
+				sol.Result.Set("x", x.Matrix())
+				sol.Result.Set("y", y.Matrix())
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
 				sol.Result.Set("zl",  zl)
 				sol.Result.Set("sl",  sl)
@@ -656,9 +844,11 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
         if iters == 0 {
             ws3 = matrix.FloatZeros(mnl + cdim, 1)
             wz3 = matrix.FloatZeros(mnl + cdim, 1)
+			checkpnt.AddMatrixVar("ws3", ws3)
+			checkpnt.AddMatrixVar("wz3", wz3)
 		}
 
-        f4_no_ir := func(x, y, z, s *matrix.FloatMatrix) (err error) {
+        f4_no_ir := func(x, y MatrixVariable, z, s *matrix.FloatMatrix) (err error) {
 			// Solve 
             //
             //     [ H  A'  GG'  ] [ ux        ]   [ bx                    ]
@@ -675,11 +865,12 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
             // z := z - W'*s 
             //    = bz - W' * (lambda o\ bs)
             blas.Copy(s, ws3)
+			
             scale(ws3, W, true, false)
             blas.AxpyFloat(ws3, z, -1.0)
 
             // Solve for ux, uy, uz
-            f3(x, y, z)
+            err = f3(x, y, &matrixVar{z})
 
             // s := s - z 
             //    = lambda o\ bs - z.
@@ -692,7 +883,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
             wz2l = matrix.FloatZeros(cdim, 1)
 		}
 
-		res := func(ux, uy, uz, us, vx, vy, vz, vs *matrix.FloatMatrix)(err error) {
+		res := func(ux, uy MatrixVariable, uz, us *matrix.FloatMatrix, vx, vy MatrixVariable, vz, vs *matrix.FloatMatrix)(err error) {
 
             // Evaluates residuals in Newton equations:
             //
@@ -702,6 +893,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
             //
             //     vs -= lmbda o (uz + us).
 			err = nil
+			minor := checkpnt.MinorTop()
             // vx := vx - H*ux - A'*uy - GG'*W^{-1}*uz
             fH(ux, vx, -1.0, 1.0)
             fA(uy, vx, -1.0, 1.0, la.OptTrans) 
@@ -709,26 +901,32 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
             scale(wz3, W, false, true)
 			wz3_nl := matrix.FloatVector(wz3.FloatArray()[:mnl])
 			wz3_l := matrix.FloatVector(wz3.FloatArray()[mnl:])
-            fDf(wz3_nl, vx, -1.0, 1.0, la.OptTrans)
-            fG(wz3_l, vx, -1.0, 1.0, la.OptTrans) 
+            fDf(&matrixVar{wz3_nl}, vx, -1.0, 1.0, la.OptTrans)
+            fG(&matrixVar{wz3_l}, vx, -1.0, 1.0, la.OptTrans) 
+
+			checkpnt.Check("10res", minor+10)
 
             // vy := vy - A*ux 
             fA(ux, vy, -1.0, 1.0, la.OptNoTrans)
 
             // vz := vz - W'*us - GG*ux 
-            fDf(ux, wz2nl, 1.0, 0.0, la.OptNoTrans)
+            fDf(ux, &matrixVar{wz2nl}, 1.0, 0.0, la.OptNoTrans)
             blas.AxpyFloat(wz2nl, vz, -1.0)
-            fG(ux, wz2l, 1.0, 0.0, la.OptNoTrans)
+            fG(ux, &matrixVar{wz2l}, 1.0, 0.0, la.OptNoTrans)
             blas.AxpyFloat(wz2l, vz, -1.0, &la.IOpt{"offsety", mnl})
             blas.Copy(us, ws3) 
             scale(ws3, W, true, false)
             blas.AxpyFloat(ws3, vz, -1.0)
+
+			checkpnt.Check("30res", minor+10)
 
             // vs -= lmbda o (uz + us)
             blas.Copy(us, ws3)
             blas.AxpyFloat(uz, ws3, 1.0)
             sprod(ws3, lmbda, dims, mnl, &la.SOpt{"diag", "D"})
             blas.AxpyFloat(ws3, vs, -1.0)
+
+			checkpnt.Check("90res", minor+10)
 			return 
 		}
 
@@ -737,36 +935,58 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		
 		if iters == 0 {
 			if refinement > 0 || solopts.Debug {
-				wx = x.Copy()
-				wy = y.Copy()
+				wx = c.Copy()
+				wy = b.Copy()
 				wz = z.Copy()
 				ws = s.Copy()
+				checkpnt.AddVerifiable("wx", wx)
+				checkpnt.AddMatrixVar("ws", ws)
+				checkpnt.AddMatrixVar("wz", wz)
 			}
 			if refinement > 0 {
-				wx2 = x.Copy()
-				wy2 = y.Copy()
+				wx2 = c.Copy()
+				wy2 = b.Copy()
 				wz2 = matrix.FloatZeros(mnl+cdim, 1)
 				ws2 = matrix.FloatZeros(mnl+cdim, 1)
+				checkpnt.AddVerifiable("wx2", wx2)
+				checkpnt.AddMatrixVar("ws2", ws2)
+				checkpnt.AddMatrixVar("wz2", wz2)
 			}
 		}
 
-		f4 := func(x, y, z, s *matrix.FloatMatrix)(err error) {
+		f4 := func(x, y MatrixVariable, z, s *matrix.FloatMatrix)(err error) {
 			if refinement > 0 || solopts.Debug {
-				blas.Copy(x, wx)
-				blas.Copy(y, wy)
+				mCopy(x, wx)
+				mCopy(y, wy)
 				blas.Copy(z, wz)
 				blas.Copy(s, ws)
 			}
+			minor := checkpnt.MinorTop()
+			checkpnt.Check("0_f4", minor+100)
+			checkpnt.MinorPush(minor+100)
+
 			err = f4_no_ir(x, y, z, s)
+
+			checkpnt.MinorPop()
+			checkpnt.Check("1_f4", minor+200)
 			for i := 0; i < refinement; i++ {
-				blas.Copy(wx, wx2)
-				blas.Copy(wy, wy2)
+				mCopy(wx, wx2)
+				mCopy(wy, wy2)
 				blas.Copy(wz, wz2)
 				blas.Copy(ws, ws2)
+
+				checkpnt.Check("2_f4", minor+(1+i)*200)
+				checkpnt.MinorPush(minor+(1+i)*200)
+
 				res(x, y, z, s, wx2, wy2, wz2, ws2)
+				checkpnt.MinorPop()
+				checkpnt.Check("3_f4", minor+(1+i)*200+100)
+
 				err = f4_no_ir(wx2, wy2, wz2, ws2)
-				blas.AxpyFloat(wx2, x, 1.0)
-				blas.AxpyFloat(wy2, y, 1.0)
+				checkpnt.MinorPop()
+				checkpnt.Check("4_f4", minor+(1+i)*200+199)
+				wx2.Axpy(x, 1.0)
+				wy2.Axpy(y, 1.0)
 				blas.AxpyFloat(wz2, z, 1.0)
 				blas.AxpyFloat(ws2, s, 1.0)
 			}
@@ -778,7 +998,12 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		}
 
 		sigma, eta = 0.0, 0.0
+
 		for i := 0; i < 2; i++ {
+			minor := (i+2)*1000
+			checkpnt.MinorPush(minor)
+			checkpnt.Check("loop01", minor)
+			
             // Solve
             //
             //     [ 0     ]   [ H  A' GG' ] [ dx        ]
@@ -808,19 +1033,20 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				ind2 += m
 			}
 			
-			dx.Scale(0.0)
-			blas.AxpyFloat(rx, dx, -1.0+eta)
-			dy.Scale(0.0)
-			blas.AxpyFloat(ry, dy, -1.0+eta)
+			dx.Scal(0.0)
+			rx.Axpy(dx, -1.0+eta)
+			dy.Scal(0.0)
+			ry.Axpy(dy, -1.0+eta)
 			dz.Scale(0.0)
 			blas.AxpyFloat(rznl, dz, -1.0+eta)
 			blas.AxpyFloat(rzl, dz, -1.0+eta, &la.IOpt{"offsety", mnl})
-			//fmt.Printf("dx=\n%v\n", dx.ToString("%.7f"))
+			//fmt.Printf("dx=\n%v\n", dx)
 			//fmt.Printf("dz=\n%v\n", dz.ToString("%.7f"))
 			//fmt.Printf("ds=\n%v\n", ds.ToString("%.7f"))
 
+			checkpnt.Check("pref4", minor)
+			checkpnt.MinorPush(minor)
 			err = f4(dx, dy, dz, ds)
-
 			if err != nil {
 				if iters == 0 {
 					s := fmt.Sprintf("Rank(A) < p or Rank([H(x); A; Df(x); G] < n (%s)", err)
@@ -845,8 +1071,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				err = errors.New(msg)
 				sol.Status = Unknown
 				sol.Result = sets.NewFloatSet("x", "y", "znl", "zl", "snl", "sl")
-				sol.Result.Set("x", x)
-				sol.Result.Set("y", y)
+				sol.Result.Set("x", x.Matrix())
+				sol.Result.Set("y", y.Matrix())
 				sol.Result.Set("znl", matrix.FloatVector(z.FloatArray()[:mnl]))
 				sol.Result.Set("zl",  zl)
 				sol.Result.Set("sl",  sl)
@@ -862,8 +1088,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				return
 			}
 				
-			//fmt.Printf("dx=\n%v\n", dx.ToString("%.7f"))
-			//fmt.Printf("dz=\n%v\n", dz.ToString("%.7f"))
+			checkpnt.MinorPop()
+			checkpnt.Check("postf4", minor+400)
 
             // Inner product ds'*dz and unscaled steps are needed in the 
             // line search.
@@ -872,6 +1098,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
             scale(dz2, W, false, true)
             blas.Copy(ds, ds2)
             scale(ds2, W, true, false)
+
+			checkpnt.Check("dsdz", minor+400)
 
             // Maximum steps to boundary. 
             // 
@@ -890,16 +1118,16 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
                 step = math.Min(1.0, STEP / t)
 			}
 
-            //fmt.Printf("%d: ts=%.7f, tz=%.7f, t=%.7f, step=%.7f" , iters, ts, tz, t, step)
+			checkpnt.Check("maxstep", minor+400)
 
-			var newDf, newf *matrix.FloatMatrix
+			var newDf MatrixVarDf = nil
+			var newf MatrixVariable = nil
 
             // Backtrack until newx is in domain of f.
 			backtrack := true
-			//fmt.Printf("backtracking ...\n")
 			for backtrack {
-				blas.Copy(x, newx)
-				blas.AxpyFloat(dx, newx, step)
+				mCopy(x, newx)
+				dx.Axpy(newx, step)
 				newf, newDf, err = F.F1(newx)
 				if newf != nil {
 					backtrack = false
@@ -922,57 +1150,46 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				dphi = -theta1*(1-sigma)*gap - theta2*(1-eta)*resx - theta3*(1-eta)*resznl
 			}
 
-			var newfDf func(x, y *matrix.FloatMatrix, a, b float64, trans la.Option)(error)
+			var newfDf func(x, y MatrixVariable, a, b float64, trans la.Option)(error)
 
 			// Line search
 			backtrack = true
-			//fmt.Printf("start line search ...\n")
 			for backtrack {
-
-				blas.Copy(x, newx)
-				blas.AxpyFloat(dx, newx, step)
-				blas.Copy(y, newy)
-				blas.AxpyFloat(dy, newy, step)
+				mCopy(x, newx)
+				dx.Axpy(newx, step)
+				mCopy(y, newy)
+				dy.Axpy(newy, step)
 				blas.Copy(z, newz)
 				blas.AxpyFloat(dz2, newz, step)
 				blas.Copy(s, news)
 				blas.AxpyFloat(ds2, news, step)
 				
 				newf, newDf, err = F.F1(newx)
-				if newDf == nil || ! newDf.SizeMatch(mnl, c.Rows()) {
-					msg := fmt.Sprintf("2nd output argument of F.F1() must be of size"+
-						" (%d,%d), has size (%d,%d)", mnl, c.Rows(), newDf.Rows(), newDf.Cols())
-					err = errors.New(msg)
-					return
-				}
-				newfDf = func(u, v *matrix.FloatMatrix, a, b float64, trans la.Option)(error) {
-					return blas.GemvFloat(newDf, u, v, a, b, trans)
+				newfDf = func(u, v MatrixVariable, a, b float64, trans la.Option)(error) {
+					return newDf.Df(u, v, a, b, trans)
 				}
 				
-				//fmt.Printf("news=\n%v\n", news.ToString("%.7f"))
-				//fmt.Printf("newf=\n%v\n", newf.ToString("%.7f"))
-
                 // newrx = c + A'*newy + newDf'*newz[:mnl] + G'*newz[mnl:]
 				newz_mnl := matrix.FloatVector(newz.FloatArray()[:mnl])
 				newz_ml := matrix.FloatVector(newz.FloatArray()[mnl:])
-				blas.Copy(c, newrx)
+				//blas.Copy(c, newrx)
+				//c.CopyTo(newrx)
+				mCopy(c, newrx)
 				fA(newy, newrx, 1.0, 1.0, la.OptTrans)
-				newfDf(newz_mnl, newrx, 1.0, 1.0, la.OptTrans)
-				fG(newz_ml, newrx, 1.0, 1.0, la.OptTrans)
-				newresx = math.Sqrt(blas.DotFloat(newrx, newrx))
+				newfDf(&matrixVar{newz_mnl}, newrx, 1.0, 1.0, la.OptTrans)
+				fG(&matrixVar{newz_ml}, newrx, 1.0, 1.0, la.OptTrans)
+				newresx = math.Sqrt(newrx.Dot(newrx))
 				
                 // newrznl = news[:mnl] + newf 
 				news_mnl := matrix.FloatVector(news.FloatArray()[:mnl])
 				//news_ml := matrix.FloatVector(news.FloatArray()[mnl:])
 				blas.Copy(news_mnl, newrznl)
-				blas.AxpyFloat(newf, newrznl, 1.0)
+				blas.AxpyFloat(newf.Matrix(), newrznl, 1.0)
 				newresznl = blas.Nrm2Float(newrznl)
 				
 				newgap = (1.0 - (1.0-sigma)*step)*gap + step*step*dsdz
 				newphi = theta1*newgap + theta2*newresx + theta3*newresznl
 
-				//fmt.Printf("theta1=%.7f theta2=%.7f theta3=%.7f\n", theta1, theta2, theta3)
-				//fmt.Printf("newgap=%.7f, newphi=%.7f nresx=%.7f nresznl=%.7f\n", newgap, newphi, newresx, newresznl)
 				if i == 0 {
 					if newgap <= (1.0-ALPHA*step)*gap &&
 						(relaxed_iters > 0 && relaxed_iters < MAX_RELAXED_ITERS ||
@@ -1015,10 +1232,10 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 								blas.Copy(W.At("r")[k],   W0.At("r")[k])
 								blas.Copy(W.At("rti")[k], W0.At("rti")[k])
 							}
-							blas.Copy(x, x0)
-							blas.Copy(y, y0)
-							blas.Copy(dx, dx0)
-							blas.Copy(dy, dy0)
+							mCopy(x, x0)
+							mCopy(y, y0)
+							mCopy(dx, dx0)
+							mCopy(dy, dy0)
 							blas.Copy(s, s0)
 							blas.Copy(z, z0)
 							blas.Copy(ds, ds0)
@@ -1027,8 +1244,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 							blas.Copy(dz2, dz20)
 							blas.Copy(lmbda, lmbda0)
 							blas.Copy(lmbdasq, lmbdasq0) // ???
-							blas.Copy(rx, rx0)
-							blas.Copy(ry, ry0)
+							mCopy(rx, rx0)
+							mCopy(ry, ry0)
 							blas.Copy(rznl, rznl0)
 							blas.Copy(rzl, rzl0)
 							dsdz0 = dsdz
@@ -1073,18 +1290,18 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 								blas.Copy(W0.At("r")[k],   W.At("r")[k])
 								blas.Copy(W0.At("rti")[k], W.At("rti")[k])
 							}
-							blas.Copy(x, x0)
-							blas.Copy(y, y0)
-							blas.Copy(dx, dx0)
-							blas.Copy(dy, dy0)
+							mCopy(x, x0)
+							mCopy(y, y0)
+							mCopy(dx, dx0)
+							mCopy(dy, dy0)
 							blas.Copy(s, s0)
 							blas.Copy(z, z0)
 							blas.Copy(ds2, ds20)
 							blas.Copy(dz2, dz20)
 							blas.Copy(lmbda, lmbda0)
 							blas.Copy(lmbdasq, lmbdasq0) // ???
-							blas.Copy(rx, rx0)
-							blas.Copy(ry, ry0)
+							mCopy(rx, rx0)
+							mCopy(ry, ry0)
 							blas.Copy(rznl, rznl0)
 							blas.Copy(rzl, rzl0)
 							dsdz = dsdz0
@@ -1102,16 +1319,14 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 				}
 			} // end of line search
 
-			//fmt.Printf("eol ds=\n%v\n", ds.ToString("%.7f"))
-			//fmt.Printf("eol dz=\n%v\n", dz.ToString("%.7f"))
+			checkpnt.Check("eol", minor+900)
 
 		} // end for [0,1]
 
 		// Update x, y
-		blas.AxpyFloat(dx, x, step)
-		blas.AxpyFloat(dy, y, step)
-		//fmt.Printf("update x=\n%v\n", x.ToString("%.7f"))
-		//fmt.Printf("z=\n%v\n", z.ToString("%.7f"))
+		dx.Axpy(x, step)
+		dy.Axpy(y, step)
+		checkpnt.Check("updatexy", 5000)
 
 		// Replace nonlinear, 'l' and 'q' blocks of ds and dz with the 
 		// updated variables in the current scaling.
@@ -1132,6 +1347,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 			dz.SetIndex(ind, 1.0+dz.GetIndex(ind))
 			ind += m
 		}
+		checkpnt.Check("updatedsdz", 5100)
 
         // ds := H(lambda)^{-1/2} * ds and dz := H(lambda)^{-1/2} * dz.
         // 
@@ -1143,6 +1359,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
         // diag(lmbda_k)^{1/2} * Qz * diag(lmbda_k)^{1/2} 
 		scale2(lmbda, ds, dims, mnl, true)
 		scale2(lmbda, dz, dims, mnl, true)
+
+		checkpnt.Check("scale2", 5200)
 
         // sigs := ( e + step*sigs ) ./ lambda for 's' blocks.
         // sigz := ( e + step*sigz ) ./ lambda for 's' blocks.
@@ -1157,6 +1375,8 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 		blas.TbsvFloat(lmbda, sigz, &la.IOpt{"n", sdimsum}, &la.IOpt{"k", 0},
 			&la.IOpt{"lda", 1}, &la.IOpt{"offseta", mnl+qdimsum})
 		
+
+		checkpnt.Check("sigs", 5300)
 
 		ind2 := mnl + qdimsum; ind3 := 0
 		sdims := dims.At("s")
@@ -1173,7 +1393,9 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 			ind3 += m
 		}
 		
+		checkpnt.Check("scaling", 5400)
 		err = updateScaling(W, lmbda, ds, dz)
+		checkpnt.Check("postscaling", 5500)
 
         // Unscale s, z, tau, kappa (unscaled variables are used only to 
         // compute feasibility residuals).
@@ -1188,6 +1410,7 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 			ind2 += m*m
 		}
 		scale(s, W, true, false)
+		checkpnt.Check("unscale_s", 5600)
 		
 		ind = mnl + dims.Sum("l", "q")
 		ind2 = ind
@@ -1200,12 +1423,14 @@ func CplCustom(F ConvexProg, c *matrix.FloatMatrix, G MatrixG, h *matrix.FloatMa
 			ind2 += m*m
 		}
 		scale(z, W, false, true)
+		checkpnt.Check("unscale_z", 5700)
 
 		gap = blas.DotFloat(lmbda, lmbda)
 
 	}
 	return
 }
+
 
 
 // Local Variables:
