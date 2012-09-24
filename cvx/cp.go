@@ -15,7 +15,8 @@ import (
 	"github.com/hrautila/go.opt/cvx/sets"
 	"errors"
 	"fmt"
-	//"math"
+	"strings"
+	"strconv"
 )
 
 
@@ -68,19 +69,30 @@ func (u *epigraph) String() string {
 }
 
 // Implement Verifiable interface
-func (u *epigraph) Verify(vals ...interface{}) float64 {
+func (u *epigraph) Verify(line string) float64 {
 	diff := 0.0
-	for _, v := range vals {
-		if vm, ok := v.(*matrix.FloatMatrix); ok {
-			diff += blas.Nrm2Float(matrix.Minus(vm, u.m()))
-		} else if vf, ok := v.(*float64); ok {
-			d := u.t() - *vf
-			diff += d*d
-		} else {
-			fmt.Printf("Warning: unknown verify reference value\n")
-		}
-	}
+	lpar := strings.Index(line, "[")
+	rpar := strings.LastIndex(line, "]")
+	mstart := strings.Index(line, "{")
+	refval, _ := matrix.FloatParseSpe(line[mstart:rpar])
+	fval, _ := strconv.ParseFloat(strings.Trim(line[lpar+1:mstart], " "), 64)
+	diff += blas.Nrm2Float(matrix.Minus(refval, u.m()))
+	d := u.t() - fval
+	diff += d*d
 	return diff
+}
+
+func (u *epigraph) ShowError(line string)  {
+	lpar := strings.Index(line, "[")
+	rpar := strings.LastIndex(line, "]")
+	mstart := strings.Index(line, "{")
+	refval, _ := matrix.FloatParseSpe(line[mstart:rpar])
+	fval, _ := strconv.ParseFloat(strings.Trim(line[lpar+1:mstart], " "), 64)
+	df := matrix.Minus(u.m(), refval)
+	em, _ := matrix.FloatMatrixStacked(matrix.StackRight, u.m(), refval, df)
+	fmt.Printf("my data | ref.data | diff \n%v\n", em.ToString("%.4e"))
+	d := u.t() - fval
+	fmt.Printf("/%.4e/ | /%.4e/ | /%4e/\n", u.t(), fval, d)
 }
 
 func (u *epigraph) m() *matrix.FloatMatrix {
@@ -325,9 +337,6 @@ func (a *epiMatrixA) Af(u, v MatrixVariable, alpha, beta float64, trans la.Optio
 	return 
 }
 
-
-type KKTVarFunc func(x, y, z MatrixVariable) error
-type KKTVarSolver func(W *sets.FloatMatrixSet, x, znl MatrixVariable)(KKTVarFunc, error)
 
 //    Solves a convex optimization problem with a linear objective
 //
