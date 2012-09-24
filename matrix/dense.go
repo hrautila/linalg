@@ -355,17 +355,6 @@ func (A *FloatMatrix) GetColumnArray(i int, vec []float64) []float64 {
 	return vec
 }
 
-// Get a slice from the underlying storage array. Changing entries
-// in the returned slices changes the matrix. Be carefull with this.
-func (A *FloatMatrix) GetSlice(start, end int) []float64 {
-	if start < 0 {
-		start = 0
-	}
-	if end > A.NumElements() {
-		end = A.NumElements()
-	}
-	return A.elements[start:end]
-}
 
 // Set the element in the i'th row and j'th column to val.
 func (A *FloatMatrix) SetAt(i, j int, val float64) {
