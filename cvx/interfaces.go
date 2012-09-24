@@ -14,6 +14,7 @@ import (
 	"github.com/hrautila/go.opt/linalg/blas"
 	"github.com/hrautila/go.opt/cvx/sets"
 	la "github.com/hrautila/go.opt/linalg"
+	"fmt"
 )
 
 // Public interface to provide custom G matrix-vector products
@@ -188,7 +189,9 @@ type MatrixVariable interface {
 	// Computes u := alpha*u for a scalar alpha and vectors u in a vector space.
 	Scal(alpha float64) 
 	// Implement checkpnt.Verifiable to allow checkpoint checking
-	Verify(vals ...interface{}) float64
+	Verify(dataline string) float64
+	// Implement checkpnt.Verifiable to allow checkpoint checking
+	ShowError(dataline string) 
 	// Convert to string for printing
 	String() string
 }
@@ -240,55 +243,78 @@ func (u *matrixVar) String() string {
 	return u.val.ToString("%.7f")
 }
 
-func (u *matrixVar) Verify(vals ...interface{}) float64 {
+func (u *matrixVar) Verify(dataline string) float64 {
 	diff := 0.0
-	for _, v := range vals {
-		if vm, ok := v.(*matrix.FloatMatrix); ok {
-			diff += blas.Nrm2Float(matrix.Minus(vm, u.val))
-		}
-	}
+	refval, _ := matrix.FloatParseSpe(dataline)
+	diff += blas.Nrm2Float(matrix.Minus(u.val, refval))
 	return diff
+}
+
+func (u *matrixVar) ShowError(dataline string)  {
+	refval, _ := matrix.FloatParseSpe(dataline)
+	em := matrix.Minus(u.val, refval)
+	fmt.Printf("my data | ref.data | diff \n%v\n", em.ToString("%.4e"))
 }
 
 // Implements MatrixVarG interface for matrix valued G
 type matrixVarG struct {
-	G *matrix.FloatMatrix
+	mG *matrix.FloatMatrix
 	dims *sets.DimensionSet
 }
 
 func (g *matrixVarG) Gf(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
-	err = sgemv(g.G, u.Matrix(), v.Matrix(), alpha, beta, g.dims, trans)
+	err = sgemv(g.mG, u.Matrix(), v.Matrix(), alpha, beta, g.dims, trans)
 	return
 }
 
-// Implements MatrixVarG interface for MatrixG interface
+// Implements MatrixVarG interface for MatrixG interface and matrix valued u, v
 type matrixIfG struct {
-	G MatrixG
+	mG MatrixG
 }
 
 func (g *matrixIfG) Gf(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
-	err = g.G.Gf(u.Matrix(), v.Matrix(), alpha, beta, trans)
+	err = g.mG.Gf(u.Matrix(), v.Matrix(), alpha, beta, trans)
 	return
 }
 
 
-// Implements MatrixVarA interface for matrix valued A
+// Implements MatrixVarA interface for matrix valued A, u, v
 type matrixVarA struct {
-	A *matrix.FloatMatrix
+	mA *matrix.FloatMatrix
 }
 
 func (a *matrixVarA) Af(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
-	err = blas.GemvFloat(a.A, u.Matrix(), v.Matrix(), alpha, beta, trans) 
+	err = blas.GemvFloat(a.mA, u.Matrix(), v.Matrix(), alpha, beta, trans) 
 	return
 }
 
 // Implements MatrixVarA interface for MatrixA interface
 type matrixIfA struct {
-	A MatrixA
+	mA MatrixA
 }
 
 func (a *matrixIfA) Af(u, v MatrixVariable, alpha, beta float64, trans la.Option) (err error) {
-	err = a.A.Af(u.Matrix(), v.Matrix(), alpha, beta, trans) 
+	err = a.mA.Af(u.Matrix(), v.Matrix(), alpha, beta, trans) 
+	return
+}
+
+// Implements MatrixVarA interface for matrix valued A, u, v
+type matrixVarP struct {
+	mP *matrix.FloatMatrix
+}
+
+func (p *matrixVarP) Pf(u, v MatrixVariable, alpha, beta float64) (err error) {
+	err = blas.SymvFloat(p.mP, u.Matrix(), v.Matrix(), alpha, beta) 
+	return
+}
+
+// Implements MatrixVarA interface for MatrixA interface
+type matrixIfP struct {
+	mP MatrixP
+}
+
+func (p *matrixIfP) Pf(u, v MatrixVariable, alpha, beta float64) (err error) {
+	err = p.mP.Pf(u.Matrix(), v.Matrix(), alpha, beta) 
 	return
 }
 
