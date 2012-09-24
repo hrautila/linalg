@@ -14,17 +14,43 @@ import (
 	"github.com/hrautila/go.opt/cvx/sets"
 )
 
-// KKTFunc solves KKT equations.
-type KKTFunc func(x, y, z *matrix.FloatMatrix) error
-
-// KKTSolver produces solver function
-type KKTSolver func(*sets.FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
-
 // kktFactor produces solver function
 type kktFactor func(*sets.FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
 
 // kktSolver creates problem spesific factor
 type kktSolver func(*matrix.FloatMatrix, *sets.DimensionSet, *matrix.FloatMatrix, int) (kktFactor, error)
+
+// Custom solver type for solving linear equations (`KKT systems')
+//        
+//            [ 0  A'  G'   ] [ ux ]   [ bx ]
+//            [ A  0   0    ] [ uy ] = [ by ].
+//            [ G  0  -W'*W ] [ uz ]   [ bz ]
+//
+// W is a scaling matrix, a block diagonal mapping 
+//
+// The call f = KKTConeSolver(W) or f = KKTSolver(W, x, z)should return a function f
+// that solves the KKT system by f(x, y, z).  On entry, x, y, z contain the 
+// righthand side bx, by, bz.  On exit, they contain the solution, 
+// with uz scaled: the argument z contains W*uz.  In other words,
+// on exit, x, y, z are the solution of
+//
+//            [ 0  A'  G'*W^{-1} ] [ ux ]   [ bx ]
+//            [ A  0   0         ] [ uy ] = [ by ].
+//            [ G  0  -W'        ] [ uz ]   [ bz ]
+//
+type KKTConeSolver func(W *sets.FloatMatrixSet) (KKTFunc, error)
+type KKTSolver func(*sets.FloatMatrixSet, *matrix.FloatMatrix, *matrix.FloatMatrix)(KKTFunc, error)
+
+// KKTFunc/KKTVarFunc solves KKT equations.
+type KKTFunc func(x, y, z *matrix.FloatMatrix) error
+type KKTVarFunc func(x, y, z MatrixVariable) error
+
+// KKTVarConeSolver produces solver function for cone problems
+type KKTVarConeSolver func(W *sets.FloatMatrixSet) (KKTVarFunc, error)
+
+// KKTVarSolver produces solver function for convex problems
+type KKTVarSolver func(W *sets.FloatMatrixSet, x, znl MatrixVariable)(KKTVarFunc, error)
+
 
 
 type solverMap map[string]kktSolver
