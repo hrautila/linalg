@@ -14,7 +14,7 @@ import (
 	"github.com/hrautila/go.opt/linalg/lapack"
 	"github.com/hrautila/go.opt/matrix"
 	"github.com/hrautila/go.opt/cvx/sets"
-	"github.com/hrautila/go.opt/cvx/checkpnt"
+	//"github.com/hrautila/go.opt/cvx/checkpnt"
 	"math"
 	//"fmt"
 )
@@ -83,10 +83,10 @@ func scale(x *matrix.FloatMatrix, W *sets.FloatMatrixSet, trans, inverse bool) (
 	ind := 0
 	err = nil
 
-	var minor int = 0
-	if ! checkpnt.MinorEmpty() {
-		minor = checkpnt.MinorTop()
-	}
+	// var minor int = 0
+	//if ! checkpnt.MinorEmpty() {
+	//	minor = checkpnt.MinorTop()
+	//}
 
 	//fmt.Printf("\n%d.%04d scaling x=\n%v\n", checkpnt.Major(), minor, x.ToString("%.17f"))
 
@@ -108,9 +108,10 @@ func scale(x *matrix.FloatMatrix, W *sets.FloatMatrixSet, trans, inverse bool) (
 		ind += w.Rows()
 	}
 
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("000scale", minor)
-	}
+	//if ! checkpnt.MinorEmpty() {
+	//    checkpnt.Check("000scale", minor)
+	//}
+
     // Scaling for linear 'l' component xk is xk := d .* xk; inverse 
     // scaling is xk ./ d = di .* xk, where d = W['d'], di = W['di'].
 
@@ -127,9 +128,9 @@ func scale(x *matrix.FloatMatrix, W *sets.FloatMatrixSet, trans, inverse bool) (
 	}
 	ind += w.Rows()
 		
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("010scale", minor)
-	}
+	//if ! checkpnt.MinorEmpty() {
+	//	checkpnt.Check("010scale", minor)
+	//}
 
     // Scaling for 'q' component is 
     //
@@ -176,9 +177,10 @@ func scale(x *matrix.FloatMatrix, W *sets.FloatMatrixSet, trans, inverse bool) (
 		}
 		ind += m
 	}
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("020scale", minor)
-	}
+
+	//if ! checkpnt.MinorEmpty() {
+	//	checkpnt.Check("020scale", minor)
+	//}
 
     // Scaling for 's' component xk is
     //
@@ -245,9 +247,9 @@ func scale(x *matrix.FloatMatrix, W *sets.FloatMatrixSet, trans, inverse bool) (
 		}
 		ind += n*n
 	}
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("030scale", minor)
-	}
+	//if ! checkpnt.MinorEmpty() {
+	//	checkpnt.Check("030scale", minor)
+	//}
 	return 
 }
 
@@ -263,17 +265,17 @@ func scale(x *matrix.FloatMatrix, W *sets.FloatMatrixSet, trans, inverse bool) (
 func scale2(lmbda, x *matrix.FloatMatrix, dims *sets.DimensionSet, mnl int, inverse bool) (err error) {
 	err = nil
 
-	var minor int = 0
-	if ! checkpnt.MinorEmpty() {
-		minor = checkpnt.MinorTop()
-	}
+	//var minor int = 0
+	//if ! checkpnt.MinorEmpty() {
+	//	minor = checkpnt.MinorTop()
+	//}
 
 	//fmt.Printf("\n%d.%04d scale2 x=\n%v\nlmbda=\n%v\n", checkpnt.Major(), minor,
 	//	x.ToString("%.17f"), lmbda.ToString("%.17f"))
 
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("000scale2", minor)
-	}
+	//if ! checkpnt.MinorEmpty() {
+	//	checkpnt.Check("000scale2", minor)
+	//}
 
 	// For the nonlinear and 'l' blocks, 
     //
@@ -288,9 +290,9 @@ func scale2(lmbda, x *matrix.FloatMatrix, dims *sets.DimensionSet, mnl int, inve
 		blas.TbmvFloat(lmbda, x, &la_.IOpt{"n", ind}, &la_.IOpt{"k", 0}, &la_.IOpt{"lda", 1})
 	}
 
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("010scale2", minor)
-	}
+	//if ! checkpnt.MinorEmpty() {
+	//	checkpnt.Check("010scale2", minor)
+	//}
 
     // For 'q' blocks, if inverse is 'N',
     //
@@ -326,9 +328,9 @@ func scale2(lmbda, x *matrix.FloatMatrix, dims *sets.DimensionSet, mnl int, inve
 		ind += m
 	}
 
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("020scale2", minor)
-	}
+	//if ! checkpnt.MinorEmpty() {
+	//	checkpnt.Check("020scale2", minor)
+	//}
 
     // For the 's' blocks, if inverse is 'N',
     //
@@ -364,9 +366,9 @@ func scale2(lmbda, x *matrix.FloatMatrix, dims *sets.DimensionSet, mnl int, inve
 		ind2 += m
 	}
 
-	if ! checkpnt.MinorEmpty() {
-		checkpnt.Check("030scale2", minor)
-	}
+	//if ! checkpnt.MinorEmpty() {
+	//	checkpnt.Check("030scale2", minor)
+	//}
 	return
 }
 
