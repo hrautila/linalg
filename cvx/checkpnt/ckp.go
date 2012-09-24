@@ -11,11 +11,17 @@ import (
 	"strings"
 	"strconv"
 	"errors"
+	"math"
 )
 
-type Verifiable interface {
+type Verifiability interface {
 	// Verify variable against reference values. Returns difference.
 	Verify(vals ...interface{}) float64
+}
+type Verifiable interface {
+	// Verify variable against reference values. Returns difference.
+	Verify(dataline string) float64
+	ShowError(dataline string)
 }
 
 type checkpoint struct {
@@ -37,6 +43,7 @@ type dataPoint struct {
 }
 
 type variableTable map[string]*dataPoint
+type dataTable map[string]string
 
 var variables variableTable
 var active bool = false
@@ -60,6 +67,54 @@ func init() {
 	minorstack = make([]int, 20)
 	minorpointer = 0
 	spformat = "%12.5e"
+}
+
+type mVariable struct {
+	mtx *matrix.FloatMatrix
+}
+
+func (m *mVariable) Verify(dataline string) float64 {
+	refdata, err := matrix.FloatParseSpe(dataline)
+	if err != nil {
+		fmt.Printf("parse error: %s", err)
+		return 0.0
+	}
+	return blas.Nrm2Float(matrix.Minus(m.mtx, refdata))
+}
+
+func (m *mVariable) ShowError(dataline string) {
+	refdata, err := matrix.FloatParseSpe(dataline)
+	if err != nil {
+		fmt.Printf("parse error: %s", err)
+		return 
+	}
+	df := matrix.Minus(m.mtx, refdata)
+	emtx, _ := matrix.FloatMatrixStacked(matrix.StackRight, m.mtx, refdata, df)
+	fmt.Printf("my data | ref.data | diff \n%v\n", emtx.ToString(spformat))
+}
+
+type fVariable struct {
+	fvar *float64
+}
+
+func (f *fVariable) Verify(dataline string) float64 {
+	refdata, err := strconv.ParseFloat(strings.Trim(dataline, " "), 64)
+	if err != nil {
+		fmt.Printf("parse error: %s", err)
+		return 0.0
+	}
+	return math.Sqrt((*f.fvar - refdata)*(*f.fvar - refdata))
+}
+
+func (f *fVariable) ShowError(dataline string) {
+	refdata, err := strconv.ParseFloat(strings.Trim(dataline, " "), 64)
+	if err != nil {
+		fmt.Printf("parse error: %s", err)
+		return 
+	}
+	df := (*f.fvar - refdata)
+	s := fmt.Sprintf("my data | ref.data | diff \n %s %s %s\n", spformat, spformat, spformat)
+	fmt.Printf(s, *f.fvar, refdata, df)
 }
 
 // Return current major number.
@@ -124,7 +179,7 @@ func AddMatrixVar(name string, mtx *matrix.FloatMatrix) {
 	}
 	_, ok := variables[name]
 	if ! ok {
-		variables[name] = &dataPoint{mtx:mtx}
+		variables[name] = &dataPoint{vvar:&mVariable{mtx}}
 	}
 }
 
@@ -145,7 +200,7 @@ func AddFloatVar(name string, fptr *float64) {
 		return
 	}
 	if _, ok := variables[name]; ! ok {
-		variables[name] = &dataPoint{fvar:fptr}
+		variables[name] = &dataPoint{vvar:&fVariable{fptr}}
 	}
 }
 
@@ -156,16 +211,6 @@ func AddVerifiable(name string, vvar Verifiable) {
 	}
 	if _, ok := variables[name]; ! ok {
 		variables[name] = &dataPoint{vvar:vvar}
-	}
-}
-
-// Add float variable as check point variable.
-func AddCpVar(name string, mtx *matrix.FloatMatrix, fptr *float64) {
-	if ! active {
-		return
-	}
-	if _, ok := variables[name]; ! ok {
-		variables[name] = &dataPoint{mtx:mtx, fvar:fptr}
 	}
 }
 
@@ -180,7 +225,7 @@ func AddScaleVar(w *sets.FloatMatrixSet) {
 		for k, m := range mset {
 			name := fmt.Sprintf("%s.%d", key, k)
 			if _, ok := variables[name]; ! ok {
-				variables[name] = &dataPoint{mtx:m}
+				variables[name] = &dataPoint{vvar:&mVariable{m}}
 			}
 		}
 	}
@@ -253,127 +298,60 @@ func Check(name string, minor int) {
 	if ! active {
 		return
 	}
-	vars, checkp, err := readCkp(name, minor)
+	data, checkp, err := readCkpData(name, minor)
 	if err != nil {
 		//fmt.Printf("error when reading savepoint '%s': %v\n", name, err)
 		return
 	}
 	// loop through all our savepoint variables
 	for varname := range variables {
-		dp, ok := (*vars)[varname]		
+		dataline, ok := (*data)[varname]		
 		if ! ok {
 			// varname not found in savepoint reference data
 			continue
 		}
 		// internal data value
 		mydp := variables[varname]
-		if mydp.vvar != nil {
-			diff := mydp.vvar.Verify(dp.mtx, dp.fvar)
-			//fmt.Printf("verify %s: Verifiable ... %10.4e\n", varname, diff)
-			if diff > diffError {
-				if ! mydp.inErrorM {
-					fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': normError = %9.2e\n",
-						checkp.major, checkp.minor, checkp.name, checkp.filepath, varname, diff)
-					mydp.ckp = checkp
-				}
-				mydp.inErrorM = true
-				if mydp.panicVar {
-					panic("variable divergence error ...")
-				}
-			} else {
-				if  mydp.inErrorM {
-					fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': returned to valid\n",
-						checkp.major, checkp.minor, checkp.name, checkp.filepath, varname)
-					mydp.ckp = nil
-				}
+		if mydp.vvar == nil {
+			continue
+		}
+		diff := mydp.vvar.Verify(dataline)
+		if diff > diffError {
+			if ! mydp.inErrorM {
+				fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': normError = %9.2e\n",
+					checkp.major, checkp.minor, checkp.name, checkp.filepath, varname, diff)
+				mydp.ckp = checkp
+			}
+			if verbose && ! mydp.inErrorM || mydp.panicVar {
+				mydp.vvar.ShowError(dataline)
+			}
+			mydp.inErrorM = true
+			if mydp.panicVar {
+				panic("variable divergence error ...")
+			}
+		} else {
+			if  mydp.inErrorM {
+				fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': returned to valid\n",
+					checkp.major, checkp.minor, checkp.name, checkp.filepath, varname)
+				mydp.ckp = nil
 			}
 			mydp.inErrorM = false
-		} else if dp.mtx != nil && dp.fvar == nil {
-			// std matrix
-			checkMatrix(varname, checkp, dp, mydp)
-		} else if dp.fvar != nil && dp.mtx == nil {
-			// std float
-			checkFloat(varname, checkp, dp, mydp)
-		} else if dp.fvar != nil && dp.mtx != nil {
-			// cp epigraph
-			checkMatrix(varname, checkp, dp, mydp)
-			checkFloat(varname+".t", checkp, dp, mydp)
 		}
 	}
 }
 
-func checkFloat(varname string, ckp *checkpoint, refdp, mydp *dataPoint) {
-	// std float
-	df := *mydp.fvar - *refdp.fvar
-	if df > diffError {
-		if ! mydp.inErrorF {
-			fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': diff = %9.2e\n",
-				ckp.major, ckp.minor, ckp.name, ckp.filepath, varname, df)
-			mydp.ckp = ckp
-		}
-		if verbose && ! mydp.inErrorF || mydp.panicVar {
-			fmt.Printf("variable '%s' internal|refrence|difference\n", varname)
-			fmt.Printf("%.17f %.17f %.17f\n", *mydp.fvar, *refdp.fvar, df)
-		}
-		mydp.inErrorF = true
-		if mydp.panicVar {
-			panic("variable divergence error ...")
-		}
-	} else {
-		if  mydp.inErrorF {
-			fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': returned to valid\n",
-				ckp.major, ckp.minor, ckp.name, ckp.filepath, varname)
-			mydp.ckp = nil
-		}
-		mydp.inErrorF = false
-	}
-}
-
-func checkMatrix(varname string, ckp *checkpoint, refdp, mydp *dataPoint) {
-	//fmt.Printf("checking matrix %s ...\n", varname)
-	var refval, myval *matrix.FloatMatrix
-	refval = refdp.mtx
-	myval = mydp.mtx
-	dval := matrix.Minus(myval, refval)
-	norm := blas.Nrm2Float(dval)
-	if norm > normError {
-		if ! mydp.inErrorM {
-			fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': normError = %9.2e\n",
-				ckp.major, ckp.minor, ckp.name, ckp.filepath, varname, norm)
-			mydp.ckp = ckp
-		}
-		if verbose && ! mydp.inErrorM || mydp.panicVar {
-			rm, _ := matrix.FloatMatrixStacked(matrix.StackRight, myval, refval, dval)
-			fmt.Printf("variable '%s' internal|refrence|difference\n", varname)
-			fmt.Printf("%v\n", rm.ToString(spformat))
-		}
-		mydp.inErrorM = true
-		if mydp.panicVar {
-			panic("variable divergence error ...")
-		}
-	} else {
-		//
-		if  mydp.inErrorM {
-			fmt.Printf("%d.%d sp '%s'[file:%s] variable '%s': returned to valid\n",
-				ckp.major, ckp.minor, ckp.name, ckp.filepath, varname)
-			mydp.ckp = nil
-		}
-		mydp.inErrorM = false
-	}
-}
-
-func readCkp(name string, minor int) (vars *variableTable, ckp *checkpoint, err error) {
+func readCkpData(name string, minor int) (data *dataTable, ckp *checkpoint, err error) {
 	err = nil
 	refname := ""
 	path := fmt.Sprintf("%s/%04d-%04d.%s", sppath, spmajor, minor, name)
 	file, ferr := os.Open(path)
 	if ferr != nil {
-		vars = nil
+		data = nil
 		err = ferr
 		return
 	}
 
-	refvars := make(variableTable, 20)
+	refdata := make(dataTable, 30)
 	linereader := bufio.NewReader(file)
 	reading := true
 	lineno := 0
@@ -391,51 +369,33 @@ func readCkp(name string, minor int) (vars *variableTable, ckp *checkpoint, err 
 				return
 			}
 		} else {
-			parseVariable(string(line), &refvars)
+			vartype := parseLine(string(line), &refdata)
+			_ = vartype
 		}
 		lineno += 1
 	}
-	vars = &refvars
+	data = &refdata
 	ckp = &checkpoint{name:name, filepath:path, major:spmajor, minor:minor}
 	return
 }
 
-// Parse variable line with format: <prefix>: <data>
-// where <prefix> = <varname> <type> <count>
-// for <type> matrix line is: <varname> matrix 1
-// for <type> W the line is: <varname>.<index> W <varname-count>
-// W has standard entries: d, di, dnl, dnli, r, rti, v, beta
-func parseVariable(line string, vars *variableTable)  {
+func parseLine(line string, data *dataTable) string {
 	index := strings.Index(line, ":")
 	if index == -1 {
 		// unknown line
-		return
+		return ""
 	}
 	prefix := strings.Trim(line[:index], " ")
 	pparts := strings.Fields(prefix)
 	if len(pparts) != 3 {
 		// corrupted prefix
-		return
+		return ""
 	}
-	switch pparts[1] {
-	case "matrix":
-		// do matrix stuff
-		refval, _ := matrix.FloatParseSpe(line[index+1:]) 
-		(*vars)[pparts[0]] = &dataPoint{mtx:refval}
-	case "epigraph":
-		lpar := strings.Index(line, "[")
-		rpar := strings.LastIndex(line, "]")
-		mstart := strings.Index(line, "{")
-		//mend   := strings.Index(line, "}")
-		refval, _ := matrix.FloatParseSpe(line[mstart:rpar])
-		fval, _ := strconv.ParseFloat(strings.Trim(line[lpar+1:mstart], " "), 64)
-		(*vars)[pparts[0]] = &dataPoint{mtx:refval, fvar:&fval}
-	case "float":
-		// do variable stuff
-		fval, _ := strconv.ParseFloat(strings.Trim(line[index+1:], " "), 64)
-		(*vars)[pparts[0]] = &dataPoint{fvar:&fval}
-	}
+	(*data)[pparts[0]] = strings.Trim(line[index+1:], " ")
+	return pparts[1]
 }
+
+
 // Local Variables:
 // tab-width: 4
 // End:
