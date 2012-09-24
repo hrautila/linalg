@@ -19,8 +19,6 @@ import (
 	"math"
 )
 
-type  CustomCvxKKT func(W *sets.FloatMatrixSet, x, z *matrix.FloatMatrix) (KKTFunc, error)
-
 //    Solves a convex optimization problem with a linear objective
 //
 //        minimize    c'*x 
