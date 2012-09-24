@@ -9,12 +9,13 @@
 package cvx
 
 import (
-	"github.com/hrautila/go.opt/matrix"
-	"github.com/hrautila/go.opt/cvx/sets"
+	//"github.com/hrautila/go.opt/matrix"
+	//"github.com/hrautila/go.opt/cvx/sets"
 	"fmt"
 	"testing"
 )
 
+/*
 func calcDims(dims *sets.DimensionSet) (int, int, int) {
 	cdim := dims.Sum("l", "q") + dims.SumSquared("s")
 	cdim_pckd := dims.Sum("l", "q") + dims.SumPacked("s")
@@ -50,6 +51,7 @@ func makeMatrixSet(dims *sets.DimensionSet) *sets.FloatMatrixSet {
 	return W
 }
 
+
 func TestDSet(t *testing.T) {
 	dims := makeDSet()
 	cdim, cdim_packd, cdim_diag := calcDims(dims)
@@ -77,9 +79,8 @@ func TestMatrixSet(t *testing.T) {
 	for k, m := range W.At("rti") {
 		fmt.Printf("rti[%d]:\n%v\n", k, m)
 	}
-
-		
 }
+*/
 
 func TestCompile(t *testing.T) {
 	fmt.Printf("CVX compiles OK\n")
