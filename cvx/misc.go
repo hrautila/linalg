@@ -29,6 +29,14 @@ func maxdim(vec []int) int {
 	return res
 }
 
+func sumdim(vec []int) int {
+	res := 0
+	for _, v := range vec {
+		res += v
+	}
+	return res
+}
+
 func maxvec(vec []float64) float64 {
 	res := math.Inf(-1)
 	for _, v := range vec {
