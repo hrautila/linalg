@@ -19,10 +19,10 @@ type Matrix interface {
 	NumElements() int
 	// Returns underlying float64 array for BLAS/LAPACK routines. Returns nil
 	// if matrix is complex128 valued.
-	FloatArray() []float64
+	//FloatArray() []float64
 	// Returns underlying complex128 array for BLAS/LAPACK routines. Returns nil
 	// if matrix is float64 valued matrix.
-	ComplexArray() []complex128
+	//ComplexArray() []complex128
 	// Matrix in string format.
 	String() string
 	// Make a copy  and return as Matrix interface type.
@@ -148,9 +148,9 @@ func Set(x, y Matrix) {
 	}
 	switch x.(type) {
 	case *FloatMatrix:
-		copy(x.FloatArray(), y.FloatArray())
+		copy(x.(*FloatMatrix).FloatArray(), y.(*FloatMatrix).FloatArray())
 	case *ComplexMatrix:
-		copy(x.ComplexArray(), y.ComplexArray())
+		copy(x.(*ComplexMatrix).ComplexArray(), y.(*ComplexMatrix).ComplexArray())
 	}
 }
 	

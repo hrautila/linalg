@@ -114,11 +114,11 @@ func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option)
 	var info int = -1
 	switch DL.(type) {
 	case *matrix.FloatMatrix:
-		DLa := DL.FloatArray()
-		Da := D.FloatArray()
-		DUa := DU.FloatArray()
-		DU2a := DU2.FloatArray()
-		Ba := B.FloatArray()
+		DLa := DL.(*matrix.FloatMatrix).FloatArray()
+		Da := D.(*matrix.FloatMatrix).FloatArray()
+		DUa := DU.(*matrix.FloatMatrix).FloatArray()
+		DU2a := DU2.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		trans := linalg.ParamString(pars.Trans)
 		info = dgttrs(trans, ind.N, ind.Nrhs,
 			DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:], DU2a,

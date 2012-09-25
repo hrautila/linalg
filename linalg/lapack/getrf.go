@@ -68,7 +68,7 @@ func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	info := -1
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		info = dgetrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
 	case *matrix.ComplexMatrix:
 	}

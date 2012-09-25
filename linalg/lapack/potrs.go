@@ -92,8 +92,8 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
 	info := -1
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		uplo := linalg.ParamString(pars.Uplo)
 		info = dpotrs(uplo, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
 			Ba[ind.OffsetB:], ind.LDb)

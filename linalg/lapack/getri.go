@@ -59,7 +59,7 @@ func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	info := -1
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		info = dgetri(ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
 	case *matrix.ComplexMatrix:
 		return errors.New("Getri: complex not yet implemented")

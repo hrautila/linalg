@@ -22,7 +22,6 @@ type FloatMatrix struct {
 	elements []float64
 }
 
-
 // Create a column-major matrix from a flat array of elements. Assumes
 // values are in column-major order.
 func FloatNew(rows, cols int, elements []float64) *FloatMatrix {

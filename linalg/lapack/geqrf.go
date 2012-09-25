@@ -76,8 +76,8 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
 	info := -1
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		taua := tau.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		taua := tau.(*matrix.FloatMatrix).FloatArray()
 		info = dgeqrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, taua)
 	case *matrix.ComplexMatrix:
 		return errors.New("Geqrf: complex not yet implemented")
