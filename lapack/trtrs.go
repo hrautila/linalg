@@ -100,8 +100,8 @@ func Trtrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	diag := linalg.ParamString(pars.Diag)
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		info = dtrtrs(uplo, trans, diag, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
 			Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:

@@ -117,9 +117,9 @@ func Ormqf(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
 	trans := linalg.ParamString(pars.Trans)
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ca := C.FloatArray()
-		taua := tau.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
+		taua := tau.(*matrix.FloatMatrix).FloatArray()
 		info = dormqr(side, trans, ind.M, ind.N, ind.K, Aa[ind.OffsetA:], ind.LDa,
 			taua, Ca[ind.OffsetC:], ind.LDc)
 	case *matrix.ComplexMatrix:

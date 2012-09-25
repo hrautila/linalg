@@ -82,10 +82,10 @@ func Gtrrf(DL, D, DU, DU2 matrix.Matrix, ipiv []int32, opts ...linalg.Option) er
 	}
 	switch DL.(type) {
 	case *matrix.FloatMatrix:
-		DLa := DL.FloatArray()
-		Da := D.FloatArray()
-		DUa := DU.FloatArray()
-		DU2a := DU2.FloatArray()
+		DLa := DL.(*matrix.FloatMatrix).FloatArray()
+		Da := D.(*matrix.FloatMatrix).FloatArray()
+		DUa := DU.(*matrix.FloatMatrix).FloatArray()
+		DU2a := DU2.(*matrix.FloatMatrix).FloatArray()
 		info = dgttrf(ind.N, DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:],
 			DU2a, ipiv)
 	case *matrix.ComplexMatrix:

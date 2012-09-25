@@ -63,9 +63,9 @@ func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -143,9 +143,9 @@ func Gbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -213,9 +213,9 @@ func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -280,9 +280,9 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -294,9 +294,9 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 			bval, Ya[ind.OffsetY:], ind.IncY)
 
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
-		Aa := A.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		/*
 		if alpha != nil {
@@ -382,9 +382,9 @@ func Sbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -449,9 +449,9 @@ func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -462,9 +462,9 @@ func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 			Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
 
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
-		Aa := A.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		bval := beta.Complex()
 		uplo := linalg.ParamString(params.Uplo)
@@ -526,8 +526,8 @@ func Trmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
 		diag := linalg.ParamString(params.Diag)
@@ -592,8 +592,8 @@ func Tbmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
 		diag := linalg.ParamString(params.Diag)
@@ -656,8 +656,8 @@ func Trsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
 		diag := linalg.ParamString(params.Diag)
@@ -721,8 +721,8 @@ func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
 		trans := linalg.ParamString(params.Trans)
 		diag := linalg.ParamString(params.Diag)
@@ -784,9 +784,9 @@ func Ger(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -795,9 +795,9 @@ func Ger(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err
 			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
 
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
-		Aa := A.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -858,9 +858,9 @@ func Geru(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -869,9 +869,9 @@ func Geru(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
 
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
-		Aa := A.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -930,8 +930,8 @@ func Syr(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
@@ -993,8 +993,8 @@ func Her(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		uplo := linalg.ParamString(params.Uplo)
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
@@ -1003,8 +1003,8 @@ func Her(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
 		dsyr(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
 			Aa[ind.OffsetA:], ind.LDa)
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Aa := A.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
 		uplo := linalg.ParamString(params.Uplo)
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
@@ -1058,9 +1058,9 @@ func Syr2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -1120,9 +1120,9 @@ func Her2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 	}
 	switch X.(type) {
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := X.FloatArray()
-		Aa := A.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -1132,9 +1132,9 @@ func Her2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 			Ya[ind.OffsetY:], ind.IncY,
 			Aa[ind.OffsetA:], ind.LDa)
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := X.ComplexArray()
-		Aa := A.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := X.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a number")

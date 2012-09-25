@@ -102,8 +102,8 @@ func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	trans := linalg.ParamString(pars.Trans)
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		info = dgetrs(trans, ind.N, ind.Nrhs,
 			Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:

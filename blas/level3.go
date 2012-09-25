@@ -81,9 +81,9 @@ func Gemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
-		Ca := C.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -96,9 +96,9 @@ func Gemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 			Ca[ind.OffsetC:], ind.LDc)
 
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ba := B.ComplexArray()
-		Ca := C.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -175,9 +175,9 @@ func Symm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
-		Ca := C.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -188,9 +188,9 @@ func Symm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 		dsymm(side, uplo, ind.M, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
 			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ba := B.ComplexArray()
-		Ca := C.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -268,8 +268,8 @@ func Syrk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) 
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ca := C.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -280,8 +280,8 @@ func Syrk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) 
 		dsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
 			Ca[ind.OffsetC:], ind.LDc)
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ca := C.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -354,8 +354,8 @@ func Herk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) 
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ca := C.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -366,8 +366,8 @@ func Herk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) 
 		dsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
 			Ca[ind.OffsetC:], ind.LDc)
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ca := C.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a real or complex number")
@@ -452,9 +452,9 @@ func Syr2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Opti
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
-		Ca := C.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -466,9 +466,9 @@ func Syr2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Opti
 			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
 
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ba := B.ComplexArray()
-		Ca := C.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a real or complex number")
@@ -550,9 +550,9 @@ func Her2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Opti
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
-		Ca := C.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		bval := beta.Float()
 		if math.IsNaN(aval) || math.IsNaN(bval) {
@@ -564,9 +564,9 @@ func Her2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Opti
 			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
 
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ba := B.ComplexArray()
-		Ca := C.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not a number")
@@ -643,8 +643,8 @@ func Trmm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		if math.IsNaN(aval)  {
 			return errors.New("alpha  not a number")
@@ -656,8 +656,8 @@ func Trmm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 		dtrmm(side, uplo, transA, diag,	ind.M, ind.N, aval,
 			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ba := B.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha  not a number")
@@ -732,8 +732,8 @@ func Trsm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		if math.IsNaN(aval)  {
 			return errors.New("alpha or beta not a number")
@@ -745,8 +745,8 @@ func Trsm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 		dtrsm(side, uplo, transA, diag,	ind.M, ind.N, aval,
 			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
-		Aa := A.ComplexArray()
-		Ba := B.ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha  not a number")

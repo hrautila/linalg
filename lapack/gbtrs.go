@@ -107,8 +107,8 @@ func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) erro
 	info := -1
 	switch A.(type) {
 	case *matrix.FloatMatrix:
-		Aa := A.FloatArray()
-		Ba := B.FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		trans := linalg.ParamString(pars.Trans)
 		info = dgbtrs(trans, ind.N, ind.Kl, ind.Ku, ind.Nrhs,
 			Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)

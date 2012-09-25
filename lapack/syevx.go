@@ -174,11 +174,11 @@ func SyevxFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
 		}
 	}
 			
-	Aa := A.FloatArray()
-	Wa := W.FloatArray()
+	Aa := A.(*matrix.FloatMatrix).FloatArray()
+	Wa := W.(*matrix.FloatMatrix).FloatArray()
 	var Za []float64
 	if pars.Jobz == linalg.PJobValue {
-		Za = Z.FloatArray()
+		Za = Z.(*matrix.FloatMatrix).FloatArray()
 	} else {
 		Za = nil
 	}

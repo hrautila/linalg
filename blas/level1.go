@@ -39,10 +39,10 @@ func Nrm2(X matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
 		v = matrix.FScalar(dznrm2(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
 		v = matrix.FScalar(dnrm2(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
 	default:
 		//err = errors.New("not implemented for parameter types", )
@@ -74,10 +74,10 @@ func Asum(X matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
 		v = matrix.FScalar(dzasum(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
 		v =  matrix.FScalar(dasum(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
 	//default:
 	//	err = errors.New("not implemented for parameter types", )
@@ -119,12 +119,12 @@ func Dotu(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
 		v = matrix.CScalar(zdotu(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
 		v = matrix.FScalar(ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
 	//default:
 	//	err = errors.New("not implemented for parameter types", )
@@ -167,12 +167,12 @@ func Dot(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
 		v = matrix.CScalar(zdotc(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
 		v = matrix.FScalar(ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
 	//default:
 	//	err = errors.New("not implemented for parameter types", )
@@ -217,12 +217,12 @@ func Swap(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
 		zswap(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
 		dswap(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
 	default:
 		err = errors.New("not implemented for parameter types", )
@@ -261,12 +261,12 @@ func Copy(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
 		zcopy(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
 		dcopy(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
 	default:
 		err = errors.New("not implemented for parameter types", )
@@ -301,11 +301,11 @@ func Scal(X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err erro
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
 		cval := alpha.Complex()
 		zscal(ind.Nx, cval, Xa[ind.OffsetX:], ind.IncX)
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
 		rval := alpha.Float()
 		if math.IsNaN(rval) {
 			return errors.New("alpha not float value")
@@ -353,8 +353,8 @@ func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 	}
 	switch X.(type) {
 	case *matrix.ComplexMatrix:
-		Xa := X.ComplexArray()
-		Ya := Y.ComplexArray()
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
 		aval := alpha.Complex()
 		if cmplx.IsNaN(aval) {
 			return errors.New("alpha not complex value")
@@ -362,8 +362,8 @@ func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 		zaxpy(ind.Nx, aval, Xa[ind.OffsetX:],
 			ind.IncX, Ya[ind.OffsetY:], ind.IncY)
 	case *matrix.FloatMatrix:
-		Xa := X.FloatArray()
-		Ya := Y.FloatArray()
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
 		aval := alpha.Float()
 		if math.IsNaN(aval) {
 			return errors.New("alpha not float value")
