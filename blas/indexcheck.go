@@ -540,12 +540,12 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 				return errors.New("sizeC")
 			}
 		}
-	case fsyrk, fsyr2k: 
+	case fsyrk: 
 		if ind.N < 0 {
 			if pars.Trans == linalg.PNoTrans {
-				ind.N = B.Rows()
+				ind.N = A.Rows()
 			} else {
-				ind.N = B.Cols()
+				ind.N = A.Cols()
 			}
 		}
 		if ind.K < 0 {
@@ -557,6 +557,69 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 		}
 		if ind.N == 0 {
 			return
+		}
+		if ind.LDa == 0 {
+			ind.LDa = max(1, A.Rows())
+		}
+		if ind.OffsetA < 0 { 
+			return errors.New("offsetA")
+		}
+		if ind.K > 0 {
+			if (pars.Trans == linalg.PNoTrans && ind.LDa < max(1, ind.N)) ||
+				(pars.Trans != linalg.PNoTrans && ind.LDa < max(1, ind.K)) {
+				return errors.New("inconsistent ldA")
+			}
+			sizeA := A.NumElements()
+			if (pars.Trans == linalg.PNoTrans &&
+				sizeA < ind.OffsetA + (ind.K-1)*ind.LDa + ind.N) ||
+				(pars.TransA != linalg.PNoTrans &&
+				sizeA < ind.OffsetA + (ind.N-1)*ind.LDa + ind.K) {
+				return errors.New("sizeA")
+			}
+		}
+			
+		if ind.OffsetC < 0 { 
+			return errors.New("offsetC illegal, <0")
+		}
+		if ind.LDc == 0 {
+			ind.LDc = max(1, C.Rows())
+		}
+		if ind.LDc < max(1, ind.N) {
+			return errors.New("ldC")
+		}
+		sizeC := C.NumElements()
+		if sizeC < ind.OffsetC + (ind.N-1)*ind.LDc + ind.N {
+			return errors.New("sizeC")
+		}
+	case fsyr2k: 
+		if ind.N < 0 {
+			if pars.Trans == linalg.PNoTrans {
+				ind.N = A.Rows()
+				if ind.N != B.Rows() {
+					return errors.New("dimensions of A and B do not match")
+				}
+			} else {
+				ind.N = A.Cols()
+				if ind.N != B.Cols() {
+					return errors.New("dimensions of A and B do not match")
+				}
+			}
+		}
+		if ind.N == 0 {
+			return
+		}
+		if ind.K < 0 {
+			if pars.Trans == linalg.PNoTrans {
+				ind.K = A.Cols()
+				if ind.K != B.Cols() {
+					return errors.New("dimensions of A and B do not match")
+				}
+			} else {
+				ind.K = A.Rows()
+				if ind.K != B.Rows() {
+					return errors.New("dimensions of A and B do not match")
+				}
+			}
 		}
 		if ind.LDa == 0 {
 			ind.LDa = max(1, A.Rows())
@@ -574,42 +637,37 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 				return errors.New("sizeA")
 			}
 		}
-		if B != nil {
-			if ind.OffsetB < 0 { 
-				return errors.New("offsetB illegal, <0")
+		if ind.OffsetB < 0 { 
+			return errors.New("offsetB illegal, <0")
+		}
+		if ind.LDb == 0 {
+			ind.LDb = max(1, B.Rows())
+		}
+		if ind.K > 0 {
+			if (pars.Trans == linalg.PNoTrans && ind.LDb < max(1, ind.N)) ||
+				(pars.Trans != linalg.PNoTrans && ind.LDb < max(1, ind.K)) {
+				return errors.New("ldB")
 			}
-			if ind.LDb == 0 {
-				ind.LDb = max(1, B.Rows())
-			}
-			if ind.K > 0 {
-				if (pars.Trans == linalg.PNoTrans && ind.LDb < max(1, ind.N)) ||
-					(pars.Trans != linalg.PNoTrans && ind.LDb < max(1, ind.K)) {
-					return errors.New("ldB")
-				}
-				sizeB := B.NumElements()
-				if (pars.Trans == linalg.PNoTrans &&
-					sizeB < ind.OffsetB + (ind.K-1)*ind.LDb + ind.N) ||
-					(pars.Trans != linalg.PNoTrans &&
-					sizeB < ind.OffsetB + (ind.N-1)*ind.LDb + ind.K) {
-					return errors.New("sizeB")
-				}
+			sizeB := B.NumElements()
+			if (pars.Trans == linalg.PNoTrans &&
+				sizeB < ind.OffsetB + (ind.K-1)*ind.LDb + ind.N) ||
+				(pars.Trans != linalg.PNoTrans &&
+				sizeB < ind.OffsetB + (ind.N-1)*ind.LDb + ind.K) {
+				return errors.New("sizeB")
 			}
 		}
-			
-		if C != nil {
-			if ind.OffsetC < 0 { 
-				return errors.New("offsetC illegal, <0")
-			}
-			if ind.LDc == 0 {
-				ind.LDc = max(1, C.Rows())
-			}
-			if ind.LDc < max(1, ind.N) {
-				return errors.New("ldC")
-			}
-			sizeC := C.NumElements()
-			if sizeC < ind.OffsetC + (ind.N-1)*ind.LDc + ind.N {
-				return errors.New("sizeC")
-			}
+		if ind.OffsetC < 0 { 
+			return errors.New("offsetC illegal, <0")
+		}
+		if ind.LDc == 0 {
+			ind.LDc = max(1, C.Rows())
+		}
+		if ind.LDc < max(1, ind.N) {
+			return errors.New("ldC")
+		}
+		sizeC := C.NumElements()
+		if sizeC < ind.OffsetC + (ind.N-1)*ind.LDc + ind.N {
+			return errors.New("sizeC")
 		}
 	}
 	err = nil
