@@ -1,25 +1,21 @@
 
 // Copyright (c) Harri Rautila, 2012
 
-// This file is part of go.opt/linalg package. It is free software, distributed
-// under the terms of GNU Lesser General Public License Version 3, or any later
-// version. See the COPYING tile included in this archive.
+// This file is part of github.com/hrautila/linalg/lapack package.
+// It is free software, distributed under the terms of GNU Lesser General Public 
+// License Version 3, or any later version. See the COPYING tile included in this archive.
 
 package lapack
 
 import (
-	"github.com/hrautila/go.opt/linalg"
-	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 	"errors"
 	"fmt"
 )
 
 /*
  Singular value decomposition of a real or complex matrix.
-
- Gesvd(A, S, jobu=PJobNo, jobvt=PJobNo, U=nil, Vt=nil, m=A.Rows,
- n=A.Cols, ldA=max(1,A.Rows), ldU=-1, ldVt=-1,
- offsetA=0, offsetS=0, offsetU=0, offsetVt=0)
 
  PURPOSE
 

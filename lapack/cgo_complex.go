@@ -1,8 +1,8 @@
 // Copyright (c) Harri Rautila, 2012
 
-// This file is part of go.opt/linalg package. It is free software, distributed
-// under the terms of GNU Lesser General Public License Version 3, or any later
-// version. See the COPYING tile included in this archive.
+// This file is part of github.com/hrautila/linalg/lapack package.
+// It is free software, distributed under the terms of GNU Lesser General Public 
+// License Version 3, or any later version. See the COPYING tile included in this archive.
 
 package lapack
 

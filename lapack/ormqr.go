@@ -1,24 +1,21 @@
 
 // Copyright (c) Harri Rautila, 2012
 
-// This file is part of go.opt/linalg package. It is free software, distributed
-// under the terms of GNU Lesser General Public License Version 3, or any later
-// version. See the COPYING tile included in this archive.
+// This file is part of github.com/hrautila/linalg/lapack package.
+// It is free software, distributed under the terms of GNU Lesser General Public 
+// License Version 3, or any later version. See the COPYING tile included in this archive.
 
 package lapack
 
 import (
-	"github.com/hrautila/go.opt/linalg"
-	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 	"errors"
 	"fmt"
 )
 
 /*
  Product with a real orthogonal matrix.
-
- Ormqr(A, tau, C, side='L', trans='N', m=C.Rows, n=C.Cols,
- k=len(tau), ldA=max(1,A.Rows), ldC=max(1,C.Rows), offsetA=0, offsetC=0)
 
  PURPOSE
 

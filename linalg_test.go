@@ -29,18 +29,6 @@ func TestOpt(t *testing.T) {
 	PrintOpts(&iopt, &fopt, &sopt, &BOpt{"bopt", true})
 }
 
-func PrintConsts(cs ...Const) {
-	for i, c := range cs {
-		fmt.Printf("%d: f=%v, c=%v\n", i, c.Float(), c.Complex())
-	}
-}
-
-func TestConst(t *testing.T) {
-	f := FConst(2.0)
-	c := CConst(complex(1.0, 2.0))
-	PrintConsts(f, c)
-}
-
 // Local Variables:
 // tab-width: 4
 // End:

@@ -1,15 +1,15 @@
 
 // Copyright (c) Harri Rautila, 2012
 
-// This file is part of go.opt/linalg package. It is free software, distributed
-// under the terms of GNU Lesser General Public License Version 3, or any later
-// version. See the COPYING tile included in this archive.
+// This file is part of github.com/hrautila/linalg/lapack package.
+// It is free software, distributed under the terms of GNU Lesser General Public 
+// License Version 3, or any later version. See the COPYING tile included in this archive.
 
 package lapack
 
 import (
-	"github.com/hrautila/go.opt/linalg"
-	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 	"errors"
 	"fmt"
 )
@@ -19,10 +19,6 @@ import (
  Computes selected eigenvalues and eigenvectors of a real symmetric
  matrix (RRR driver).
 
- m = Syevr(A, W, jobz=PJobNo, range=PRangeAll, uplo=PLower,
- vlimit=[]float{0.0, 0.0}, ilimit=[]int{1, 1}, Z=-1, n=A.Rows,
- ldA=max(1,A.Rows), ldZ=-1, abstol=0.0, offsetA=0, offsetW=0, offsetZ=0)
- 
  PURPOSE
 
  Computes selected eigenvalues/vectors of a real symmetric n by n

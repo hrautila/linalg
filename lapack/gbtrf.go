@@ -1,23 +1,21 @@
 
 // Copyright (c) Harri Rautila, 2012
 
-// This file is part of go.opt/linalg package. It is free software, distributed
-// under the terms of GNU Lesser General Public License Version 3, or any later
-// version. See the COPYING tile included in this archive.
+// This file is part of github.com/hrautila/linalg/lapack package.
+// It is free software, distributed under the terms of GNU Lesser General Public 
+// License Version 3, or any later version. See the COPYING tile included in this archive.
 
 package lapack
 
 import (
-	"github.com/hrautila/go.opt/linalg"
-	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 	"errors"
 	"fmt"
 )
 
 /*
  LU factorization of a real or complex m by n band matrix.
-
- Gbtrf(A, m, kl, ipiv, n=A.Cols, ku=A.Rows-2*kl-1, ldA=max(1,A.Rows), offsetA=0)
 
  PURPOSE
 

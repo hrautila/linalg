@@ -1,15 +1,15 @@
 
 // Copyright (c) Harri Rautila, 2012
 
-// This file is part of go.opt/linalg package. It is free software, distributed
-// under the terms of GNU Lesser General Public License Version 3, or any later
-// version. See the COPYING tile included in this archive.
+// This file is part of github.com/hrautila/linalg/lapack package.
+// It is free software, distributed under the terms of GNU Lesser General Public 
+// License Version 3, or any later version. See the COPYING tile included in this archive.
 
 package lapack
 
 import (
-	"github.com/hrautila/go.opt/linalg"
-	"github.com/hrautila/go.opt/matrix"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 	"errors"
 	"fmt"
 )
@@ -18,9 +18,6 @@ import (
  Solves a real or complex set of linear equations with a banded
  coefficient matrix, given the LU factorization computed by gbtrf()
  or gbsv().
-
- Gbtrs(A, B, ipiv, kl, trans=PNoTrans, n=A.Cols, ku=A.Rows-2*kl-1,
- nrhs=B.Cols, ldA=max(1,A.Rows), ldB=max(1,B.Rows), offsetA=0, offsetB=0)
 
  PURPOSE
 
