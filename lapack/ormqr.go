@@ -51,7 +51,7 @@ import (
   offsetB   nonnegative integer
 
 */
-func Ormqf(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
+func Ormqr(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
 	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return err
