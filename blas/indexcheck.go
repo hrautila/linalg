@@ -409,10 +409,13 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 		}
 		if ind.N < 0 {
 			if pars.TransB == linalg.PNoTrans {
-				ind.N = A.Cols()
+				ind.N = B.Cols()
 			} else {
-				ind.N = A.Rows()
+				ind.N = B.Rows()
 			}
+		}
+		if ind.M == 0 || ind.N == 0 {
+			return nil
 		}
 		if ind.K < 0 {
 			if pars.TransA == linalg.PNoTrans {
@@ -425,8 +428,8 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 				return errors.New("dimensions of A and B do not match")
 			}
 		}
-		if ind.OffsetB < 0 { 
-			return errors.New("offsetB illegal, <0")
+		if ind.OffsetA < 0 { 
+			return errors.New("offsetA illegal, <0")
 		}
 		if ind.LDa == 0 {
 			ind.LDa = max(1, A.Rows())
@@ -445,42 +448,38 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
 			}
 		}
 		// B matrix
-		if B != nil {
-			if ind.OffsetB < 0 { 
-				return errors.New("offsetB illegal, <0")
+		if ind.OffsetB < 0 { 
+			return errors.New("offsetB illegal, <0")
+		}
+		if ind.LDb == 0 {
+			ind.LDb = max(1, B.Rows())
+		}
+		if ind.K > 0 {
+			if (pars.TransB == linalg.PNoTrans && ind.LDb < max(1, ind.K)) ||
+				(pars.TransB != linalg.PNoTrans && ind.LDb < max(1, ind.N)) {
+				return errors.New("inconsistent ldB")
 			}
-			if ind.LDb == 0 {
-				ind.LDb = max(1, B.Rows())
-			}
-			if ind.K > 0 {
-				if (pars.TransB == linalg.PNoTrans && ind.LDb < max(1, ind.K)) ||
-					(pars.TransB != linalg.PNoTrans && ind.LDb < max(1, ind.N)) {
-					return errors.New("inconsistent ldB")
-				}
-				sizeB := B.NumElements()
-				if (pars.TransB == linalg.PNoTrans &&
-					sizeB < ind.OffsetB + (ind.N-1)*ind.LDb + ind.K) ||
-					(pars.TransB != linalg.PNoTrans &&
-					sizeB < ind.OffsetB + (ind.K-1)*ind.LDb + ind.N) {
-					return errors.New("sizeB")
-				}
+			sizeB := B.NumElements()
+			if (pars.TransB == linalg.PNoTrans &&
+				sizeB < ind.OffsetB + (ind.N-1)*ind.LDb + ind.K) ||
+				(pars.TransB != linalg.PNoTrans &&
+				sizeB < ind.OffsetB + (ind.K-1)*ind.LDb + ind.N) {
+				return errors.New("sizeB")
 			}
 		}
 		// C matrix
-		if C != nil {
-			if ind.OffsetC < 0 { 
-				return errors.New("offsetC illegal, <0")
-			}
-			if ind.LDc == 0 {
-				ind.LDc = max(1, C.Rows())
-			}
-			if ind.LDc < max(1, ind.M) {
-				return errors.New("inconsistent ldC")
-			}
-			sizeC := C.NumElements()
-			if sizeC < ind.OffsetC + (ind.N-1)*ind.LDc + ind.M {
-				return errors.New("sizeC")
-			}
+		if ind.OffsetC < 0 { 
+			return errors.New("offsetC illegal, <0")
+		}
+		if ind.LDc == 0 {
+			ind.LDc = max(1, C.Rows())
+		}
+		if ind.LDc < max(1, ind.M) {
+			return errors.New("inconsistent ldC")
+		}
+		sizeC := C.NumElements()
+		if sizeC < ind.OffsetC + (ind.N-1)*ind.LDc + ind.M {
+			return errors.New("sizeC")
 		}
 
 	case fsymm, ftrmm, ftrsm: 
