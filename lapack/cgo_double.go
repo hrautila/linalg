@@ -282,7 +282,7 @@ func dtrtrs(uplo, trans, diag string, N, Nrhs int, A []float64, lda int, B []flo
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
 	ctrans := C.CString(trans)
-	defer C.free(unsafe.Pointer(cuplo))
+	defer C.free(unsafe.Pointer(ctrans))
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
