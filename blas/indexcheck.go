@@ -12,7 +12,7 @@ import (
 	"github.com/hrautila/linalg"
 	"github.com/hrautila/matrix"
 	"errors"
-	"fmt"
+	//"fmt"
 )
 
 type funcNum int
@@ -133,7 +133,7 @@ func check_level1_func(ind *linalg.IndexOpts, fn funcNum, X, Y matrix.Matrix) er
 			ind.Ny = nY
 		}
 		if sizeY < ind.OffsetY + 1 + (ind.Ny-1)*abs(ind.IncY) {
-			fmt.Printf("sizeY=%d, inds: %#v\n", sizeY, ind)
+			//fmt.Printf("sizeY=%d, inds: %#v\n", sizeY, ind)
 			return errors.New("Y size error")
 		}
 
