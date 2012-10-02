@@ -147,6 +147,7 @@ func dgemv(transA string, M int, N int, alpha float64,
 	ctransA := C.CString(transA)
 	defer C.free(unsafe.Pointer(ctransA))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dgemv_(ctransA,
 		(*C.int)(unsafe.Pointer(&M)),
 		(*C.int)(unsafe.Pointer(&N)),
@@ -170,6 +171,7 @@ func dgbmv(transA string, M int, N int, KL int, KU int,
 	ctransA := C.CString(transA)
 	defer C.free(unsafe.Pointer(ctransA))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dgbmv_(ctransA,
 		(*C.int)(unsafe.Pointer(&M)),
 		(*C.int)(unsafe.Pointer(&N)),
@@ -197,6 +199,7 @@ func dtrmv(uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dtrmv_(cuplo, ctransA, cdiag,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&A[0])),
@@ -217,6 +220,7 @@ func dtbmv(uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dtbmv_(cuplo, ctransA, cdiag,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.int)(unsafe.Pointer(&K)),
@@ -238,6 +242,7 @@ func dtpmv(uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dtpmv_(cuplo, ctransA, cdiag,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&Ap[0])), 
@@ -258,6 +263,7 @@ func dtrsv(uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dtrsv_(cuplo, ctransA, cdiag,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&A[0])),
@@ -278,6 +284,7 @@ func dtbsv(uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dtbsv_(cuplo, ctransA, cdiag,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.int)(unsafe.Pointer(&K)),
@@ -299,6 +306,7 @@ func dtpsv(uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dtpsv_(cuplo, ctransA, cdiag,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&Ap[0])), 
@@ -315,6 +323,7 @@ func dsymv(uplo string, N int, alpha float64,
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dsymv_(cuplo, (*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
 		(*C.double)(unsafe.Pointer(&A[0])),
@@ -336,6 +345,7 @@ func dsbmv(uplo string, N int, K int, alpha float64,
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dsbmv_(cuplo,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.int)(unsafe.Pointer(&K)),
@@ -360,6 +370,7 @@ func dspmv(uplo string, N int, alpha float64,
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dspmv_(cuplo,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
@@ -376,6 +387,7 @@ func dger(M int, N int, alpha float64,
 		X []float64, incX int, Y []float64, incY int,
 		A []float64, lda int) {
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dger_((*C.int)(unsafe.Pointer(&M)),
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
@@ -394,6 +406,7 @@ func dsyr(uplo string, N int, alpha float64,
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dsyr_(cuplo,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
@@ -410,6 +423,7 @@ func dspr(uplo string, N int, alpha float64,
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dspr_(cuplo,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
@@ -424,6 +438,8 @@ func dsyr2(uplo string, N int, alpha float64,
 
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
+
+	// ?? TODO: protect against index out of bounds panics. 
 
 	C.dsyr2_(cuplo,
 		(*C.int)(unsafe.Pointer(&N)),
@@ -443,6 +459,7 @@ func dspr2(uplo string, N int, alpha float64,
 	cuplo := C.CString(uplo)
 	defer C.free(unsafe.Pointer(cuplo))
 
+	// ?? TODO: protect against index out of bounds panics. 
 	C.dspr2_(cuplo,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
@@ -468,17 +485,28 @@ func dgemm(transA, transB string, M int, N int, K int,
 	ctransB := C.CString(transB)
 	defer C.free(unsafe.Pointer(ctransB))
 
+	// protect against index out of bounds panics
+	var aptr, bptr, cptr *float64 = nil, nil, nil
+	if len(A) > 0 {
+		aptr = &A[0]
+	}
+	if len(B) > 0 {
+		bptr = &B[0]
+	}
+	if len(C) > 0 {
+		cptr = &C[0]
+	}
 	C.dgemm_(ctransA,ctransB,
 		(*C.int)(unsafe.Pointer(&M)),
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.int)(unsafe.Pointer(&K)),
 		(*C.double)(unsafe.Pointer(&alpha)),
-		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.double)(unsafe.Pointer(aptr)),
 		(*C.int)(unsafe.Pointer(&lda)),
-		(*C.double)(unsafe.Pointer(&B[0])),
+		(*C.double)(unsafe.Pointer(bptr)),
 		(*C.int)(unsafe.Pointer(&ldb)),
 		(*C.double)(unsafe.Pointer(&beta)),
-		(*C.double)(unsafe.Pointer(&C[0])),
+		(*C.double)(unsafe.Pointer(cptr)),
 		(*C.int)(unsafe.Pointer(&ldc)))
 }
 
@@ -491,16 +519,27 @@ func dsymm(side, uplo string, M int, N int,
 	cside := C.CString(side)
 	defer C.free(unsafe.Pointer(cside))
 
+	// protect against index out of bounds panics
+	var aptr, bptr, cptr *float64 = nil, nil, nil
+	if len(A) > 0 {
+		aptr = &A[0]
+	}
+	if len(B) > 0 {
+		bptr = &B[0]
+	}
+	if len(C) > 0 {
+		cptr = &C[0]
+	}
 	C.dsymm_(cside, cuplo,
 		(*C.int)(unsafe.Pointer(&M)),
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
-		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.double)(unsafe.Pointer(aptr)),
 		(*C.int)(unsafe.Pointer(&lda)),
-		(*C.double)(unsafe.Pointer(&B[0])),
+		(*C.double)(unsafe.Pointer(bptr)),
 		(*C.int)(unsafe.Pointer(&ldb)),
 		(*C.double)(unsafe.Pointer(&beta)),
-		(*C.double)(unsafe.Pointer(&C[0])),
+		(*C.double)(unsafe.Pointer(cptr)),
 		(*C.int)(unsafe.Pointer(&ldc)))
 }
 
@@ -512,17 +551,23 @@ func dsyrk(uplo, trans string, N int, K int,
 	defer C.free(unsafe.Pointer(cuplo))
 	ctrans := C.CString(trans)
 	defer C.free(unsafe.Pointer(ctrans))
-	//cside := C.CString(side)
-	//defer C.free(unsafe.Pointer(cside))
 
+	// protect against index out of bounds panics
+	var aptr, cptr *float64 = nil, nil
+	if len(A) > 0 {
+		aptr = &A[0]
+	}
+	if len(C) > 0 {
+		cptr = &C[0]
+	}
 	C.dsyrk_(cuplo, ctrans,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.int)(unsafe.Pointer(&K)),
 		(*C.double)(unsafe.Pointer(&alpha)),
-		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.double)(unsafe.Pointer(aptr)),
 		(*C.int)(unsafe.Pointer(&lda)),
 		(*C.double)(unsafe.Pointer(&beta)),
-		(*C.double)(unsafe.Pointer(&C[0])),
+		(*C.double)(unsafe.Pointer(cptr)),
 		(*C.int)(unsafe.Pointer(&ldc)))
 }
 
@@ -534,19 +579,28 @@ func dsyr2k(uplo, trans string, N int, K int,
 	defer C.free(unsafe.Pointer(cuplo))
 	ctrans := C.CString(trans)
 	defer C.free(unsafe.Pointer(ctrans))
-	//cside := C.CString(side)
-	//defer C.free(unsafe.Pointer(cside))
 
+	// protect against index out of bounds panics
+	var aptr, bptr, cptr *float64 = nil, nil, nil
+	if len(A) > 0 {
+		aptr = &A[0]
+	}
+	if len(B) > 0 {
+		bptr = &B[0]
+	}
+	if len(C) > 0 {
+		cptr = &C[0]
+	}
 	C.dsyr2k_(cuplo, ctrans,
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.int)(unsafe.Pointer(&K)),
 		(*C.double)(unsafe.Pointer(&alpha)),
-		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.double)(unsafe.Pointer(aptr)),
 		(*C.int)(unsafe.Pointer(&lda)),
-		(*C.double)(unsafe.Pointer(&B[0])),
+		(*C.double)(unsafe.Pointer(bptr)),
 		(*C.int)(unsafe.Pointer(&ldb)),
 		(*C.double)(unsafe.Pointer(&beta)),
-		(*C.double)(unsafe.Pointer(&C[0])),
+		(*C.double)(unsafe.Pointer(cptr)),
 		(*C.int)(unsafe.Pointer(&ldc)))
 }
 
@@ -562,13 +616,21 @@ func dtrmm(side, uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// protect against index out of bounds panics
+	var aptr, bptr *float64 = nil, nil
+	if len(A) > 0 {
+		aptr = &A[0]
+	}
+	if len(B) > 0 {
+		bptr = &B[0]
+	}
 	C.dtrmm_(cside, cuplo, ctrans, cdiag,
 		(*C.int)(unsafe.Pointer(&M)),
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
-		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.double)(unsafe.Pointer(aptr)),
 		(*C.int)(unsafe.Pointer(&lda)),
-		(*C.double)(unsafe.Pointer(&B[0])),
+		(*C.double)(unsafe.Pointer(bptr)),
 		(*C.int)(unsafe.Pointer(&ldb)))
 }
 
@@ -584,13 +646,21 @@ func dtrsm(side, uplo, transA, diag string,
 	cdiag := C.CString(diag)
 	defer C.free(unsafe.Pointer(cdiag))
 
+	// protect against index out of bounds panics
+	var aptr, bptr *float64 = nil, nil
+	if len(A) > 0 {
+		aptr = &A[0]
+	}
+	if len(B) > 0 {
+		bptr = &B[0]
+	}
 	C.dtrsm_(cside, cuplo, ctrans, cdiag,
 		(*C.int)(unsafe.Pointer(&M)),
 		(*C.int)(unsafe.Pointer(&N)),
 		(*C.double)(unsafe.Pointer(&alpha)),
-		(*C.double)(unsafe.Pointer(&A[0])),
+		(*C.double)(unsafe.Pointer(aptr)),
 		(*C.int)(unsafe.Pointer(&lda)),
-		(*C.double)(unsafe.Pointer(&B[0])),
+		(*C.double)(unsafe.Pointer(bptr)),
 		(*C.int)(unsafe.Pointer(&ldb)))
 }
 
