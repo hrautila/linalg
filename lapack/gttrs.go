@@ -1,4 +1,3 @@
-
 // Copyright (c) Harri Rautila, 2012
 
 // This file is part of github.com/hrautila/linalg/lapack package.
@@ -8,10 +7,10 @@
 package lapack
 
 import (
-	"github.com/hrautila/linalg"
-	"github.com/hrautila/matrix"
-	"errors"
-	"fmt"
+    "errors"
+    "fmt"
+    "github.com/hrautila/linalg"
+    "github.com/hrautila/matrix"
 )
 
 /*
@@ -45,89 +44,88 @@ import (
   offsetdu  nonnegative integer
   offsetB   nonnegative integer
 
- */
+*/
 func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
-	pars, err := linalg.GetParameters(opts...)
-	if err != nil {
-		return err
-	}
-	ind := linalg.GetIndexOpts(opts...)
-	if ind.OffsetD < 0 {
-		return errors.New("Gttrs: offset D")
-	}
-	if ind.N < 0 {
-		ind.N = D.NumElements() - ind.OffsetD
-	}
-	if ind.N < 0 {
-		return errors.New("Gttrs: size D")
-	}
-	if ind.N == 0 {
-		return nil
-	}
-	if ind.OffsetDL < 0 {
-		return errors.New("Gttrs: offset DL")
-	}
-	sizeDL := DL.NumElements()
-	if sizeDL < ind.OffsetDL + ind.N - 1 {
-		return errors.New("Gttrs: sizeDL")
-	}
-	if ind.OffsetDU < 0 {
-		return errors.New("Gttrs: offset DU")
-	}
-	sizeDU := DU.NumElements()
-	if sizeDU < ind.OffsetDU + ind.N - 1 {
-		return errors.New("Gttrs: sizeDU")
-	}
-	sizeDU2 := DU2.NumElements()
-	if sizeDU2 < ind.N - 2 {
-		return errors.New("Gttrs: sizeDU2")
-	}
-	if ind.Nrhs < 0 {
-		ind.Nrhs = B.Cols()
-	}
-	if ind.Nrhs == 0 {
-		return nil
-	}
-	if ind.LDb == 0 {
-		ind.LDb = max(1, B.Rows())
-	}
-	if ind.LDb < max(1, ind.N) {
-		return errors.New("Gttrs: ldB")
-	}
-	if ind.OffsetB < 0 {
-		return errors.New("Gttrs: offset B")
-	}
-	sizeB := B.NumElements()
-	if sizeB < ind.OffsetB + (ind.Nrhs-1)*ind.LDb + ind.N {
-		return errors.New("Gttrs: sizeB")
-	}
-	if len(ipiv) < ind.N {
-		return errors.New("Gttrs: size ipiv")
-	}
-	if ! matrix.EqualTypes(DL, D, DU, DU2, B) {
-		return errors.New("Gttrs: matrix types")
-	}
-	var info int = -1
-	switch DL.(type) {
-	case *matrix.FloatMatrix:
-		DLa := DL.(*matrix.FloatMatrix).FloatArray()
-		Da := D.(*matrix.FloatMatrix).FloatArray()
-		DUa := DU.(*matrix.FloatMatrix).FloatArray()
-		DU2a := DU2.(*matrix.FloatMatrix).FloatArray()
-		Ba := B.(*matrix.FloatMatrix).FloatArray()
-		trans := linalg.ParamString(pars.Trans)
-		info = dgttrs(trans, ind.N, ind.Nrhs,
-			DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:], DU2a,
-			ipiv, Ba[ind.OffsetB:], ind.LDb)
-	case *matrix.ComplexMatrix:
-		return errors.New("Gttrs: complex valued not yet implemented")
-	}
-	if info != 0 {
-		return errors.New(fmt.Sprintf("Gttrs lapack error: %d", info))
-	}
-	return nil
+    pars, err := linalg.GetParameters(opts...)
+    if err != nil {
+        return err
+    }
+    ind := linalg.GetIndexOpts(opts...)
+    if ind.OffsetD < 0 {
+        return errors.New("Gttrs: offset D")
+    }
+    if ind.N < 0 {
+        ind.N = D.NumElements() - ind.OffsetD
+    }
+    if ind.N < 0 {
+        return errors.New("Gttrs: size D")
+    }
+    if ind.N == 0 {
+        return nil
+    }
+    if ind.OffsetDL < 0 {
+        return errors.New("Gttrs: offset DL")
+    }
+    sizeDL := DL.NumElements()
+    if sizeDL < ind.OffsetDL+ind.N-1 {
+        return errors.New("Gttrs: sizeDL")
+    }
+    if ind.OffsetDU < 0 {
+        return errors.New("Gttrs: offset DU")
+    }
+    sizeDU := DU.NumElements()
+    if sizeDU < ind.OffsetDU+ind.N-1 {
+        return errors.New("Gttrs: sizeDU")
+    }
+    sizeDU2 := DU2.NumElements()
+    if sizeDU2 < ind.N-2 {
+        return errors.New("Gttrs: sizeDU2")
+    }
+    if ind.Nrhs < 0 {
+        ind.Nrhs = B.Cols()
+    }
+    if ind.Nrhs == 0 {
+        return nil
+    }
+    if ind.LDb == 0 {
+        ind.LDb = max(1, B.Rows())
+    }
+    if ind.LDb < max(1, ind.N) {
+        return errors.New("Gttrs: ldB")
+    }
+    if ind.OffsetB < 0 {
+        return errors.New("Gttrs: offset B")
+    }
+    sizeB := B.NumElements()
+    if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb+ind.N {
+        return errors.New("Gttrs: sizeB")
+    }
+    if len(ipiv) < ind.N {
+        return errors.New("Gttrs: size ipiv")
+    }
+    if !matrix.EqualTypes(DL, D, DU, DU2, B) {
+        return errors.New("Gttrs: matrix types")
+    }
+    var info int = -1
+    switch DL.(type) {
+    case *matrix.FloatMatrix:
+        DLa := DL.(*matrix.FloatMatrix).FloatArray()
+        Da := D.(*matrix.FloatMatrix).FloatArray()
+        DUa := DU.(*matrix.FloatMatrix).FloatArray()
+        DU2a := DU2.(*matrix.FloatMatrix).FloatArray()
+        Ba := B.(*matrix.FloatMatrix).FloatArray()
+        trans := linalg.ParamString(pars.Trans)
+        info = dgttrs(trans, ind.N, ind.Nrhs,
+            DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:], DU2a,
+            ipiv, Ba[ind.OffsetB:], ind.LDb)
+    case *matrix.ComplexMatrix:
+        return errors.New("Gttrs: complex valued not yet implemented")
+    }
+    if info != 0 {
+        return errors.New(fmt.Sprintf("Gttrs lapack error: %d", info))
+    }
+    return nil
 }
-
 
 // Local Variables:
 // tab-width: 4

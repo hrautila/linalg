@@ -1,4 +1,3 @@
-
 // Copyright (c) Harri Rautila, 2012
 
 // This file is part of github.com/hrautila/linalg/lapack package.
@@ -8,11 +7,12 @@
 package lapack
 
 import (
-	"github.com/hrautila/linalg"
-	"github.com/hrautila/matrix"
-	"errors"
-	"fmt"
+    "errors"
+    "fmt"
+    "github.com/hrautila/linalg"
+    "github.com/hrautila/matrix"
 )
+
 /*
  Inverse of a real symmetric or complex Hermitian positive definite
  matrix.
@@ -35,59 +35,58 @@ import (
   offsetA   nonnegative integer;
 */
 func Potri(A matrix.Matrix, opts ...linalg.Option) error {
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		return PotriFloat(A.(*matrix.FloatMatrix), opts...)
-	case *matrix.ComplexMatrix:
-		return errors.New("Potri: complex not implemented yet")
-	}
-	return errors.New("Potri: unknown types")
+    switch A.(type) {
+    case *matrix.FloatMatrix:
+        return PotriFloat(A.(*matrix.FloatMatrix), opts...)
+    case *matrix.ComplexMatrix:
+        return errors.New("Potri: complex not implemented yet")
+    }
+    return errors.New("Potri: unknown types")
 }
 
 func PotriFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
-	pars, err := linalg.GetParameters(opts...)
-	if err != nil {
-		return err
-	}
-	ind := linalg.GetIndexOpts(opts...)
-	err = checkPotri(ind, A)
-	if err != nil {
-		return err
-	}
-	if ind.N == 0 {
-		return nil
-	}
-	Aa := A.FloatArray()
-	uplo := linalg.ParamString(pars.Uplo)
-	info := dpotri(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
-	if info != 0 {
-		return errors.New(fmt.Sprintf("Potri lapack error %d", info))
-	}
-	return nil
+    pars, err := linalg.GetParameters(opts...)
+    if err != nil {
+        return err
+    }
+    ind := linalg.GetIndexOpts(opts...)
+    err = checkPotri(ind, A)
+    if err != nil {
+        return err
+    }
+    if ind.N == 0 {
+        return nil
+    }
+    Aa := A.FloatArray()
+    uplo := linalg.ParamString(pars.Uplo)
+    info := dpotri(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
+    if info != 0 {
+        return errors.New(fmt.Sprintf("Potri lapack error %d", info))
+    }
+    return nil
 }
 
 func checkPotri(ind *linalg.IndexOpts, A matrix.Matrix) error {
-	if ind.N < 0 {
-		ind.N = A.Rows()
-	}
-	if ind.N == 0 {
-		return nil
-	}
-	if ind.LDa == 0 {
-		ind.LDa = max(1, A.Rows())
-	}
-	if ind.LDa < max(1, ind.N) {
-		return errors.New("Potri: lda")
-	}
-	if ind.OffsetA < 0 {
-		return errors.New("Potri: offsetA")
-	}
-	if A.NumElements() < ind.OffsetA + (ind.N-1)*ind.LDa + ind.N {
-		return errors.New("Potri: sizeA")
-	}
-	return nil
+    if ind.N < 0 {
+        ind.N = A.Rows()
+    }
+    if ind.N == 0 {
+        return nil
+    }
+    if ind.LDa == 0 {
+        ind.LDa = max(1, A.Rows())
+    }
+    if ind.LDa < max(1, ind.N) {
+        return errors.New("Potri: lda")
+    }
+    if ind.OffsetA < 0 {
+        return errors.New("Potri: offsetA")
+    }
+    if A.NumElements() < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+        return errors.New("Potri: sizeA")
+    }
+    return nil
 }
-
 
 // Local Variables:
 // tab-width: 4

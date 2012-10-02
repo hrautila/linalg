@@ -1,4 +1,3 @@
-
 // Copyright (c) Harri Rautila, 2012
 
 // This file is part of github.com/hrautila/linalg/lapack package.
@@ -8,10 +7,10 @@
 package lapack
 
 import (
-	"github.com/hrautila/linalg"
-	"github.com/hrautila/matrix"
-	"errors"
-	"fmt"
+    "errors"
+    "fmt"
+    "github.com/hrautila/linalg"
+    "github.com/hrautila/matrix"
 )
 
 /*
@@ -32,40 +31,40 @@ import (
   ldA       positive integer.  ldA >= max(1,n).  If zero, the default
             value is used.
   offsetA   nonnegative integer;
- */
+*/
 func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
-	ind := linalg.GetIndexOpts(opts...)
-	if ind.N < 0 {
-		ind.N = A.Cols()
-	}
-	if ind.N == 0 {
-		return nil
-	}
-	if ind.LDa == 0 {
-		ind.LDa = max(1, A.Rows())
-	}
-	if ind.OffsetA < 0 {
-		return errors.New("Getri: ldA")
-	}
-	sizeA := A.NumElements()
-	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
-		return errors.New("Getri: sizeA")
-	}
-	if ipiv != nil && len(ipiv) < ind.N {
-		return errors.New("Getri: size ipiv")
-	}
-	info := -1
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.(*matrix.FloatMatrix).FloatArray()
-		info = dgetri(ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
-	case *matrix.ComplexMatrix:
-		return errors.New("Getri: complex not yet implemented")
-	}
-	if info != 0 {
-		return errors.New(fmt.Sprintf("Getri lapack error: %d", info))
-	}
-	return nil
+    ind := linalg.GetIndexOpts(opts...)
+    if ind.N < 0 {
+        ind.N = A.Cols()
+    }
+    if ind.N == 0 {
+        return nil
+    }
+    if ind.LDa == 0 {
+        ind.LDa = max(1, A.Rows())
+    }
+    if ind.OffsetA < 0 {
+        return errors.New("Getri: ldA")
+    }
+    sizeA := A.NumElements()
+    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+        return errors.New("Getri: sizeA")
+    }
+    if ipiv != nil && len(ipiv) < ind.N {
+        return errors.New("Getri: size ipiv")
+    }
+    info := -1
+    switch A.(type) {
+    case *matrix.FloatMatrix:
+        Aa := A.(*matrix.FloatMatrix).FloatArray()
+        info = dgetri(ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
+    case *matrix.ComplexMatrix:
+        return errors.New("Getri: complex not yet implemented")
+    }
+    if info != 0 {
+        return errors.New(fmt.Sprintf("Getri lapack error: %d", info))
+    }
+    return nil
 }
 
 // Local Variables:

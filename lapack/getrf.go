@@ -1,4 +1,3 @@
-
 // Copyright (c) Harri Rautila, 2012
 
 // This file is part of github.com/hrautila/linalg/lapack package.
@@ -8,9 +7,9 @@
 package lapack
 
 import (
-	"github.com/hrautila/linalg"
-	"github.com/hrautila/matrix"
-	"errors"
+    "errors"
+    "github.com/hrautila/linalg"
+    "github.com/hrautila/matrix"
 )
 
 /*
@@ -35,47 +34,46 @@ import (
             value is used.
   offsetA   nonnegative integer
 
- */
+*/
 func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
-	ind := linalg.GetIndexOpts(opts...)
-	if ind.M < 0 {
-		ind.M = A.Rows()
-	}
-	if ind.N < 0 {
-		ind.N = A.Cols()
-	}
-	if ind.N == 0 || ind.M == 0 {
-		return nil
-	}
-	if ind.LDa == 0 {
-		ind.LDa = max(1, A.Rows())
-	}
-	if ind.LDa < max(1, ind.M) {
-		return errors.New("lda")
-	}
-	if ind.OffsetA < 0 {
-		return errors.New("offsetA")
-	}
-	sizeA := A.NumElements()
-	if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.M {
-		return errors.New("sizeA")
-	}
-	if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
-		return errors.New("size ipiv")
-	}
-	info := -1
-	switch A.(type) {
-	case *matrix.FloatMatrix:
-		Aa := A.(*matrix.FloatMatrix).FloatArray()
-		info = dgetrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
-	case *matrix.ComplexMatrix:
-	}
-	if info != 0 {
-		return errors.New("Getrf call error")
-	}
-	return nil
+    ind := linalg.GetIndexOpts(opts...)
+    if ind.M < 0 {
+        ind.M = A.Rows()
+    }
+    if ind.N < 0 {
+        ind.N = A.Cols()
+    }
+    if ind.N == 0 || ind.M == 0 {
+        return nil
+    }
+    if ind.LDa == 0 {
+        ind.LDa = max(1, A.Rows())
+    }
+    if ind.LDa < max(1, ind.M) {
+        return errors.New("lda")
+    }
+    if ind.OffsetA < 0 {
+        return errors.New("offsetA")
+    }
+    sizeA := A.NumElements()
+    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.M {
+        return errors.New("sizeA")
+    }
+    if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
+        return errors.New("size ipiv")
+    }
+    info := -1
+    switch A.(type) {
+    case *matrix.FloatMatrix:
+        Aa := A.(*matrix.FloatMatrix).FloatArray()
+        info = dgetrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
+    case *matrix.ComplexMatrix:
+    }
+    if info != 0 {
+        return errors.New("Getrf call error")
+    }
+    return nil
 }
-
 
 // Local Variables:
 // tab-width: 4
