@@ -1,4 +1,3 @@
-
 This package distributed under LGPL3 license. See file COPYING in repository root.
 
 Linalg package provides thin interface for BLAS/LAPACK libraries. 
@@ -14,13 +13,14 @@ It uses real and complex column-major matrix implementation from github.com/hrau
 Requirements
 
 (external): 
-	libblas package	   (Ubuntu, Debian)
-	liblapack package  (Ubuntu, Debian)
-	(See the cgo_ files in blas/lapack subdirectories).
+* libblas package   (Ubuntu, Debian)
+* liblapack package  (Ubuntu, Debian)
+
+(See the cgo_ files in blas/lapack subdirectories).
 
 
 (other packages)
-	go get github.com/hrautila/matrix 
+* go get github.com/hrautila/matrix 
 
 
 
