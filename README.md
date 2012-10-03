@@ -12,14 +12,14 @@ It uses real and complex column-major matrix implementation from github.com/hrau
 
 Requirements
 
-(external): 
-* libblas package   (Ubuntu, Debian)
-* liblapack package  (Ubuntu, Debian)
+external: 
+* libblas-dev package   (tested in Ubuntu 12.04)
+* liblapack-edv package  (tested in Ubuntu 12.04)
 
 (See the cgo_ files in blas/lapack subdirectories).
 
 
-(other packages)
+other packages:
 * go get github.com/hrautila/matrix 
 
 
