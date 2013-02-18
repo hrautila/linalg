@@ -53,7 +53,7 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < max(1, ind.M) {
         return errors.New("Geqrf: ldA")
@@ -61,7 +61,8 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
     if ind.OffsetA < 0 {
         return errors.New("Geqrf: offsetA")
     }
-    if A.NumElements() < ind.OffsetA+ind.K*ind.LDa {
+	arows := max(1, A.Rows())
+    if A.NumElements() < ind.OffsetA+ind.K*arows {
         return errors.New("Geqrf: sizeA")
     }
     if tau.NumElements() < min(ind.M, ind.N) {

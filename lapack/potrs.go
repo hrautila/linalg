@@ -59,13 +59,13 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Potrs: ldA")
     }
     if ind.LDb == 0 {
-        ind.LDb = max(1, B.Rows())
+        ind.LDb = max(1, B.LeadingIndex())
     }
     if ind.LDb < max(1, ind.N) {
         return errors.New("Potrs: ldB")
@@ -73,13 +73,15 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
     if ind.OffsetA < 0 {
         return errors.New("Potrs: offsetA")
     }
-    if A.NumElements() < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+	arows := max(1, A.Rows())
+    if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Potrs: sizeA")
     }
     if ind.OffsetB < 0 {
         return errors.New("Potrs: offsetB")
     }
-    if B.NumElements() < ind.OffsetB+(ind.Nrhs-1)*ind.LDb+ind.N {
+	brows := max(1, B.Rows())
+    if B.NumElements() < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
         return errors.New("Potrs: sizeB")
     }
     if !matrix.EqualTypes(A, B) {

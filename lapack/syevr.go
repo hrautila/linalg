@@ -99,7 +99,7 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < max(1, A.Rows()) {
         return errors.New("Syevr: lda")
@@ -128,7 +128,7 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
             return errors.New("Syevr: Z is nil")
         }
         if ind.LDz == 0 {
-            ind.LDz = max(1, Z.Rows())
+            ind.LDz = max(1, Z.LeadingIndex())
         }
         if ind.LDz < max(1, ind.N) {
             return errors.New("Syevr: ldz")
@@ -145,7 +145,8 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
         return errors.New("Syevr: OffsetA")
     }
     sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+	arows := max(1, A.Rows())
+    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Syevr: sizeA")
     }
     if ind.OffsetW < 0 {
@@ -159,9 +160,10 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
         if ind.OffsetZ < 0 {
             return errors.New("Syevr: OffsetW")
         }
-        minZ := ind.OffsetZ + (ind.N-1)*ind.LDz + ind.N
+		zrows := max(1, Z.Rows())
+        minZ := ind.OffsetZ + (ind.N-1)*zrows + ind.N
         if pars.Range == linalg.PRangeInt {
-            minZ = ind.OffsetZ + (iu-il)*ind.LDz + ind.N
+            minZ = ind.OffsetZ + (iu-il)*zrows + ind.N
         }
         if Z.NumElements() < minZ {
             return errors.New("Syevr: sizeZ")

@@ -155,13 +155,14 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
             ind.N = A.Cols()
         }
         if ind.LDa == 0 {
-            ind.LDa = max(1, A.Rows())
+            ind.LDa = max(1, A.LeadingIndex())
         }
         if ind.OffsetA < 0 {
             return errors.New("offsetA")
         }
+		arows := max(1, A.Rows())
         if ind.N > 0 && ind.M > 0 &&
-            sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.M {
+            sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
             return errors.New("sizeA")
         }
         if ind.OffsetX < 0 {
@@ -199,7 +200,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         }
         if ind.M > 0 && ind.N > 0 {
             if ind.LDa == 0 {
-                ind.LDa = max(1, A.Rows())
+                ind.LDa = max(1, A.LeadingIndex())
             }
             if ind.LDa < max(1, ind.M) {
                 return errors.New("ldA")
@@ -207,7 +208,8 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
             if ind.OffsetA < 0 {
                 return errors.New("offsetA")
             }
-            if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.M {
+			arows := max(1, A.Rows())
+            if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
                 return errors.New("sizeA")
             }
             if ind.OffsetX < 0 {
@@ -242,7 +244,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
             return errors.New("ku")
         }
         if ind.LDa == 0 {
-            ind.LDa = max(1, A.Rows())
+            ind.LDa = max(1, A.LeadingIndex())
         }
         if ind.LDa < ind.Kl+ind.Ku+1 {
             return errors.New("ldA")
@@ -251,8 +253,9 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
             return errors.New("offsetA")
         }
         sizeA := A.NumElements()
+		arows := max(1, A.Rows())
         if ind.N > 0 && ind.M > 0 &&
-            sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.Kl+ind.Ku+1 {
+            sizeA < ind.OffsetA+(ind.N-1)*arows+ind.Kl+ind.Ku+1 {
             return errors.New("sizeA")
         }
         if ind.OffsetX < 0 {
@@ -289,7 +292,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         }
         if ind.N > 0 {
             if ind.LDa == 0 {
-                ind.LDa = max(1, A.Rows())
+                ind.LDa = max(1, A.LeadingIndex())
             }
             if ind.LDa < max(1, ind.N) {
                 return errors.New("ldA")
@@ -298,7 +301,8 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
                 return errors.New("offsetA")
             }
             sizeA := A.NumElements()
-            if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+			arows := max(1, A.Rows())
+            if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
                 return errors.New("sizeA")
             }
             sizeX := X.NumElements()
@@ -318,7 +322,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
                 ind.K = max(0, A.Rows()-1)
             }
             if ind.LDa == 0 {
-                ind.LDa = max(1, A.Rows())
+                ind.LDa = max(1, A.LeadingIndex())
             }
             if ind.LDa < ind.K+1 {
                 return errors.New("ldA")
@@ -327,7 +331,8 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
                 return errors.New("offsetA")
             }
             sizeA := A.NumElements()
-            if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.K+1 {
+			arows := max(1, A.Rows())
+            if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.K+1 {
                 return errors.New("sizeA")
             }
             sizeX := X.NumElements()
@@ -353,7 +358,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         }
         if ind.N > 0 {
             if ind.LDa == 0 {
-                ind.LDa = max(1, A.Rows())
+                ind.LDa = max(1, A.LeadingIndex())
             }
             if ind.LDa < max(1, ind.N) {
                 return errors.New("ldA")
@@ -362,7 +367,8 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
                 return errors.New("offsetA")
             }
             sizeA := A.NumElements()
-            if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+			arows := max(1, A.Rows())
+            if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
                 return errors.New("sizeA")
             }
             if ind.OffsetX < 0 {
@@ -427,7 +433,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return errors.New("offsetA illegal, <0")
         }
         if ind.LDa == 0 {
-            ind.LDa = max(1, A.Rows())
+            ind.LDa = max(1, A.LeadingIndex())
         }
         if ind.K > 0 {
             if (pars.TransA == linalg.PNoTrans && ind.LDa < max(1, ind.M)) ||
@@ -435,10 +441,11 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
                 return errors.New("inconsistent ldA")
             }
             sizeA := A.NumElements()
+			arows := max(1, A.Rows())
             if (pars.TransA == linalg.PNoTrans &&
-                sizeA < ind.OffsetA+(ind.K-1)*ind.LDa+ind.M) ||
+                sizeA < ind.OffsetA+(ind.K-1)*arows+ind.M) ||
                 (pars.TransA != linalg.PNoTrans &&
-                    sizeA < ind.OffsetA+(ind.M-1)*ind.LDa+ind.K) {
+                    sizeA < ind.OffsetA+(ind.M-1)*arows+ind.K) {
                 return errors.New("sizeA")
             }
         }
@@ -447,7 +454,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return errors.New("offsetB illegal, <0")
         }
         if ind.LDb == 0 {
-            ind.LDb = max(1, B.Rows())
+            ind.LDb = max(1, B.LeadingIndex())
         }
         if ind.K > 0 {
             if (pars.TransB == linalg.PNoTrans && ind.LDb < max(1, ind.K)) ||
@@ -455,10 +462,11 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
                 return errors.New("inconsistent ldB")
             }
             sizeB := B.NumElements()
+			brows := max(1, B.Rows())
             if (pars.TransB == linalg.PNoTrans &&
-                sizeB < ind.OffsetB+(ind.N-1)*ind.LDb+ind.K) ||
+                sizeB < ind.OffsetB+(ind.N-1)*brows+ind.K) ||
                 (pars.TransB != linalg.PNoTrans &&
-                    sizeB < ind.OffsetB+(ind.K-1)*ind.LDb+ind.N) {
+                    sizeB < ind.OffsetB+(ind.K-1)*brows+ind.N) {
                 return errors.New("sizeB")
             }
         }
@@ -467,13 +475,14 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return errors.New("offsetC illegal, <0")
         }
         if ind.LDc == 0 {
-            ind.LDc = max(1, C.Rows())
+            ind.LDc = max(1, C.LeadingIndex())
         }
         if ind.LDc < max(1, ind.M) {
             return errors.New("inconsistent ldC")
         }
         sizeC := C.NumElements()
-        if sizeC < ind.OffsetC+(ind.N-1)*ind.LDc+ind.M {
+		crows := max(1, C.Rows())
+        if sizeC < ind.OffsetC+(ind.N-1)*crows+ind.M {
             return errors.New("sizeC")
         }
 
@@ -498,14 +507,15 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return errors.New("offsetB illegal, <0")
         }
         if ind.LDa == 0 {
-            ind.LDa = max(1, A.Rows())
+            ind.LDa = max(1, A.LeadingIndex())
         }
         if pars.Side == linalg.PLeft && ind.LDa < max(1, ind.M) || ind.LDa < max(1, ind.N) {
             return errors.New("ldA")
         }
         sizeA := A.NumElements()
-        if (pars.Side == linalg.PLeft && sizeA < ind.OffsetA+(ind.M-1)*ind.LDa+ind.M) ||
-            (pars.Side == linalg.PRight && sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N) {
+		arows := max(1, A.Rows())
+        if (pars.Side == linalg.PLeft && sizeA < ind.OffsetA+(ind.M-1)*arows+ind.M) ||
+            (pars.Side == linalg.PRight && sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N) {
             return errors.New("sizeA")
         }
 
@@ -514,13 +524,14 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
                 return errors.New("offsetB illegal, <0")
             }
             if ind.LDb == 0 {
-                ind.LDb = max(1, B.Rows())
+                ind.LDb = max(1, B.LeadingIndex())
             }
             if ind.LDb < max(1, ind.M) {
                 return errors.New("ldB")
             }
             sizeB := B.NumElements()
-            if sizeB < ind.OffsetB+(ind.N-1)*ind.LDb+ind.M {
+			brows := max(1, B.Rows())
+            if sizeB < ind.OffsetB+(ind.N-1)*brows+ind.M {
                 return errors.New("sizeB")
             }
         }
@@ -530,13 +541,14 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
                 return errors.New("offsetC illegal, <0")
             }
             if ind.LDc == 0 {
-                ind.LDc = max(1, C.Rows())
+                ind.LDc = max(1, C.LeadingIndex())
             }
             if ind.LDc < max(1, ind.M) {
                 return errors.New("ldC")
             }
             sizeC := C.NumElements()
-            if sizeC < ind.OffsetC+(ind.N-1)*ind.LDc+ind.M {
+			crows := max(1, C.Rows())
+            if sizeC < ind.OffsetC+(ind.N-1)*crows+ind.M {
                 return errors.New("sizeC")
             }
         }
@@ -559,7 +571,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return
         }
         if ind.LDa == 0 {
-            ind.LDa = max(1, A.Rows())
+            ind.LDa = max(1, A.LeadingIndex())
         }
         if ind.OffsetA < 0 {
             return errors.New("offsetA")
@@ -570,10 +582,11 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
                 return errors.New("inconsistent ldA")
             }
             sizeA := A.NumElements()
+			arows := max(1, A.Rows())
             if (pars.Trans == linalg.PNoTrans &&
-                sizeA < ind.OffsetA+(ind.K-1)*ind.LDa+ind.N) ||
+                sizeA < ind.OffsetA+(ind.K-1)*arows+ind.N) ||
                 (pars.TransA != linalg.PNoTrans &&
-                    sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.K) {
+                    sizeA < ind.OffsetA+(ind.N-1)*arows+ind.K) {
                 return errors.New("sizeA")
             }
         }
@@ -582,13 +595,14 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return errors.New("offsetC illegal, <0")
         }
         if ind.LDc == 0 {
-            ind.LDc = max(1, C.Rows())
+            ind.LDc = max(1, C.LeadingIndex())
         }
         if ind.LDc < max(1, ind.N) {
             return errors.New("ldC")
         }
         sizeC := C.NumElements()
-        if sizeC < ind.OffsetC+(ind.N-1)*ind.LDc+ind.N {
+		crows := max(1, C.Rows())
+        if sizeC < ind.OffsetC+(ind.N-1)*crows+ind.N {
             return errors.New("sizeC")
         }
     case fsyr2k:
@@ -622,7 +636,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             }
         }
         if ind.LDa == 0 {
-            ind.LDa = max(1, A.Rows())
+            ind.LDa = max(1, A.LeadingIndex())
         }
         if ind.K > 0 {
             if (pars.Trans == linalg.PNoTrans && ind.LDa < max(1, ind.N)) ||
@@ -630,10 +644,11 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
                 return errors.New("inconsistent ldA")
             }
             sizeA := A.NumElements()
+			arows := max(1, A.Rows())
             if (pars.Trans == linalg.PNoTrans &&
-                sizeA < ind.OffsetA+(ind.K-1)*ind.LDa+ind.N) ||
+                sizeA < ind.OffsetA+(ind.K-1)*arows+ind.N) ||
                 (pars.TransA != linalg.PNoTrans &&
-                    sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.K) {
+                    sizeA < ind.OffsetA+(ind.N-1)*arows+ind.K) {
                 return errors.New("sizeA")
             }
         }
@@ -641,7 +656,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return errors.New("offsetB illegal, <0")
         }
         if ind.LDb == 0 {
-            ind.LDb = max(1, B.Rows())
+            ind.LDb = max(1, B.LeadingIndex())
         }
         if ind.K > 0 {
             if (pars.Trans == linalg.PNoTrans && ind.LDb < max(1, ind.N)) ||
@@ -649,10 +664,11 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
                 return errors.New("ldB")
             }
             sizeB := B.NumElements()
+			brows := max(1, B.Rows())
             if (pars.Trans == linalg.PNoTrans &&
-                sizeB < ind.OffsetB+(ind.K-1)*ind.LDb+ind.N) ||
+                sizeB < ind.OffsetB+(ind.K-1)*brows+ind.N) ||
                 (pars.Trans != linalg.PNoTrans &&
-                    sizeB < ind.OffsetB+(ind.N-1)*ind.LDb+ind.K) {
+                    sizeB < ind.OffsetB+(ind.N-1)*brows+ind.K) {
                 return errors.New("sizeB")
             }
         }
@@ -660,13 +676,14 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             return errors.New("offsetC illegal, <0")
         }
         if ind.LDc == 0 {
-            ind.LDc = max(1, C.Rows())
+            ind.LDc = max(1, C.LeadingIndex())
         }
         if ind.LDc < max(1, ind.N) {
             return errors.New("ldC")
         }
         sizeC := C.NumElements()
-        if sizeC < ind.OffsetC+(ind.N-1)*ind.LDc+ind.N {
+		crows := max(1, C.Rows())
+        if sizeC < ind.OffsetC+(ind.N-1)*crows+ind.N {
             return errors.New("sizeC")
         }
     }

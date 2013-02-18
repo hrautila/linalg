@@ -77,7 +77,7 @@ func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Potrf: lda")
@@ -85,7 +85,8 @@ func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
     if ind.OffsetA < 0 {
         return errors.New("Potrf: offsetA")
     }
-    if A.NumElements() < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+	arows := max(1, A.Rows())
+    if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Potrf: sizeA")
     }
     return nil

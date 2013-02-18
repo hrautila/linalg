@@ -80,7 +80,7 @@ func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Sytrf: lda")
@@ -89,7 +89,8 @@ func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
         return errors.New("Sytrf: offsetA")
     }
     sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+	arows := max(1, A.Rows())
+    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Sytrf: sizeA")
     }
     if ipiv != nil && len(ipiv) < ind.N {

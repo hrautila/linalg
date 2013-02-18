@@ -55,13 +55,13 @@ func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Gesv: ldA")
     }
     if ind.LDb == 0 {
-        ind.LDb = max(1, B.Rows())
+        ind.LDb = max(1, B.LeadingIndex())
     }
     if ind.LDb < max(1, ind.N) {
         return errors.New("Gesv: ldB")
@@ -73,11 +73,13 @@ func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
         return errors.New("Gesv: offsetB")
     }
     sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+	arows := max(1, A.Rows())
+    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Gesv: sizeA")
     }
     sizeB := B.NumElements()
-    if sizeB < ind.OffsetB+(ind.Nrhs-1)*ind.LDb+ind.N {
+	brows := max(1, B.Rows())
+    if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
         return errors.New("Gesv: sizeB")
     }
     if ipiv != nil && len(ipiv) < ind.N {

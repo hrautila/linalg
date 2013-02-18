@@ -86,7 +86,7 @@ func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
         return errors.New("Gbtrf: invalid ku")
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < 2*ind.Kl+ind.Ku+1 {
         return errors.New("Gbtrf: lda")
@@ -95,7 +95,8 @@ func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
         return errors.New("Gbtrf: offsetA")
     }
     sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+2*ind.Kl+ind.Ku+1 {
+	arows := max(1, A.Rows())
+    if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
         return errors.New("Gbtrf: sizeA")
     }
     if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {

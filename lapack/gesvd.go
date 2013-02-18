@@ -175,7 +175,7 @@ func checkGesvd(ind *linalg.IndexOpts, pars *linalg.Parameters, A, S, U, Vt matr
             return errors.New("Gesvd: missing matrix U")
         }
         if ind.LDu == 0 {
-            ind.LDu = max(1, U.Rows())
+            ind.LDu = max(1, U.LeadingIndex())
         }
         if ind.LDu < max(1, ind.M) {
             return errors.New("Gesvd: ldU")
@@ -193,7 +193,7 @@ func checkGesvd(ind *linalg.IndexOpts, pars *linalg.Parameters, A, S, U, Vt matr
             return errors.New("Gesvd: missing matrix Vt")
         }
         if ind.LDvt == 0 {
-            ind.LDvt = max(1, Vt.Rows())
+            ind.LDvt = max(1, Vt.LeadingIndex())
         }
         if pars.Jobvt == linalg.PJobAll && ind.LDvt < max(1, ind.N) {
             return errors.New("Gesvd: ldVt")
@@ -212,7 +212,8 @@ func checkGesvd(ind *linalg.IndexOpts, pars *linalg.Parameters, A, S, U, Vt matr
         return errors.New("Gesvd: offsetA")
     }
     sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.M {
+	arows := max(1, A.Rows())
+    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
         return errors.New("Gesvd: sizeA")
     }
 

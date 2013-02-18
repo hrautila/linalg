@@ -89,7 +89,7 @@ func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Syevd: lda")
@@ -98,7 +98,8 @@ func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
         return errors.New("Syevd: offsetA")
     }
     sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+	arows := max(1, A.Rows())
+    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Syevd: sizeA")
     }
     if ind.OffsetW < 0 {

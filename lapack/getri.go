@@ -41,13 +41,14 @@ func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.OffsetA < 0 {
-        return errors.New("Getri: ldA")
+        return errors.New("Getri: offset")
     }
     sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*ind.LDa+ind.N {
+	arows := max(1, A.Rows())
+    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Getri: sizeA")
     }
     if ipiv != nil && len(ipiv) < ind.N {

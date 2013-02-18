@@ -69,10 +69,10 @@ func Ormqr(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
         return nil
     }
     if ind.LDa == 0 {
-        ind.LDa = max(1, A.Rows())
+        ind.LDa = max(1, A.LeadingIndex())
     }
     if ind.LDc == 0 {
-        ind.LDc = max(1, C.Rows())
+        ind.LDc = max(1, C.LeadingIndex())
     }
     switch pars.Side {
     case linalg.PLeft:
@@ -93,13 +93,15 @@ func Ormqr(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
     if ind.OffsetA < 0 {
         return errors.New("Ormqf: offsetA")
     }
-    if A.NumElements() < ind.OffsetA+ind.K*ind.LDa {
+	arows := max(1, A.Rows())
+    if A.NumElements() < ind.OffsetA+ind.K*arows {
         return errors.New("Ormqf: sizeA")
     }
     if ind.OffsetC < 0 {
         return errors.New("Ormqf: offsetC")
     }
-    if C.NumElements() < ind.OffsetC+(ind.N-1)*ind.LDa+ind.M {
+	crows := max(1, C.Rows())
+    if C.NumElements() < ind.OffsetC+(ind.N-1)*crows+ind.M {
         return errors.New("Ormqf: sizeC")
     }
     if tau.NumElements() < ind.K {
