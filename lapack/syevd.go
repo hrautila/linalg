@@ -79,6 +79,7 @@ func SyevdFloat(A, W *matrix.FloatMatrix, opts ...linalg.Option) error {
 }
 
 func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
+	arows := ind.LDa
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
@@ -90,6 +91,7 @@ func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Syevd: lda")
@@ -98,7 +100,6 @@ func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
         return errors.New("Syevd: offsetA")
     }
     sizeA := A.NumElements()
-	arows := max(1, A.Rows())
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Syevd: sizeA")
     }

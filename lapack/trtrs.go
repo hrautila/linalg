@@ -49,6 +49,8 @@ func Trtrs(A, B matrix.Matrix, opts ...linalg.Option) error {
         return err
     }
     ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
+	brows := ind.LDb
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
@@ -63,12 +65,14 @@ func Trtrs(A, B matrix.Matrix, opts ...linalg.Option) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Trtrs: ldA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
+		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
         return errors.New("Trtrs: ldB")
@@ -77,7 +81,6 @@ func Trtrs(A, B matrix.Matrix, opts ...linalg.Option) error {
         return errors.New("Trtrs: offsetA")
     }
     sizeA := A.NumElements()
-	arows := max(1, A.Rows())
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Trtrs: sizeA")
     }
@@ -85,7 +88,6 @@ func Trtrs(A, B matrix.Matrix, opts ...linalg.Option) error {
         return errors.New("Trtrs: offsetB")
     }
     sizeB := B.NumElements()
-	brows := max(1, B.Rows())
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
         return errors.New("Trtrs: sizeB")
     }

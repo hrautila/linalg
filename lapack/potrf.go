@@ -67,6 +67,7 @@ func PotrfFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
 }
 
 func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
+	arows := ind.LDa
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
@@ -78,6 +79,7 @@ func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Potrf: lda")
@@ -85,7 +87,6 @@ func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
     if ind.OffsetA < 0 {
         return errors.New("Potrf: offsetA")
     }
-	arows := max(1, A.Rows())
     if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Potrf: sizeA")
     }

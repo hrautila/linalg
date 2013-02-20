@@ -51,6 +51,7 @@ func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option)
         return err
     }
     ind := linalg.GetIndexOpts(opts...)
+	brows := ind.LDb
     if ind.OffsetD < 0 {
         return errors.New("Gttrs: offset D")
     }
@@ -89,6 +90,7 @@ func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option)
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
+		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
         return errors.New("Gttrs: ldB")
@@ -97,7 +99,6 @@ func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option)
         return errors.New("Gttrs: offset B")
     }
     sizeB := B.NumElements()
-	brows := max(1, B.Rows())
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
         return errors.New("Gttrs: sizeB")
     }

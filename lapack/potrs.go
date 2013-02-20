@@ -49,6 +49,8 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
         return err
     }
     ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
+	brows := ind.LDb
     if ind.N < 0 {
         ind.N = A.Rows()
     }
@@ -60,12 +62,14 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return errors.New("Potrs: ldA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
+		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
         return errors.New("Potrs: ldB")
@@ -73,14 +77,12 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
     if ind.OffsetA < 0 {
         return errors.New("Potrs: offsetA")
     }
-	arows := max(1, A.Rows())
     if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
         return errors.New("Potrs: sizeA")
     }
     if ind.OffsetB < 0 {
         return errors.New("Potrs: offsetB")
     }
-	brows := max(1, B.Rows())
     if B.NumElements() < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
         return errors.New("Potrs: sizeB")
     }

@@ -106,6 +106,8 @@ func GbsvComplex(A, B *matrix.ComplexMatrix, ipiv []int32, kl int, opts ...linal
 }
 
 func checkGbsv(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {
+	arows := ind.LDa
+	brows := ind.LDb
     if ind.Kl < 0 {
         return errors.New("Gbsv: invalid kl")
     }
@@ -126,6 +128,7 @@ func checkGbsv(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
     }
     if ind.LDa < 2*ind.Kl+ind.Ku+1 {
         return errors.New("Gbsv: lda")
@@ -134,18 +137,17 @@ func checkGbsv(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {
         return errors.New("Gbsv: offsetA")
     }
     sizeA := A.NumElements()
-	arows := max(1, A.Rows())
     if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
         return errors.New("Gbsv: sizeA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
+		brows = max(1, B.Rows())
     }
     if ind.OffsetB < 0 {
         return errors.New("Gbsv: offsetB")
     }
     sizeB := B.NumElements()
-	brows := max(1, B.Rows())
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
         return errors.New("Gbsv: sizeB")
     }

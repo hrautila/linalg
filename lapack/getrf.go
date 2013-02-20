@@ -37,6 +37,7 @@ import (
 */
 func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
     if ind.M < 0 {
         ind.M = A.Rows()
     }
@@ -48,6 +49,7 @@ func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.M) {
         return errors.New("lda")
@@ -56,7 +58,6 @@ func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
         return errors.New("offsetA")
     }
     sizeA := A.NumElements()
-	arows := max(1, A.Rows())
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
         return errors.New("sizeA")
     }

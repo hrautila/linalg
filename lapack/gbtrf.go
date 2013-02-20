@@ -67,6 +67,7 @@ func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.O
 }
 
 func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
+	arows := ind.LDa
     if ind.M < 0 {
         return errors.New("Gbtrf: illegal m")
     }
@@ -87,6 +88,7 @@ func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
     }
     if ind.LDa < 2*ind.Kl+ind.Ku+1 {
         return errors.New("Gbtrf: lda")
@@ -95,7 +97,6 @@ func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
         return errors.New("Gbtrf: offsetA")
     }
     sizeA := A.NumElements()
-	arows := max(1, A.Rows())
     if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
         return errors.New("Gbtrf: sizeA")
     }
