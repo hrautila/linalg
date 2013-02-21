@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -42,9 +42,9 @@ func Potrf(A matrix.Matrix, opts ...linalg.Option) error {
     case *matrix.FloatMatrix:
         return PotrfFloat(A.(*matrix.FloatMatrix), opts...)
     case *matrix.ComplexMatrix:
-        return errors.New("Potrf: complex not implemented yet")
+        return onError("Potrf: complex not implemented yet")
     }
-    return errors.New("Potrf unknown types")
+    return onError("Potrf unknown types")
 }
 
 func PotrfFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
@@ -61,7 +61,7 @@ func PotrfFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
     uplo := linalg.ParamString(pars.Uplo)
     info := dpotrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
     if info != 0 {
-        return errors.New(fmt.Sprintf("Potrf: lapack error %d", info))
+        return onError(fmt.Sprintf("Potrf: lapack error %d", info))
     }
     return nil
 }
@@ -71,7 +71,7 @@ func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
-            return errors.New("Potrf: not square")
+            return onError("Potrf: not square")
         }
     }
     if ind.N == 0 {
@@ -82,13 +82,13 @@ func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
-        return errors.New("Potrf: lda")
+        return onError("Potrf: lda")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Potrf: offsetA")
+        return onError("Potrf: offsetA")
     }
     if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Potrf: sizeA")
+        return onError("Potrf: sizeA")
     }
     return nil
 }

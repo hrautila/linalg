@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -65,29 +65,29 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
-        return errors.New("Potrs: ldA")
+        return onError("Potrs: ldA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
 		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
-        return errors.New("Potrs: ldB")
+        return onError("Potrs: ldB")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Potrs: offsetA")
+        return onError("Potrs: offsetA")
     }
     if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Potrs: sizeA")
+        return onError("Potrs: sizeA")
     }
     if ind.OffsetB < 0 {
-        return errors.New("Potrs: offsetB")
+        return onError("Potrs: offsetB")
     }
     if B.NumElements() < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Potrs: sizeB")
+        return onError("Potrs: sizeB")
     }
     if !matrix.EqualTypes(A, B) {
-        return errors.New("Potrs: arguments not of same types")
+        return onError("Potrs: arguments not of same types")
     }
     info := -1
     switch A.(type) {
@@ -98,10 +98,10 @@ func Potrs(A, B matrix.Matrix, opts ...linalg.Option) error {
         info = dpotrs(uplo, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
             Ba[ind.OffsetB:], ind.LDb)
     case *matrix.ComplexMatrix:
-        return errors.New("Potrs: complex not implemented yet")
+        return onError("Potrs: complex not implemented yet")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Potrs: lapack error %d", info))
+        return onError(fmt.Sprintf("Potrs: lapack error %d", info))
     }
     return nil
 }

@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of go.opt/linalg package. It is free software, distributed
 // under the terms of GNU Lesser General Public License Version 3, or any later

@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012, 2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -42,9 +42,9 @@ func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Option) erro
         Am := A.(*matrix.FloatMatrix)
         return Gbtrf(Am, ipiv, M, KL, opts...)
     case *matrix.ComplexMatrix:
-        return errors.New("Gbtrf: complex not yet implemented.")
+        return onError("Gbtrf: complex not yet implemented.")
     }
-    return errors.New("Gbtrf: unknown types")
+    return onError("Gbtrf: unknown types")
 }
 
 func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
@@ -61,7 +61,7 @@ func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.O
     Aa := A.FloatArray()
     info := dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
     if info != 0 {
-        return errors.New(fmt.Sprintf("Gbtrf lapack error: %d", info))
+        return onError(fmt.Sprintf("Gbtrf lapack error: %d", info))
     }
     return nil
 }
@@ -69,10 +69,10 @@ func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.O
 func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
 	arows := ind.LDa
     if ind.M < 0 {
-        return errors.New("Gbtrf: illegal m")
+        return onError("Gbtrf: illegal m")
     }
     if ind.Kl < 0 {
-        return errors.New("GBtrf: illegal kl")
+        return onError("GBtrf: illegal kl")
     }
     if ind.N < 0 {
         ind.N = A.Rows()
@@ -84,24 +84,24 @@ func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
         ind.Ku = A.Rows() - 2*ind.Kl - 1
     }
     if ind.Ku < 0 {
-        return errors.New("Gbtrf: invalid ku")
+        return onError("Gbtrf: invalid ku")
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
 		arows = max(1, A.Rows())
     }
     if ind.LDa < 2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbtrf: lda")
+        return onError("Gbtrf: lda")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Gbtrf: offsetA")
+        return onError("Gbtrf: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbtrf: sizeA")
+        return onError("Gbtrf: sizeA")
     }
     if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
-        return errors.New("Gbtrf: size ipiv")
+        return onError("Gbtrf: size ipiv")
     }
     return nil
 }

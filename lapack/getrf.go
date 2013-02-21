@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
 )
@@ -52,17 +52,17 @@ func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.M) {
-        return errors.New("lda")
+        return onError("lda")
     }
     if ind.OffsetA < 0 {
-        return errors.New("offsetA")
+        return onError("offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
-        return errors.New("sizeA")
+        return onError("sizeA")
     }
     if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
-        return errors.New("size ipiv")
+        return onError("size ipiv")
     }
     info := -1
     switch A.(type) {
@@ -72,7 +72,7 @@ func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     case *matrix.ComplexMatrix:
     }
     if info != 0 {
-        return errors.New("Getrf call error")
+        return onError("Getrf call error")
     }
     return nil
 }

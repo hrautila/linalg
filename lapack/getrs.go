@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -54,7 +54,7 @@ func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
-            return errors.New("Getrs: A not square")
+            return onError("Getrs: A not square")
         }
     }
     if ind.Nrhs < 0 {
@@ -68,34 +68,34 @@ func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
-        return errors.New("Getrs: ldA")
+        return onError("Getrs: ldA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
 		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
-        return errors.New("Getrs: ldB")
+        return onError("Getrs: ldB")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Getrs: offsetA")
+        return onError("Getrs: offsetA")
     }
     if ind.OffsetB < 0 {
-        return errors.New("Getrs: offsetB")
+        return onError("Getrs: offsetB")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Getrs: sizeA")
+        return onError("Getrs: sizeA")
     }
     sizeB := B.NumElements()
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Getrs: sizeB")
+        return onError("Getrs: sizeB")
     }
     if ipiv != nil && len(ipiv) < ind.N {
-        return errors.New("Getrs: size ipiv")
+        return onError("Getrs: size ipiv")
     }
     if !matrix.EqualTypes(A, B) {
-        return errors.New("Getrs: arguments not of same type")
+        return onError("Getrs: arguments not of same type")
     }
     info := -1
     trans := linalg.ParamString(pars.Trans)
@@ -106,10 +106,10 @@ func Getrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
         info = dgetrs(trans, ind.N, ind.Nrhs,
             Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)
     case *matrix.ComplexMatrix:
-        return errors.New("Getrs: complex not yet implemented")
+        return onError("Getrs: complex not yet implemented")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Getrs lapack error: %d", info))
+        return onError(fmt.Sprintf("Getrs lapack error: %d", info))
     }
     return nil
 }

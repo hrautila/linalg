@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012, 2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -55,7 +55,7 @@ import (
 */
 func Gbsv(A, B matrix.Matrix, ipiv []int32, kl int, opts ...linalg.Option) error {
     if !matrix.EqualTypes(A, B) {
-        return errors.New("Gbsv: not same type")
+        return onError("Gbsv: not same type")
     }
     switch A.(type) {
     case *matrix.FloatMatrix:
@@ -67,7 +67,7 @@ func Gbsv(A, B matrix.Matrix, ipiv []int32, kl int, opts ...linalg.Option) error
         Bm := B.(*matrix.ComplexMatrix)
         return GbsvComplex(Am, Bm, ipiv, kl, opts...)
     }
-    return errors.New("Gbsv: unknown types types!")
+    return onError("Gbsv: unknown types types!")
 }
 
 func GbsvFloat(A, B *matrix.FloatMatrix, ipiv []int32, kl int, opts ...linalg.Option) error {
@@ -87,7 +87,7 @@ func GbsvFloat(A, B *matrix.FloatMatrix, ipiv []int32, kl int, opts ...linalg.Op
     info := dgbsv(ind.N, ind.Kl, ind.Ku, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
         ipiv, Ba[ind.OffsetB:], ind.LDb)
     if info != 0 {
-        return errors.New(fmt.Sprintf("Gbsv lapack error: %d", info))
+        return onError(fmt.Sprintf("Gbsv lapack error: %d", info))
     }
     return nil
 }
@@ -102,14 +102,14 @@ func GbsvComplex(A, B *matrix.ComplexMatrix, ipiv []int32, kl int, opts ...linal
     if ind.N == 0 || ind.Nrhs == 0 {
         return nil
     }
-    return errors.New("Gbsv: complex not implemented yet")
+    return onError("Gbsv: complex not implemented yet")
 }
 
 func checkGbsv(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {
 	arows := ind.LDa
 	brows := ind.LDb
     if ind.Kl < 0 {
-        return errors.New("Gbsv: invalid kl")
+        return onError("Gbsv: invalid kl")
     }
     if ind.N < 0 {
         ind.N = A.Rows()
@@ -124,35 +124,35 @@ func checkGbsv(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {
         ind.Ku = A.Rows() - 2*ind.Kl - 1
     }
     if ind.Ku < 0 {
-        return errors.New("Gbsv: invalid ku")
+        return onError("Gbsv: invalid ku")
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
 		arows = max(1, A.Rows())
     }
     if ind.LDa < 2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbsv: lda")
+        return onError("Gbsv: lda")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Gbsv: offsetA")
+        return onError("Gbsv: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbsv: sizeA")
+        return onError("Gbsv: sizeA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
 		brows = max(1, B.Rows())
     }
     if ind.OffsetB < 0 {
-        return errors.New("Gbsv: offsetB")
+        return onError("Gbsv: offsetB")
     }
     sizeB := B.NumElements()
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Gbsv: sizeB")
+        return onError("Gbsv: sizeB")
     }
     if ipiv != nil && len(ipiv) < ind.N {
-        return errors.New("Gbsv: size ipiv")
+        return onError("Gbsv: size ipiv")
     }
     return nil
 }

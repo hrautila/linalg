@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg package. 
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -9,7 +9,6 @@ package blas
 import (
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
-    //"errors"
     "math"
 )
 

@@ -130,7 +130,8 @@ func TestDgemv(t *testing.T) {
     fmt.Printf("after:\nA=\n%v\nX=\n%v\nY=\n%v\n", A, X, Y)
 }
 
-func TestPanic(t *testing.T) {
+// not run 
+func _TestPanic(t *testing.T) {
 	PanicOnError(true)
 	X := matrix.FloatWithValue(10, 1, 1.0)
 	ScalFloat(X, 2.0, &linalg.IOpt{"offset", -1})

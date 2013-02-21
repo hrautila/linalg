@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -54,7 +54,7 @@ func Sytrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
-            return errors.New("Sytrs: A not square")
+            return onError("Sytrs: A not square")
         }
     }
     if ind.Nrhs < 0 {
@@ -68,34 +68,34 @@ func Sytrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
-        return errors.New("Sytrs: ldA")
+        return onError("Sytrs: ldA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
 		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
-        return errors.New("Sytrs: ldB")
+        return onError("Sytrs: ldB")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Sytrs: offsetA")
+        return onError("Sytrs: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Sytrs: sizeA")
+        return onError("Sytrs: sizeA")
     }
     if ind.OffsetB < 0 {
-        return errors.New("Sytrs: offsetB")
+        return onError("Sytrs: offsetB")
     }
     sizeB := B.NumElements()
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Sytrs: sizeB")
+        return onError("Sytrs: sizeB")
     }
     if ipiv != nil && len(ipiv) < ind.N {
-        return errors.New("Sytrs: size ipiv")
+        return onError("Sytrs: size ipiv")
     }
     if !matrix.EqualTypes(A, B) {
-        return errors.New("Sytrs: arguments not of same type")
+        return onError("Sytrs: arguments not of same type")
     }
     info := -1
     switch A.(type) {
@@ -106,10 +106,10 @@ func Sytrs(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
         info = dsytrs(uplo, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa, ipiv,
             Ba[ind.OffsetB:], ind.LDb)
     case *matrix.ComplexMatrix:
-        return errors.New("Sytrs: complex not yet implemented")
+        return onError("Sytrs: complex not yet implemented")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Sytrs lapack error: %d", info))
+        return onError(fmt.Sprintf("Sytrs lapack error: %d", info))
     }
     return nil
 }

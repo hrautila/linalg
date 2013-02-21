@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/blas package. 
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -10,7 +10,6 @@ import (
     "errors"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
-    //"fmt"
 )
 
 type funcNum int

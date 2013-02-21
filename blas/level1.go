@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/blas package. 
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package blas
 
 import (
-    "errors"
+    //"errors"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
     "math"
@@ -44,7 +44,7 @@ func Nrm2(X matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
         Xa := X.(*matrix.FloatMatrix).FloatArray()
         v = matrix.FScalar(dnrm2(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
     default:
-        //err = errors.New("not implemented for parameter types", )
+        //err = onError("not implemented for parameter types", )
     }
     return
 }
@@ -79,7 +79,7 @@ func Asum(X matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
         Xa := X.(*matrix.FloatMatrix).FloatArray()
         v = matrix.FScalar(dasum(ind.Nx, Xa[ind.OffsetX:], ind.IncX))
         //default:
-        //	err = errors.New("not implemented for parameter types", )
+        //	err = onError("not implemented for parameter types", )
     }
     return
 }
@@ -113,7 +113,7 @@ func Dotu(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
     }
     sameType := matrix.EqualTypes(X, Y)
     if !sameType {
-        err = errors.New("arrays not of same type")
+        err = onError("arrays not of same type")
         return
     }
     switch X.(type) {
@@ -126,7 +126,7 @@ func Dotu(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
         Ya := Y.(*matrix.FloatMatrix).FloatArray()
         v = matrix.FScalar(ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
         //default:
-        //	err = errors.New("not implemented for parameter types", )
+        //	err = onError("not implemented for parameter types", )
     }
     return
 }
@@ -160,7 +160,7 @@ func Dot(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
     }
     sameType := matrix.EqualTypes(X, Y)
     if !sameType {
-        err = errors.New("arrays not of same type")
+        err = onError("arrays not of same type")
         return
     }
     switch X.(type) {
@@ -173,7 +173,7 @@ func Dot(X, Y matrix.Matrix, opts ...linalg.Option) (v matrix.Scalar) {
         Ya := Y.(*matrix.FloatMatrix).FloatArray()
         v = matrix.FScalar(ddot(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY))
         //default:
-        //	err = errors.New("not implemented for parameter types", )
+        //	err = onError("not implemented for parameter types", )
     }
     return
 }
@@ -205,12 +205,12 @@ func Swap(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
         return
     }
     //if ind.Nx != ind.Ny {
-    //	err = errors.New("arrays have unequal default lengths")
+    //	err = onError("arrays have unequal default lengths")
     //	return
     //}
     sameType := matrix.EqualTypes(X, Y)
     if !sameType {
-        err = errors.New("arrays not same type")
+        err = onError("arrays not same type")
         return
     }
     switch X.(type) {
@@ -223,7 +223,7 @@ func Swap(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
         Ya := Y.(*matrix.FloatMatrix).FloatArray()
         dswap(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
     default:
-        err = errors.New("not implemented for parameter types")
+        err = onError("not implemented for parameter types")
     }
     return
 }
@@ -254,7 +254,7 @@ func Copy(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
     }
     sameType := matrix.EqualTypes(X, Y)
     if !sameType {
-        err = errors.New("arrays not same type")
+        err = onError("arrays not same type")
         return
     }
     switch X.(type) {
@@ -267,7 +267,7 @@ func Copy(X, Y matrix.Matrix, opts ...linalg.Option) (err error) {
         Ya := Y.(*matrix.FloatMatrix).FloatArray()
         dcopy(ind.Nx, Xa[ind.OffsetX:], ind.IncX, Ya[ind.OffsetY:], ind.IncY)
     default:
-        err = errors.New("not implemented for parameter types")
+        err = onError("not implemented for parameter types")
     }
     return
 }
@@ -304,11 +304,11 @@ func Scal(X matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err erro
         Xa := X.(*matrix.FloatMatrix).FloatArray()
         rval := alpha.Float()
         if math.IsNaN(rval) {
-            return errors.New("alpha not float value")
+            return onError("alpha not float value")
         }
         dscal(ind.Nx, rval, Xa[ind.OffsetX:], ind.IncX)
     default:
-        err = errors.New("not implemented for parameter types")
+        err = onError("not implemented for parameter types")
     }
     return
 }
@@ -344,7 +344,7 @@ func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
     }
     sameType := matrix.EqualTypes(X, Y)
     if !sameType {
-        err = errors.New("arrays not same type")
+        err = onError("arrays not same type")
         return
     }
     switch X.(type) {
@@ -353,7 +353,7 @@ func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
         Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
         aval := alpha.Complex()
         if cmplx.IsNaN(aval) {
-            return errors.New("alpha not complex value")
+            return onError("alpha not complex value")
         }
         zaxpy(ind.Nx, aval, Xa[ind.OffsetX:],
             ind.IncX, Ya[ind.OffsetY:], ind.IncY)
@@ -362,12 +362,12 @@ func Axpy(X, Y matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
         Ya := Y.(*matrix.FloatMatrix).FloatArray()
         aval := alpha.Float()
         if math.IsNaN(aval) {
-            return errors.New("alpha not float value")
+            return onError("alpha not float value")
         }
         daxpy(ind.Nx, aval, Xa[ind.OffsetX:],
             ind.IncX, Ya[ind.OffsetY:], ind.IncY)
     default:
-        err = errors.New("not implemented for parameter types")
+        err = onError("not implemented for parameter types")
     }
     return
 }

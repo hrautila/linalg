@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -40,7 +40,7 @@ func Sytrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     case *matrix.ComplexMatrix:
         return SytrfComplex(A.(*matrix.ComplexMatrix), ipiv, opts...)
     }
-    return errors.New("Sytrf: unknown types")
+    return onError("Sytrf: unknown types")
 }
 
 func SytrfFloat(A *matrix.FloatMatrix, ipiv []int32, opts ...linalg.Option) error {
@@ -60,13 +60,13 @@ func SytrfFloat(A *matrix.FloatMatrix, ipiv []int32, opts ...linalg.Option) erro
     uplo := linalg.ParamString(pars.Uplo)
     info := dsytrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
     if info != 0 {
-        return errors.New(fmt.Sprintf("Sytrf: lapack error %d", info))
+        return onError(fmt.Sprintf("Sytrf: lapack error %d", info))
     }
     return nil
 }
 
 func SytrfComplex(A *matrix.ComplexMatrix, ipiv []int32, opts ...linalg.Option) error {
-    return errors.New(fmt.Sprintf("Sytrf: complex not yet implemented"))
+    return onError(fmt.Sprintf("Sytrf: complex not yet implemented"))
 }
 
 func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
@@ -74,7 +74,7 @@ func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
-            return errors.New("A not square")
+            return onError("A not square")
         }
     }
     if ind.N == 0 {
@@ -85,17 +85,17 @@ func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
-        return errors.New("Sytrf: lda")
+        return onError("Sytrf: lda")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Sytrf: offsetA")
+        return onError("Sytrf: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Sytrf: sizeA")
+        return onError("Sytrf: sizeA")
     }
     if ipiv != nil && len(ipiv) < ind.N {
-        return errors.New("Sytrf: size ipiv")
+        return onError("Sytrf: size ipiv")
     }
     return nil
 }

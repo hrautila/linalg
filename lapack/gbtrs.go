@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012, 2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -55,7 +55,7 @@ func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) erro
 	arows := ind.LDa
 	brows := ind.LDb
     if ind.Kl < 0 {
-        return errors.New("Gbtrs: invalid kl")
+        return onError("Gbtrs: invalid kl")
     }
     if ind.N < 0 {
         ind.N = A.Rows()
@@ -70,39 +70,39 @@ func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) erro
         ind.Ku = A.Rows() - 2*ind.Kl - 1
     }
     if ind.Ku < 0 {
-        return errors.New("Gbtrs: invalid ku")
+        return onError("Gbtrs: invalid ku")
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
 		arows = max(1, A.Rows())
     }
     if ind.LDa < 2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbtrs: ldA")
+        return onError("Gbtrs: ldA")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Gbtrs: offsetA")
+        return onError("Gbtrs: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbtrs: sizeA")
+        return onError("Gbtrs: sizeA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
 		brows = max(1, B.Rows())
     }
     if ind.OffsetB < 0 {
-        return errors.New("Gbtrs: offsetB")
+        return onError("Gbtrs: offsetB")
     }
     sizeB := B.NumElements()
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Gbtrs: sizeB")
+        return onError("Gbtrs: sizeB")
     }
     if ipiv != nil && len(ipiv) < ind.N {
-        return errors.New("Gbtrs: size ipiv")
+        return onError("Gbtrs: size ipiv")
     }
 
     if !matrix.EqualTypes(A, B) {
-        return errors.New("Gbtrs: arguments not of same type")
+        return onError("Gbtrs: arguments not of same type")
     }
     info := -1
     switch A.(type) {
@@ -113,10 +113,10 @@ func Gbtrs(A, B matrix.Matrix, ipiv []int32, KL int, opts ...linalg.Option) erro
         info = dgbtrs(trans, ind.N, ind.Kl, ind.Ku, ind.Nrhs,
             Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)
     case *matrix.ComplexMatrix:
-        return errors.New("Gbtrs: complex not yet implemented")
+        return onError("Gbtrs: complex not yet implemented")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Gbtrs lapack error: %d", info))
+        return onError(fmt.Sprintf("Gbtrs lapack error: %d", info))
     }
     return nil
 }
@@ -142,7 +142,7 @@ func GbtrsFloat(A, B *matrix.FloatMatrix, ipiv []int32, KL int, opts ...linalg.O
     info := dgbtrs(trans, ind.N, ind.Kl, ind.Ku, ind.Nrhs,
         Aa[ind.OffsetA:], ind.LDa, ipiv, Ba[ind.OffsetB:], ind.LDb)
     if info != 0 {
-        return errors.New(fmt.Sprintf("Gbtrs: lapack error: %d", info))
+        return onError(fmt.Sprintf("Gbtrs: lapack error: %d", info))
     }
     return nil
 }
@@ -151,7 +151,7 @@ func checkGbtrs(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {
 	arows := ind.LDa
 	brows := ind.LDb
     if ind.Kl < 0 {
-        return errors.New("Gbtrs: invalid kl")
+        return onError("Gbtrs: invalid kl")
     }
     if ind.N < 0 {
         ind.N = A.Rows()
@@ -166,35 +166,35 @@ func checkGbtrs(ind *linalg.IndexOpts, A, B matrix.Matrix, ipiv []int32) error {
         ind.Ku = A.Rows() - 2*ind.Kl - 1
     }
     if ind.Ku < 0 {
-        return errors.New("Gbtrs: invalid ku")
+        return onError("Gbtrs: invalid ku")
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
 		arows = max(1, A.Rows())
     }
     if ind.LDa < 2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbtrs: lda")
+        return onError("Gbtrs: lda")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Gbtrs: offsetA")
+        return onError("Gbtrs: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
-        return errors.New("Gbtrs: sizeA")
+        return onError("Gbtrs: sizeA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
 		brows = max(1, B.Rows())
     }
     if ind.OffsetB < 0 {
-        return errors.New("Gbtrs: offsetB")
+        return onError("Gbtrs: offsetB")
     }
     sizeB := B.NumElements()
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Gbtrs: sizeB")
+        return onError("Gbtrs: sizeB")
     }
     if ipiv != nil && len(ipiv) < ind.N {
-        return errors.New("Gbtrs: size ipiv")
+        return onError("Gbtrs: size ipiv")
     }
     return nil
 }

@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -81,36 +81,36 @@ func Ormqr(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
     switch pars.Side {
     case linalg.PLeft:
         if ind.K > ind.M {
-            errors.New("Ormqf: K")
+            onError("Ormqf: K")
         }
         if ind.LDa < max(1, ind.M) {
-            return errors.New("Ormqf: ldA")
+            return onError("Ormqf: ldA")
         }
     case linalg.PRight:
         if ind.K > ind.N {
-            errors.New("Ormqf: K")
+            onError("Ormqf: K")
         }
         if ind.LDa < max(1, ind.N) {
-            return errors.New("Ormqf: ldA")
+            return onError("Ormqf: ldA")
         }
     }
     if ind.OffsetA < 0 {
-        return errors.New("Ormqf: offsetA")
+        return onError("Ormqf: offsetA")
     }
     if A.NumElements() < ind.OffsetA+ind.K*arows {
-        return errors.New("Ormqf: sizeA")
+        return onError("Ormqf: sizeA")
     }
     if ind.OffsetC < 0 {
-        return errors.New("Ormqf: offsetC")
+        return onError("Ormqf: offsetC")
     }
     if C.NumElements() < ind.OffsetC+(ind.N-1)*crows+ind.M {
-        return errors.New("Ormqf: sizeC")
+        return onError("Ormqf: sizeC")
     }
     if tau.NumElements() < ind.K {
-        return errors.New("Ormqf: sizeTau")
+        return onError("Ormqf: sizeTau")
     }
     if !matrix.EqualTypes(A, C, tau) {
-        return errors.New("Ormqf: arguments not of same type")
+        return onError("Ormqf: arguments not of same type")
     }
     info := -1
     side := linalg.ParamString(pars.Side)
@@ -123,10 +123,10 @@ func Ormqr(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
         info = dormqr(side, trans, ind.M, ind.N, ind.K, Aa[ind.OffsetA:], ind.LDa,
             taua, Ca[ind.OffsetC:], ind.LDc)
     case *matrix.ComplexMatrix:
-        return errors.New("Ormqf: complex not implemented yet")
+        return onError("Ormqf: complex not implemented yet")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Ormqr: lapack error %d", info))
+        return onError(fmt.Sprintf("Ormqr: lapack error %d", info))
     }
     return nil
 }

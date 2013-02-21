@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -54,7 +54,7 @@ func Trtrs(A, B matrix.Matrix, opts ...linalg.Option) error {
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
-            return errors.New("Trtrs: A not square")
+            return onError("Trtrs: A not square")
         }
     }
     if ind.Nrhs < 0 {
@@ -68,31 +68,31 @@ func Trtrs(A, B matrix.Matrix, opts ...linalg.Option) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
-        return errors.New("Trtrs: ldA")
+        return onError("Trtrs: ldA")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
 		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
-        return errors.New("Trtrs: ldB")
+        return onError("Trtrs: ldB")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Trtrs: offsetA")
+        return onError("Trtrs: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Trtrs: sizeA")
+        return onError("Trtrs: sizeA")
     }
     if ind.OffsetB < 0 {
-        return errors.New("Trtrs: offsetB")
+        return onError("Trtrs: offsetB")
     }
     sizeB := B.NumElements()
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Trtrs: sizeB")
+        return onError("Trtrs: sizeB")
     }
     if !matrix.EqualTypes(A, B) {
-        return errors.New("Trtrs: arguments not of same type")
+        return onError("Trtrs: arguments not of same type")
     }
     info := -1
     uplo := linalg.ParamString(pars.Uplo)
@@ -105,10 +105,10 @@ func Trtrs(A, B matrix.Matrix, opts ...linalg.Option) error {
         info = dtrtrs(uplo, trans, diag, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
             Ba[ind.OffsetB:], ind.LDb)
     case *matrix.ComplexMatrix:
-        return errors.New("Trtrs: complex not yet implmented")
+        return onError("Trtrs: complex not yet implmented")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Trtrs lapack error: %d", info))
+        return onError(fmt.Sprintf("Trtrs lapack error: %d", info))
     }
     return nil
 }

@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -53,34 +53,34 @@ func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option)
     ind := linalg.GetIndexOpts(opts...)
 	brows := ind.LDb
     if ind.OffsetD < 0 {
-        return errors.New("Gttrs: offset D")
+        return onError("Gttrs: offset D")
     }
     if ind.N < 0 {
         ind.N = D.NumElements() - ind.OffsetD
     }
     if ind.N < 0 {
-        return errors.New("Gttrs: size D")
+        return onError("Gttrs: size D")
     }
     if ind.N == 0 {
         return nil
     }
     if ind.OffsetDL < 0 {
-        return errors.New("Gttrs: offset DL")
+        return onError("Gttrs: offset DL")
     }
     sizeDL := DL.NumElements()
     if sizeDL < ind.OffsetDL+ind.N-1 {
-        return errors.New("Gttrs: sizeDL")
+        return onError("Gttrs: sizeDL")
     }
     if ind.OffsetDU < 0 {
-        return errors.New("Gttrs: offset DU")
+        return onError("Gttrs: offset DU")
     }
     sizeDU := DU.NumElements()
     if sizeDU < ind.OffsetDU+ind.N-1 {
-        return errors.New("Gttrs: sizeDU")
+        return onError("Gttrs: sizeDU")
     }
     sizeDU2 := DU2.NumElements()
     if sizeDU2 < ind.N-2 {
-        return errors.New("Gttrs: sizeDU2")
+        return onError("Gttrs: sizeDU2")
     }
     if ind.Nrhs < 0 {
         ind.Nrhs = B.Cols()
@@ -93,20 +93,20 @@ func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option)
 		brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
-        return errors.New("Gttrs: ldB")
+        return onError("Gttrs: ldB")
     }
     if ind.OffsetB < 0 {
-        return errors.New("Gttrs: offset B")
+        return onError("Gttrs: offset B")
     }
     sizeB := B.NumElements()
     if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return errors.New("Gttrs: sizeB")
+        return onError("Gttrs: sizeB")
     }
     if len(ipiv) < ind.N {
-        return errors.New("Gttrs: size ipiv")
+        return onError("Gttrs: size ipiv")
     }
     if !matrix.EqualTypes(DL, D, DU, DU2, B) {
-        return errors.New("Gttrs: matrix types")
+        return onError("Gttrs: matrix types")
     }
     var info int = -1
     switch DL.(type) {
@@ -121,10 +121,10 @@ func Gtrrs(DL, D, DU, DU2, B matrix.Matrix, ipiv []int32, opts ...linalg.Option)
             DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:], DU2a,
             ipiv, Ba[ind.OffsetB:], ind.LDb)
     case *matrix.ComplexMatrix:
-        return errors.New("Gttrs: complex valued not yet implemented")
+        return onError("Gttrs: complex valued not yet implemented")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Gttrs lapack error: %d", info))
+        return onError(fmt.Sprintf("Gttrs lapack error: %d", info))
     }
     return nil
 }

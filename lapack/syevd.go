@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -41,7 +41,7 @@ import (
 */
 func Syevd(A, W matrix.Matrix, opts ...linalg.Option) error {
     if !matrix.EqualTypes(A, W) {
-        return errors.New("Syevd: arguments not of same type")
+        return onError("Syevd: arguments not of same type")
     }
     switch A.(type) {
     case *matrix.FloatMatrix:
@@ -49,9 +49,9 @@ func Syevd(A, W matrix.Matrix, opts ...linalg.Option) error {
         Wm := W.(*matrix.FloatMatrix)
         return SyevdFloat(Am, Wm, opts...)
     case *matrix.ComplexMatrix:
-        return errors.New("Syevd: not a complex function")
+        return onError("Syevd: not a complex function")
     }
-    return errors.New("Syevd: unknown types")
+    return onError("Syevd: unknown types")
 }
 
 func SyevdFloat(A, W *matrix.FloatMatrix, opts ...linalg.Option) error {
@@ -73,7 +73,7 @@ func SyevdFloat(A, W *matrix.FloatMatrix, opts ...linalg.Option) error {
     Wa := W.FloatArray()
     info := dsyevd(jobz, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa, Wa[ind.OffsetW:])
     if info != 0 {
-        return errors.New(fmt.Sprintf("Syevd: lapack error %d", info))
+        return onError(fmt.Sprintf("Syevd: lapack error %d", info))
     }
     return nil
 }
@@ -83,7 +83,7 @@ func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
-            return errors.New("Syevd: A not square")
+            return onError("Syevd: A not square")
         }
     }
     if ind.N == 0 {
@@ -94,21 +94,21 @@ func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
-        return errors.New("Syevd: lda")
+        return onError("Syevd: lda")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Syevd: offsetA")
+        return onError("Syevd: offsetA")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Syevd: sizeA")
+        return onError("Syevd: sizeA")
     }
     if ind.OffsetW < 0 {
-        return errors.New("Syevd: offsetW")
+        return onError("Syevd: offsetW")
     }
     sizeW := W.NumElements()
     if sizeW < ind.OffsetW+ind.N {
-        return errors.New("Syevd: sizeW")
+        return onError("Syevd: sizeW")
     }
     return nil
 }

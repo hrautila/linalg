@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012,2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -46,14 +46,14 @@ func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		arows = max(1, A.Rows())
     }
     if ind.OffsetA < 0 {
-        return errors.New("Getri: offset")
+        return onError("Getri: offset")
     }
     sizeA := A.NumElements()
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return errors.New("Getri: sizeA")
+        return onError("Getri: sizeA")
     }
     if ipiv != nil && len(ipiv) < ind.N {
-        return errors.New("Getri: size ipiv")
+        return onError("Getri: size ipiv")
     }
     info := -1
     switch A.(type) {
@@ -61,10 +61,10 @@ func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
         Aa := A.(*matrix.FloatMatrix).FloatArray()
         info = dgetri(ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
     case *matrix.ComplexMatrix:
-        return errors.New("Getri: complex not yet implemented")
+        return onError("Getri: complex not yet implemented")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Getri lapack error: %d", info))
+        return onError(fmt.Sprintf("Getri lapack error: %d", info))
     }
     return nil
 }

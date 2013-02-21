@@ -1,4 +1,4 @@
-// Copyright (c) Harri Rautila, 2012
+// Copyright (c) Harri Rautila, 2012, 2013
 
 // This file is part of github.com/hrautila/linalg/lapack package.
 // It is free software, distributed under the terms of GNU Lesser General Public 
@@ -7,7 +7,7 @@
 package lapack
 
 import (
-    "errors"
+    //"errors"
     "fmt"
     "github.com/hrautila/linalg"
     "github.com/hrautila/matrix"
@@ -58,19 +58,19 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
 		arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.M) {
-        return errors.New("Geqrf: ldA")
+        return onError("Geqrf: ldA")
     }
     if ind.OffsetA < 0 {
-        return errors.New("Geqrf: offsetA")
+        return onError("Geqrf: offsetA")
     }
     if A.NumElements() < ind.OffsetA+ind.K*arows {
-        return errors.New("Geqrf: sizeA")
+        return onError("Geqrf: sizeA")
     }
     if tau.NumElements() < min(ind.M, ind.N) {
-        return errors.New("Geqrf: sizeTau")
+        return onError("Geqrf: sizeTau")
     }
     if !matrix.EqualTypes(A, tau) {
-        return errors.New("Geqrf: arguments not of same type")
+        return onError("Geqrf: arguments not of same type")
     }
     info := -1
     switch A.(type) {
@@ -79,10 +79,10 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
         taua := tau.(*matrix.FloatMatrix).FloatArray()
         info = dgeqrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, taua)
     case *matrix.ComplexMatrix:
-        return errors.New("Geqrf: complex not yet implemented")
+        return onError("Geqrf: complex not yet implemented")
     }
     if info != 0 {
-        return errors.New(fmt.Sprintf("Geqrf lapack error: %d", info))
+        return onError(fmt.Sprintf("Geqrf lapack error: %d", info))
     }
     return nil
 }
