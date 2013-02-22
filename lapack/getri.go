@@ -34,7 +34,7 @@ import (
 */
 func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     ind := linalg.GetIndexOpts(opts...)
-	arows := ind.LDa
+    arows := ind.LDa
     if ind.N < 0 {
         ind.N = A.Cols()
     }
@@ -43,7 +43,7 @@ func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
+        arows = max(1, A.Rows())
     }
     if ind.OffsetA < 0 {
         return onError("Getri: offset")

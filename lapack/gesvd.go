@@ -158,7 +158,7 @@ func GesvdComplex(A, S, U, Vt *matrix.ComplexMatrix, opts ...linalg.Option) erro
 }
 
 func checkGesvd(ind *linalg.IndexOpts, pars *linalg.Parameters, A, S, U, Vt matrix.Matrix) error {
-	arows := ind.LDa
+    arows := ind.LDa
     if ind.M < 0 {
         ind.M = A.Rows()
     }
@@ -213,10 +213,10 @@ func checkGesvd(ind *linalg.IndexOpts, pars *linalg.Parameters, A, S, U, Vt matr
         return onError("Gesvd: offsetA")
     }
     sizeA := A.NumElements()
-	if ind.LDa == 0 {
-		ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
-	}
+    if ind.LDa == 0 {
+        ind.LDa = max(1, A.LeadingIndex())
+        arows = max(1, A.Rows())
+    }
     if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
         return onError("Gesvd: sizeA")
     }

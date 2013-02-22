@@ -79,7 +79,7 @@ func SyevdFloat(A, W *matrix.FloatMatrix, opts ...linalg.Option) error {
 }
 
 func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
-	arows := ind.LDa
+    arows := ind.LDa
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
@@ -91,7 +91,7 @@ func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
+        arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return onError("Syevd: lda")

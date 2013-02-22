@@ -132,10 +132,11 @@ func TestDgemv(t *testing.T) {
 
 // not run 
 func _TestPanic(t *testing.T) {
-	PanicOnError(true)
-	X := matrix.FloatWithValue(10, 1, 1.0)
-	ScalFloat(X, 2.0, &linalg.IOpt{"offset", -1})
+    PanicOnError(true)
+    X := matrix.FloatWithValue(10, 1, 1.0)
+    ScalFloat(X, 2.0, &linalg.IOpt{"offset", -1})
 }
+
 // Local Variables:
 // tab-width: 4
 // End:

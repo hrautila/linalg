@@ -70,7 +70,7 @@ func SytrfComplex(A *matrix.ComplexMatrix, ipiv []int32, opts ...linalg.Option) 
 }
 
 func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
-	arows := ind.LDa
+    arows := ind.LDa
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
@@ -82,7 +82,7 @@ func checkSytrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
+        arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return onError("Sytrf: lda")

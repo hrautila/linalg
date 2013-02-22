@@ -25,14 +25,14 @@ func max(a, b int) int {
 var panicOnError bool = false
 
 func PanicOnError(flag bool) {
-	panicOnError = flag
+    panicOnError = flag
 }
 
 func onError(msg string) error {
-	if panicOnError {
-		panic(msg)
-	}
-	return errors.New(msg)
+    if panicOnError {
+        panic(msg)
+    }
+    return errors.New(msg)
 }
 
 // Local Variables:

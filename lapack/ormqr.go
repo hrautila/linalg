@@ -56,8 +56,8 @@ func Ormqr(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
         return err
     }
     ind := linalg.GetIndexOpts(opts...)
-	arows := ind.LDa
-	crows := ind.LDc
+    arows := ind.LDa
+    crows := ind.LDc
     if ind.N < 0 {
         ind.N = C.Cols()
     }
@@ -72,11 +72,11 @@ func Ormqr(A, tau, C matrix.Matrix, opts ...linalg.Option) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
+        arows = max(1, A.Rows())
     }
     if ind.LDc == 0 {
         ind.LDc = max(1, C.LeadingIndex())
-		crows = max(1, C.Rows())
+        crows = max(1, C.Rows())
     }
     switch pars.Side {
     case linalg.PLeft:

@@ -201,7 +201,6 @@ func GbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
     return
 }
 
-
 // See function Symv.
 func SymvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
@@ -227,7 +226,6 @@ func SymvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
     return
 }
 
-
 // See function Sbmv.
 func SbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
@@ -252,7 +250,6 @@ func SbmvFloat(A, X, Y *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
         ind.IncX, beta, Ya[ind.OffsetY:], ind.IncY)
     return
 }
-
 
 // See function Trmv.
 func TrmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
@@ -280,7 +277,6 @@ func TrmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
     return
 }
 
-
 // See function Tbmv.
 func TbmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 
@@ -306,7 +302,6 @@ func TbmvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
         Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
     return
 }
-
 
 // See function Trsv.
 func TrsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
@@ -334,7 +329,6 @@ func TrsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
     return
 }
 
-
 // See function Tbsv.
 func TbsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
 
@@ -361,7 +355,6 @@ func TbsvFloat(A, X *matrix.FloatMatrix, opts ...linalg.Option) (err error) {
     return
 }
 
-
 // See function Ger.
 func GerFloat(X, Y, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
@@ -387,7 +380,6 @@ func GerFloat(X, Y, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option)
     return
 }
 
-
 // See function Syr.
 func SyrFloat(X, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
@@ -410,7 +402,6 @@ func SyrFloat(X, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (e
     dsyr(uplo, ind.N, alpha, Xa[ind.OffsetX:], ind.IncX, Aa[ind.OffsetA:], ind.LDa)
     return
 }
-
 
 // See function Syr2.
 func Syr2Float(X, Y, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
@@ -441,7 +432,6 @@ func Syr2Float(X, Y, A *matrix.FloatMatrix, alpha float64, opts ...linalg.Option
 // BLAS LEVEL 3
 // ---------------------------------------------------------------------------------
 
-
 // See function Gemm.
 func GemmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
@@ -470,7 +460,6 @@ func GemmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
     return
 }
 
-
 // See function Symm.
 func SymmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
@@ -497,7 +486,6 @@ func SymmFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.
 
     return
 }
-
 
 // See function Syrk.
 func SyrkFloat(A, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
@@ -526,7 +514,6 @@ func SyrkFloat(A, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Opt
     return
 }
 
-
 // See function Syrk2.
 func Syr2kFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg.Option) (err error) {
 
@@ -554,7 +541,6 @@ func Syr2kFloat(A, B, C *matrix.FloatMatrix, alpha, beta float64, opts ...linalg
     return
 }
 
-
 // See function Trmm.
 func TrmmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {
 
@@ -581,7 +567,6 @@ func TrmmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (
         Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
     return
 }
-
 
 // See function Trsm.
 func TrsmFloat(A, B *matrix.FloatMatrix, alpha float64, opts ...linalg.Option) (err error) {

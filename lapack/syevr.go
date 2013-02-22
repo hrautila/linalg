@@ -88,7 +88,7 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
         return err
     }
     ind := linalg.GetIndexOpts(opts...)
-	arows := ind.LDa
+    arows := ind.LDa
     if ind.N < 0 {
         ind.N = A.Rows()
         if ind.N != A.Cols() {
@@ -101,7 +101,7 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
+        arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, A.Rows()) {
         return onError("Syevr: lda")
@@ -161,7 +161,7 @@ func SyevrFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit 
         if ind.OffsetZ < 0 {
             return onError("Syevr: OffsetW")
         }
-		zrows := max(1, Z.Rows())
+        zrows := max(1, Z.Rows())
         minZ := ind.OffsetZ + (ind.N-1)*zrows + ind.N
         if pars.Range == linalg.PRangeInt {
             minZ = ind.OffsetZ + (iu-il)*zrows + ind.N

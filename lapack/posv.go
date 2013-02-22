@@ -83,8 +83,8 @@ func PosvComplex(A, B *matrix.ComplexMatrix, opts ...linalg.Option) error {
 }
 
 func checkPosv(ind *linalg.IndexOpts, A, B matrix.Matrix) error {
-	arows := ind.LDa
-	brows := ind.LDb
+    arows := ind.LDa
+    brows := ind.LDb
     if ind.N < 0 {
         ind.N = A.Rows()
     }
@@ -96,14 +96,14 @@ func checkPosv(ind *linalg.IndexOpts, A, B matrix.Matrix) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
+        arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return onError("Posv: lda")
     }
     if ind.LDb == 0 {
         ind.LDb = max(1, B.LeadingIndex())
-		brows = max(1, B.Rows())
+        brows = max(1, B.Rows())
     }
     if ind.LDb < max(1, ind.N) {
         return onError("Posv: ldb")

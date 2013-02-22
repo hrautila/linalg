@@ -67,7 +67,7 @@ func PotriFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
 }
 
 func checkPotri(ind *linalg.IndexOpts, A matrix.Matrix) error {
-	arows := ind.LDa
+    arows := ind.LDa
     if ind.N < 0 {
         ind.N = A.Rows()
     }
@@ -76,7 +76,7 @@ func checkPotri(ind *linalg.IndexOpts, A matrix.Matrix) error {
     }
     if ind.LDa == 0 {
         ind.LDa = max(1, A.LeadingIndex())
-		arows = max(1, A.Rows())
+        arows = max(1, A.Rows())
     }
     if ind.LDa < max(1, ind.N) {
         return onError("Potri: lda")

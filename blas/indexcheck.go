@@ -158,7 +158,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
     }
 
     sizeA := A.NumElements()
-	arows := ind.LDa
+    arows := ind.LDa
     switch fn {
     case fgemv: // general matrix
         if ind.M < 0 {
@@ -169,7 +169,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         }
         if ind.LDa == 0 {
             ind.LDa = max(1, A.LeadingIndex())
-			arows = max(1, A.Rows())
+            arows = max(1, A.Rows())
         }
         if ind.OffsetA < 0 {
             return onError("offsetA")
@@ -214,7 +214,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         if ind.M > 0 && ind.N > 0 {
             if ind.LDa == 0 {
                 ind.LDa = max(1, A.LeadingIndex())
-				arows = max(1, A.Rows())
+                arows = max(1, A.Rows())
             }
             if ind.LDa < max(1, ind.M) {
                 return onError("ldA")
@@ -258,7 +258,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         }
         if ind.LDa == 0 {
             ind.LDa = max(1, A.LeadingIndex())
-			arows = max(1, A.Rows())
+            arows = max(1, A.Rows())
         }
         if ind.LDa < ind.Kl+ind.Ku+1 {
             return onError("ldA")
@@ -306,7 +306,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         if ind.N > 0 {
             if ind.LDa == 0 {
                 ind.LDa = max(1, A.LeadingIndex())
-				arows = max(1, A.Rows())
+                arows = max(1, A.Rows())
             }
             if ind.LDa < max(1, ind.N) {
                 return onError("ldA")
@@ -327,7 +327,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
         // ftbmv = triangular banded
         // ftbsv = triangular banded solve
         // fsbmv = symmetric banded product
-		arows := ind.LDa
+        arows := ind.LDa
         if ind.N < 0 {
             ind.N = A.Rows()
         }
@@ -337,7 +337,7 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
             }
             if ind.LDa == 0 {
                 ind.LDa = max(1, A.LeadingIndex())
-				arows = max(1, A.Rows())
+                arows = max(1, A.Rows())
             }
             if ind.LDa < ind.K+1 {
                 return onError("ldA")
@@ -370,11 +370,11 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
             }
             ind.N = A.Rows()
         }
-		arows := ind.LDa
+        arows := ind.LDa
         if ind.N > 0 {
             if ind.LDa == 0 {
                 ind.LDa = max(1, A.LeadingIndex())
-				arows = max(1, A.Rows())
+                arows = max(1, A.Rows())
             }
             if ind.LDa < max(1, ind.N) {
                 return onError("ldA")
@@ -414,10 +414,10 @@ func check_level2_func(ind *linalg.IndexOpts, fn funcNum, X, Y, A matrix.Matrix,
 func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
     pars *linalg.Parameters) (err error) {
 
-	// defaults for these
-	arows := ind.LDa
-	brows := ind.LDb
-	crows := ind.LDc
+    // defaults for these
+    arows := ind.LDa
+    brows := ind.LDb
+    crows := ind.LDc
 
     switch fn {
     case fgemm:
@@ -454,7 +454,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDa == 0 {
             ind.LDa = max(1, A.LeadingIndex())
-			arows = max(1, A.Rows())
+            arows = max(1, A.Rows())
         }
         if ind.K > 0 {
             if (pars.TransA == linalg.PNoTrans && ind.LDa < max(1, ind.M)) ||
@@ -475,7 +475,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDb == 0 {
             ind.LDb = max(1, B.LeadingIndex())
-			brows = max(1, B.Rows())
+            brows = max(1, B.Rows())
         }
         if ind.K > 0 {
             if (pars.TransB == linalg.PNoTrans && ind.LDb < max(1, ind.K)) ||
@@ -496,7 +496,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDc == 0 {
             ind.LDc = max(1, C.LeadingIndex())
-			crows = max(1, C.Rows())
+            crows = max(1, C.Rows())
         }
         if ind.LDc < max(1, ind.M) {
             return onError("inconsistent ldC")
@@ -528,7 +528,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDa == 0 {
             ind.LDa = max(1, A.LeadingIndex())
-			arows = max(1, A.Rows())
+            arows = max(1, A.Rows())
         }
         if pars.Side == linalg.PLeft && ind.LDa < max(1, ind.M) || ind.LDa < max(1, ind.N) {
             return onError("ldA")
@@ -545,7 +545,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             }
             if ind.LDb == 0 {
                 ind.LDb = max(1, B.LeadingIndex())
-				brows = max(1, B.Rows())
+                brows = max(1, B.Rows())
             }
             if ind.LDb < max(1, ind.M) {
                 return onError("ldB")
@@ -562,7 +562,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             }
             if ind.LDc == 0 {
                 ind.LDc = max(1, C.LeadingIndex())
-				crows = max(1, C.Rows())
+                crows = max(1, C.Rows())
             }
             if ind.LDc < max(1, ind.M) {
                 return onError("ldC")
@@ -592,7 +592,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDa == 0 {
             ind.LDa = max(1, A.LeadingIndex())
-			arows = max(1, A.Rows())
+            arows = max(1, A.Rows())
         }
         if ind.OffsetA < 0 {
             return onError("offsetA")
@@ -616,7 +616,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDc == 0 {
             ind.LDc = max(1, C.LeadingIndex())
-			crows = max(1, C.Rows())
+            crows = max(1, C.Rows())
         }
         if ind.LDc < max(1, ind.N) {
             return onError("ldC")
@@ -657,7 +657,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDa == 0 {
             ind.LDa = max(1, A.LeadingIndex())
-			arows = max(1, A.Rows())
+            arows = max(1, A.Rows())
         }
         if ind.K > 0 {
             if (pars.Trans == linalg.PNoTrans && ind.LDa < max(1, ind.N)) ||
@@ -677,7 +677,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDb == 0 {
             ind.LDb = max(1, B.LeadingIndex())
-			brows = max(1, B.Rows())
+            brows = max(1, B.Rows())
         }
         if ind.K > 0 {
             if (pars.Trans == linalg.PNoTrans && ind.LDb < max(1, ind.N)) ||
@@ -697,7 +697,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
         }
         if ind.LDc == 0 {
             ind.LDc = max(1, C.LeadingIndex())
-			crows = max(1, C.Rows())
+            crows = max(1, C.Rows())
         }
         if ind.LDc < max(1, ind.N) {
             return onError("ldC")
