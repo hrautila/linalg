@@ -301,6 +301,45 @@ func dtrtrs(uplo, trans, diag string, N, Nrhs int, A []float64, lda int, B []flo
 
 // void dgels_(char *trans, int *m, int *n, int *nrhs, double *A, int *lda,
 //		double *B, int *ldb, double *work, int *lwork, int *info);
+func dgels(trans string, M, N, NRHS int, A []float64, lda int, B []float64, ldb int) int {
+    var info int = 0
+    var lwork int = -1
+    var work float64
+
+    ctrans := C.CString(trans)
+    defer C.free(unsafe.Pointer(ctrans))
+
+    // calculate work buffer size
+    C.dgels_(
+		ctrans, 
+		(*C.int)(unsafe.Pointer(&M)),
+        (*C.int)(unsafe.Pointer(&N)),
+        (*C.int)(unsafe.Pointer(&NRHS)),
+        nil,
+        (*C.int)(unsafe.Pointer(&lda)),
+        nil,
+        (*C.int)(unsafe.Pointer(&ldb)),
+        (*C.double)(unsafe.Pointer(&work)),
+        (*C.int)(unsafe.Pointer(&lwork)),
+        (*C.int)(unsafe.Pointer(&info)))
+
+    lwork = int(work)
+    wbuf := make([]float64, lwork)
+
+    C.dgels_(
+		ctrans, 
+		(*C.int)(unsafe.Pointer(&M)),
+        (*C.int)(unsafe.Pointer(&N)),
+        (*C.int)(unsafe.Pointer(&NRHS)),
+        (*C.double)(unsafe.Pointer(&A[0])),
+        (*C.int)(unsafe.Pointer(&lda)),
+        (*C.double)(unsafe.Pointer(&B[0])),
+        (*C.int)(unsafe.Pointer(&ldb)),
+        (*C.double)(unsafe.Pointer(&wbuf[0])),
+        (*C.int)(unsafe.Pointer(&lwork)),
+        (*C.int)(unsafe.Pointer(&info)))
+	return info
+}
 
 // void dgeqrf_(int *m, int *n, double *a, int *lda, double *tau,
 //		double *work, int *lwork, int *info);
@@ -331,6 +370,23 @@ func dgeqrf(M, N int, A []float64, lda int, tau []float64) int {
         (*C.int)(unsafe.Pointer(&info)))
     return info
 }
+
+// void dgeqrt3_(int *m, int *n, double *a, int *lda, double *t,
+//		int *ldt, int *info);
+/*
+func dgeqrt3(M, N int, A []float64, lda int, T []float64, ldt int) int {
+    var info int = 0
+
+    C.dgeqrt3_((*C.int)(unsafe.Pointer(&M)),
+        (*C.int)(unsafe.Pointer(&N)),
+        (*C.double)(unsafe.Pointer(&A[0])),
+        (*C.int)(unsafe.Pointer(&lda)),
+        (*C.double)(unsafe.Pointer(&T[0])),
+        (*C.int)(unsafe.Pointer(&ldt)),
+        (*C.int)(unsafe.Pointer(&info)))
+    return info
+}
+*/
 
 // void dormqr_(char *side, char *trans, int *m, int *n, int *k,
 //		double *a, int *lda, double *tau, double *c, int *ldc,
