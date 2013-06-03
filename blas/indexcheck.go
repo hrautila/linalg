@@ -579,6 +579,7 @@ func check_level3_func(ind *linalg.IndexOpts, fn funcNum, A, B, C matrix.Matrix,
             } else {
                 ind.N = A.Cols()
             }
+			//ind.N = C.Rows()
         }
         if ind.K < 0 {
             if pars.Trans == linalg.PNoTrans {
