@@ -51,6 +51,7 @@ type IndexOpts struct {
     OffsetZ  int // default: 0
     LDu      int // default: 0
     LDvt     int // default: 0
+    LDt      int // default: 0
     OffsetS  int // default: 0
     OffsetU  int // default: 0
     OffsetVt int // default: 0
@@ -70,7 +71,7 @@ func GetIndexOpts(opts ...Option) *IndexOpts {
         0, 0, 0, // offsetD, offsetDL, OffsetDU,
         0, 0, // LDw, LDz
         0, 0, // OffsetW, OffsetZ
-        0, 0, // LDu, LDvt
+        0, 0, 0, // LDu, LDvt, LDt
         0, 0, 0, // OffsetS, OffsetU, OffsetVt
     }
 
@@ -101,6 +102,8 @@ loop:
             is.LDu = o.Int()
         case strings.EqualFold(o.Name(), "ldvt"):
             is.LDvt = o.Int()
+        case strings.EqualFold(o.Name(), "ldt"):
+            is.LDt = o.Int()
         case strings.EqualFold(o.Name(), "offset"):
             is.OffsetX = o.Int()
             is.OffsetY = o.Int()
