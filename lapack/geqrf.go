@@ -45,10 +45,10 @@ func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
     ind := linalg.GetIndexOpts(opts...)
     arows := ind.LDa
     if ind.N < 0 {
-        ind.N = A.Rows()
+        ind.N = A.Cols()
     }
     if ind.M < 0 {
-        ind.M = A.Cols()
+        ind.M = A.Rows()
     }
     if ind.N == 0 || ind.M == 0 {
         return nil
