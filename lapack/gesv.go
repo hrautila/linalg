@@ -91,24 +91,28 @@ func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 		return onError("Gesv: arguments not of same type")
 	}
 	info := -1
+	if ipiv == nil {
+		ipiv = make([]int32, ind.N)
+		// Do not overwrite A.
+		A = A.MakeCopy()
+	}
 	switch A.(type) {
 	case *matrix.FloatMatrix:
 		Aa := A.(*matrix.FloatMatrix).FloatArray()
 		Aa = Aa[ind.OffsetA:]
 		// Ensure there are sufficient elements in A.
 		Aa = Aa[:ind.LDa*ind.LDb]
-		if ipiv == nil {
-			ipiv = make([]int32, ind.N)
-			// Do not overwrite A.
-			tmp := Aa
-			Aa = make([]float64, len(tmp))
-			copy(Aa, tmp)
-		}
 		Ba := B.(*matrix.FloatMatrix).FloatArray()
 		Ba = Ba[ind.OffsetB:]
 		info = dgesv(ind.N, ind.Nrhs, Aa, ind.LDa, ipiv, Ba, ind.LDb)
 	case *matrix.ComplexMatrix:
-		return onError("Gesv: complex not yet implemented")
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Aa = Aa[ind.OffsetA:]
+		// Ensure there are sufficient elements in A.
+		Aa = Aa[:ind.LDa*ind.LDb]
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ba = Ba[ind.OffsetB:]
+		info = zgesv(ind.N, ind.Nrhs, Aa, ind.LDa, ipiv, Ba, ind.LDb)
 	}
 	if info != 0 {
 		return onError(fmt.Sprintf("Gesv: lapack error: %d", info))
