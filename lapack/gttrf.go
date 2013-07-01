@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -39,59 +39,59 @@ import (
   offsetdu  nonnegative integer
 */
 func Gtrrf(DL, D, DU, DU2 matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
-    ind := linalg.GetIndexOpts(opts...)
-    if ind.OffsetD < 0 {
-        return onError("Gttrf: offset D")
-    }
-    if ind.N < 0 {
-        ind.N = D.NumElements() - ind.OffsetD
-    }
-    if ind.N < 0 {
-        return onError("Gttrf: size D")
-    }
-    if ind.N == 0 {
-        return nil
-    }
-    if ind.OffsetDL < 0 {
-        return onError("Gttrf: offset DL")
-    }
-    sizeDL := DL.NumElements()
-    if sizeDL < ind.OffsetDL+ind.N-1 {
-        return onError("Gttrf: sizeDL")
-    }
-    if ind.OffsetDU < 0 {
-        return onError("Gttrf: offset DU")
-    }
-    sizeDU := DU.NumElements()
-    if sizeDU < ind.OffsetDU+ind.N-1 {
-        return onError("Gttrf: sizeDU")
-    }
-    sizeDU2 := DU2.NumElements()
-    if sizeDU2 < ind.N-2 {
-        return onError("Gttrf: sizeDU2")
-    }
-    if len(ipiv) < ind.N {
-        return onError("Gttrf: size ipiv")
-    }
-    info := -1
-    if !matrix.EqualTypes(DL, D, DU, DU2) {
-        return onError("Gttrf: arguments not same type")
-    }
-    switch DL.(type) {
-    case *matrix.FloatMatrix:
-        DLa := DL.(*matrix.FloatMatrix).FloatArray()
-        Da := D.(*matrix.FloatMatrix).FloatArray()
-        DUa := DU.(*matrix.FloatMatrix).FloatArray()
-        DU2a := DU2.(*matrix.FloatMatrix).FloatArray()
-        info = dgttrf(ind.N, DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:],
-            DU2a, ipiv)
-    case *matrix.ComplexMatrix:
-        return onError("Gttrf: complex not yet implemented")
-    }
-    if info != 0 {
-        return onError(fmt.Sprintf("Gttrf lapack error: %d", info))
-    }
-    return nil
+	ind := linalg.GetIndexOpts(opts...)
+	if ind.OffsetD < 0 {
+		return onError("Gttrf: offset D")
+	}
+	if ind.N < 0 {
+		ind.N = D.NumElements() - ind.OffsetD
+	}
+	if ind.N < 0 {
+		return onError("Gttrf: size D")
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	if ind.OffsetDL < 0 {
+		return onError("Gttrf: offset DL")
+	}
+	sizeDL := DL.NumElements()
+	if sizeDL < ind.OffsetDL+ind.N-1 {
+		return onError("Gttrf: sizeDL")
+	}
+	if ind.OffsetDU < 0 {
+		return onError("Gttrf: offset DU")
+	}
+	sizeDU := DU.NumElements()
+	if sizeDU < ind.OffsetDU+ind.N-1 {
+		return onError("Gttrf: sizeDU")
+	}
+	sizeDU2 := DU2.NumElements()
+	if sizeDU2 < ind.N-2 {
+		return onError("Gttrf: sizeDU2")
+	}
+	if len(ipiv) < ind.N {
+		return onError("Gttrf: size ipiv")
+	}
+	info := -1
+	if !matrix.EqualTypes(DL, D, DU, DU2) {
+		return onError("Gttrf: arguments not same type")
+	}
+	switch DL.(type) {
+	case *matrix.FloatMatrix:
+		DLa := DL.(*matrix.FloatMatrix).FloatArray()
+		Da := D.(*matrix.FloatMatrix).FloatArray()
+		DUa := DU.(*matrix.FloatMatrix).FloatArray()
+		DU2a := DU2.(*matrix.FloatMatrix).FloatArray()
+		info = dgttrf(ind.N, DLa[ind.OffsetDL:], Da[ind.OffsetD:], DUa[ind.OffsetDU:],
+			DU2a, ipiv)
+	case *matrix.ComplexMatrix:
+		return onError("Gttrf: complex not yet implemented")
+	}
+	if info != 0 {
+		return onError(fmt.Sprintf("Gttrf lapack error: %d", info))
+	}
+	return nil
 }
 
 // Local Variables:

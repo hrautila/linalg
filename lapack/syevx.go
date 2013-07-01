@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -63,132 +63,132 @@ import (
   offsetZ   nonnegative integer
 */
 func Syevx(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int, opts ...linalg.Option) error {
-    if !matrix.EqualTypes(A, W, Z) {
-        return onError("Syevx: not same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Am := A.(*matrix.FloatMatrix)
-        Wm := W.(*matrix.FloatMatrix)
-        var Zm *matrix.FloatMatrix = nil
-        if Z != nil {
-            Zm = Z.(*matrix.FloatMatrix)
-        }
-        return SyevrFloat(Am, Wm, Zm, abstol, vlimit, ilimit, opts...)
-    }
-    return onError("Syevr: unknown types")
+	if !matrix.EqualTypes(A, W, Z) {
+		return onError("Syevx: not same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := A.(*matrix.FloatMatrix)
+		Wm := W.(*matrix.FloatMatrix)
+		var Zm *matrix.FloatMatrix = nil
+		if Z != nil {
+			Zm = Z.(*matrix.FloatMatrix)
+		}
+		return SyevrFloat(Am, Wm, Zm, abstol, vlimit, ilimit, opts...)
+	}
+	return onError("Syevr: unknown types")
 }
 
 func SyevxFloat(A, W, Z matrix.Matrix, abstol float64, vlimit []float64, ilimit []int, opts ...linalg.Option) error {
-    var vl, vu float64
-    var il, iu int
+	var vl, vu float64
+	var il, iu int
 
-    pars, err := linalg.GetParameters(opts...)
-    if err != nil {
-        return err
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    arows := ind.LDa
-    if ind.N < 0 {
-        ind.N = A.Rows()
-        if ind.N != A.Cols() {
-            return onError("Syevr: A not square")
-        }
-    }
-    // Check indexes
-    if ind.N == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, A.Rows()) {
-        return onError("Syevr: lda")
-    }
-    if pars.Range == linalg.PRangeValue {
-        if vlimit == nil {
-            return onError("Syevx: vlimit is nil")
-        }
-        vl = vlimit[0]
-        vu = vlimit[1]
-        if vl >= vu {
-            return onError("Syevx: must be: vl < vu")
-        }
-    } else if pars.Range == linalg.PRangeInt {
-        if ilimit == nil {
-            return onError("Syevx: ilimit is nil")
-        }
-        il = ilimit[0]
-        iu = ilimit[1]
-        if il < 1 || il > iu || iu > ind.N {
-            return onError("Syevx: must be:1 <= il <= iu <= N")
-        }
-    }
-    if pars.Jobz == linalg.PJobValue {
-        if Z == nil {
-            return onError("Syevx: Z is nil")
-        }
-        if ind.LDz == 0 {
-            ind.LDz = max(1, Z.LeadingIndex())
-        }
-        if ind.LDz < max(1, ind.N) {
-            return onError("Syevx: ldz")
-        }
-    } else {
-        if ind.LDz == 0 {
-            ind.LDz = 1
-        }
-        if ind.LDz < 1 {
-            return onError("Syevx: ldz")
-        }
-    }
-    if ind.OffsetA < 0 {
-        return onError("Syevx: OffsetA")
-    }
-    sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return onError("Syevx: sizeA")
-    }
-    if ind.OffsetW < 0 {
-        return onError("Syevx: OffsetW")
-    }
-    sizeW := W.NumElements()
-    if sizeW < ind.OffsetW+ind.N {
-        return onError("Syevx: sizeW")
-    }
-    if pars.Jobz == linalg.PJobValue {
-        if ind.OffsetZ < 0 {
-            return onError("Syevx: OffsetW")
-        }
-        zrows := max(1, Z.Rows())
-        minZ := ind.OffsetZ + (ind.N-1)*zrows + ind.N
-        if pars.Range == linalg.PRangeInt {
-            minZ = ind.OffsetZ + (iu-il)*zrows + ind.N
-        }
-        if Z.NumElements() < minZ {
-            return onError("Syevx: sizeZ")
-        }
-    }
+	pars, err := linalg.GetParameters(opts...)
+	if err != nil {
+		return err
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
+	if ind.N < 0 {
+		ind.N = A.Rows()
+		if ind.N != A.Cols() {
+			return onError("Syevr: A not square")
+		}
+	}
+	// Check indexes
+	if ind.N == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, A.Rows()) {
+		return onError("Syevr: lda")
+	}
+	if pars.Range == linalg.PRangeValue {
+		if vlimit == nil {
+			return onError("Syevx: vlimit is nil")
+		}
+		vl = vlimit[0]
+		vu = vlimit[1]
+		if vl >= vu {
+			return onError("Syevx: must be: vl < vu")
+		}
+	} else if pars.Range == linalg.PRangeInt {
+		if ilimit == nil {
+			return onError("Syevx: ilimit is nil")
+		}
+		il = ilimit[0]
+		iu = ilimit[1]
+		if il < 1 || il > iu || iu > ind.N {
+			return onError("Syevx: must be:1 <= il <= iu <= N")
+		}
+	}
+	if pars.Jobz == linalg.PJobValue {
+		if Z == nil {
+			return onError("Syevx: Z is nil")
+		}
+		if ind.LDz == 0 {
+			ind.LDz = max(1, Z.LeadingIndex())
+		}
+		if ind.LDz < max(1, ind.N) {
+			return onError("Syevx: ldz")
+		}
+	} else {
+		if ind.LDz == 0 {
+			ind.LDz = 1
+		}
+		if ind.LDz < 1 {
+			return onError("Syevx: ldz")
+		}
+	}
+	if ind.OffsetA < 0 {
+		return onError("Syevx: OffsetA")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
+		return onError("Syevx: sizeA")
+	}
+	if ind.OffsetW < 0 {
+		return onError("Syevx: OffsetW")
+	}
+	sizeW := W.NumElements()
+	if sizeW < ind.OffsetW+ind.N {
+		return onError("Syevx: sizeW")
+	}
+	if pars.Jobz == linalg.PJobValue {
+		if ind.OffsetZ < 0 {
+			return onError("Syevx: OffsetW")
+		}
+		zrows := max(1, Z.Rows())
+		minZ := ind.OffsetZ + (ind.N-1)*zrows + ind.N
+		if pars.Range == linalg.PRangeInt {
+			minZ = ind.OffsetZ + (iu-il)*zrows + ind.N
+		}
+		if Z.NumElements() < minZ {
+			return onError("Syevx: sizeZ")
+		}
+	}
 
-    Aa := A.(*matrix.FloatMatrix).FloatArray()
-    Wa := W.(*matrix.FloatMatrix).FloatArray()
-    var Za []float64
-    if pars.Jobz == linalg.PJobValue {
-        Za = Z.(*matrix.FloatMatrix).FloatArray()
-    } else {
-        Za = nil
-    }
-    jobz := linalg.ParamString(pars.Jobz)
-    rnge := linalg.ParamString(pars.Range)
-    uplo := linalg.ParamString(pars.Uplo)
+	Aa := A.(*matrix.FloatMatrix).FloatArray()
+	Wa := W.(*matrix.FloatMatrix).FloatArray()
+	var Za []float64
+	if pars.Jobz == linalg.PJobValue {
+		Za = Z.(*matrix.FloatMatrix).FloatArray()
+	} else {
+		Za = nil
+	}
+	jobz := linalg.ParamString(pars.Jobz)
+	rnge := linalg.ParamString(pars.Range)
+	uplo := linalg.ParamString(pars.Uplo)
 
-    info := dsyevx(jobz, rnge, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa,
-        vl, vu, il, iu, ind.M, Wa[ind.OffsetW:], Za, ind.LDz)
-    if info != 0 {
-        return onError(fmt.Sprintf("Syevx: call failed %d", info))
-    }
-    return nil
+	info := dsyevx(jobz, rnge, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa,
+		vl, vu, il, iu, ind.M, Wa[ind.OffsetW:], Za, ind.LDz)
+	if info != 0 {
+		return onError(fmt.Sprintf("Syevx: call failed %d", info))
+	}
+	return nil
 }
 
 // Local Variables:

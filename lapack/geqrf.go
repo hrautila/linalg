@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -42,49 +42,49 @@ import (
 
 */
 func Geqrf(A, tau matrix.Matrix, opts ...linalg.Option) error {
-    ind := linalg.GetIndexOpts(opts...)
-    arows := ind.LDa
-    if ind.N < 0 {
-        ind.N = A.Cols()
-    }
-    if ind.M < 0 {
-        ind.M = A.Rows()
-    }
-    if ind.N == 0 || ind.M == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, ind.M) {
-        return onError("Geqrf: ldA")
-    }
-    if ind.OffsetA < 0 {
-        return onError("Geqrf: offsetA")
-    }
-    if A.NumElements() < ind.OffsetA+ind.K*arows {
-        return onError("Geqrf: sizeA")
-    }
-    if tau.NumElements() < min(ind.M, ind.N) {
-        return onError("Geqrf: sizeTau")
-    }
-    if !matrix.EqualTypes(A, tau) {
-        return onError("Geqrf: arguments not of same type")
-    }
-    info := -1
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        taua := tau.(*matrix.FloatMatrix).FloatArray()
-        info = dgeqrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, taua)
-    case *matrix.ComplexMatrix:
-        return onError("Geqrf: complex not yet implemented")
-    }
-    if info != 0 {
-        return onError(fmt.Sprintf("Geqrf lapack error: %d", info))
-    }
-    return nil
+	ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
+	if ind.N < 0 {
+		ind.N = A.Cols()
+	}
+	if ind.M < 0 {
+		ind.M = A.Rows()
+	}
+	if ind.N == 0 || ind.M == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, ind.M) {
+		return onError("Geqrf: ldA")
+	}
+	if ind.OffsetA < 0 {
+		return onError("Geqrf: offsetA")
+	}
+	if A.NumElements() < ind.OffsetA+ind.K*arows {
+		return onError("Geqrf: sizeA")
+	}
+	if tau.NumElements() < min(ind.M, ind.N) {
+		return onError("Geqrf: sizeTau")
+	}
+	if !matrix.EqualTypes(A, tau) {
+		return onError("Geqrf: arguments not of same type")
+	}
+	info := -1
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		taua := tau.(*matrix.FloatMatrix).FloatArray()
+		info = dgeqrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, taua)
+	case *matrix.ComplexMatrix:
+		return onError("Geqrf: complex not yet implemented")
+	}
+	if info != 0 {
+		return onError(fmt.Sprintf("Geqrf lapack error: %d", info))
+	}
+	return nil
 }
 
 // Local Variables:

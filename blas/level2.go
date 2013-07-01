@@ -7,11 +7,11 @@
 package blas
 
 import (
-    //"errors"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
-    "math"
-    "math/cmplx"
+	//"errors"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
+	"math"
+	"math/cmplx"
 )
 
 /*
@@ -46,45 +46,45 @@ import (
 */
 func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fgemv, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        if params.Trans == linalg.PNoTrans && ind.N == 0 {
-            dscal(ind.M, bval, Ya[ind.OffsetY:], ind.IncY)
-        } else if params.Trans == linalg.PTrans && ind.M == 0 {
-            dscal(ind.N, bval, Ya[ind.OffsetY:], ind.IncY)
-        } else {
-            trans := linalg.ParamString(params.Trans)
-            dgemv(trans, ind.M, ind.N, aval, Aa[ind.OffsetA:],
-                ind.LDa, Xa[ind.OffsetX:], ind.IncX, bval,
-                Ya[ind.OffsetY:], ind.IncY)
-        }
-    case *matrix.ComplexMatrix:
-        return onError("Not implemented yet for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fgemv, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		if params.Trans == linalg.PNoTrans && ind.N == 0 {
+			dscal(ind.M, bval, Ya[ind.OffsetY:], ind.IncY)
+		} else if params.Trans == linalg.PTrans && ind.M == 0 {
+			dscal(ind.N, bval, Ya[ind.OffsetY:], ind.IncY)
+		} else {
+			trans := linalg.ParamString(params.Trans)
+			dgemv(trans, ind.M, ind.N, aval, Aa[ind.OffsetA:],
+				ind.LDa, Xa[ind.OffsetX:], ind.IncX, bval,
+				Ya[ind.OffsetY:], ind.IncY)
+		}
+	case *matrix.ComplexMatrix:
+		return onError("Not implemented yet for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -123,48 +123,48 @@ func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Gbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fgbmv, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if ind.M == 0 && ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        if params.Trans == linalg.PNoTrans && ind.N == 0 {
-            dscal(ind.M, bval, Ya[ind.OffsetY:], ind.IncY)
-        } else if params.Trans == linalg.PTrans && ind.M == 0 {
-            dscal(ind.N, bval, Ya[ind.OffsetY:], ind.IncY)
-        } else {
-            trans := linalg.ParamString(params.Trans)
-            dgbmv(trans, ind.M, ind.N, ind.Kl, ind.Ku,
-                aval, Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX,
-                bval, Ya[ind.OffsetY:], ind.IncY)
-        }
-    case *matrix.ComplexMatrix:
-        return onError("Not implemented yet for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fgbmv, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if ind.M == 0 && ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		if params.Trans == linalg.PNoTrans && ind.N == 0 {
+			dscal(ind.M, bval, Ya[ind.OffsetY:], ind.IncY)
+		} else if params.Trans == linalg.PTrans && ind.M == 0 {
+			dscal(ind.N, bval, Ya[ind.OffsetY:], ind.IncY)
+		} else {
+			trans := linalg.ParamString(params.Trans)
+			dgbmv(trans, ind.M, ind.N, ind.Kl, ind.Ku,
+				aval, Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX,
+				bval, Ya[ind.OffsetY:], ind.IncY)
+		}
+	case *matrix.ComplexMatrix:
+		return onError("Not implemented yet for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -193,42 +193,42 @@ func Gbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsymv, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        dsymv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
-            Xa[ind.OffsetX:], ind.IncX,
-            bval, Ya[ind.OffsetY:], ind.IncY)
-    case *matrix.ComplexMatrix:
-        return onError("Symv not possible for ComplexMatrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsymv, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		dsymv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
+			Xa[ind.OffsetX:], ind.IncX,
+			bval, Ya[ind.OffsetY:], ind.IncY)
+	case *matrix.ComplexMatrix:
+		return onError("Symv not possible for ComplexMatrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -260,75 +260,75 @@ func Symv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsymv, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        dsymv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
-            Xa[ind.OffsetX:], ind.IncX,
-            bval, Ya[ind.OffsetY:], ind.IncY)
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsymv, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		dsymv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
+			Xa[ind.OffsetX:], ind.IncX,
+			bval, Ya[ind.OffsetY:], ind.IncY)
 
-    case *matrix.ComplexMatrix:
-        Xa := X.(*matrix.ComplexMatrix).ComplexArray()
-        Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        /*
-        	if alpha != nil {
-        		aval = alpha.ComplexValue()
-        		if cmplx.IsNaN(aval) {
-        			if ! math.IsNaN(alpha.FloatValue()) {
-        				aval = complex(alpha.FloatValue(), 0)
-        			} else {
-        				return onError("alpha not a number")
-        			}
-        		}
-        	}
-        */
-        bval := beta.Complex()
-        /*
-        	if beta != nil {
-        		bval := beta.ComplexValue()
-        		if cmplx.IsNaN(bval) {
-        			if ! math.IsNaN(beta.FloatValue()) {
-        				bval = complex(beta.FloatValue(), 0)
-        			} else {
-        				return onError("beta not a number")
-        			}
-        		}
-        	}
-        */
-        uplo := linalg.ParamString(params.Uplo)
-        zhemv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
-            Xa[ind.OffsetX:], ind.IncX,
-            bval, Ya[ind.OffsetY:], ind.IncY)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	case *matrix.ComplexMatrix:
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		/*
+			if alpha != nil {
+				aval = alpha.ComplexValue()
+				if cmplx.IsNaN(aval) {
+					if ! math.IsNaN(alpha.FloatValue()) {
+						aval = complex(alpha.FloatValue(), 0)
+					} else {
+						return onError("alpha not a number")
+					}
+				}
+			}
+		*/
+		bval := beta.Complex()
+		/*
+			if beta != nil {
+				bval := beta.ComplexValue()
+				if cmplx.IsNaN(bval) {
+					if ! math.IsNaN(beta.FloatValue()) {
+						bval = complex(beta.FloatValue(), 0)
+					} else {
+						return onError("beta not a number")
+					}
+				}
+			}
+		*/
+		uplo := linalg.ParamString(params.Uplo)
+		zhemv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
+			Xa[ind.OffsetX:], ind.IncX,
+			bval, Ya[ind.OffsetY:], ind.IncY)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -362,42 +362,42 @@ func Hemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Sbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsbmv, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        dsbmv(uplo, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
-            Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsbmv, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		dsbmv(uplo, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
+			Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
 
-    case *matrix.ComplexMatrix:
-        return onError("Sbmv not possible for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	case *matrix.ComplexMatrix:
+		return onError("Sbmv not possible for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -429,52 +429,52 @@ func Sbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsbmv, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        dsbmv(uplo, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
-            Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsbmv, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		dsbmv(uplo, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
+			Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
 
-    case *matrix.ComplexMatrix:
-        Xa := X.(*matrix.ComplexMatrix).ComplexArray()
-        Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        bval := beta.Complex()
-        uplo := linalg.ParamString(params.Uplo)
-        zhbmv(uplo, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
-            Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
-        //zhbmv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
-        //	Xa[ind.OffsetX:], ind.IncX,
-        //	bval, Ya[ind.OffsetY:], ind.IncY)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	case *matrix.ComplexMatrix:
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		bval := beta.Complex()
+		uplo := linalg.ParamString(params.Uplo)
+		zhbmv(uplo, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
+			Xa[ind.OffsetX:], ind.IncX, bval, Ya[ind.OffsetY:], ind.IncY)
+		//zhbmv(uplo, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
+		//	Xa[ind.OffsetX:], ind.IncX,
+		//	bval, Ya[ind.OffsetY:], ind.IncY)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -509,34 +509,34 @@ func Hbmv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Trmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, ftrmv, X, nil, A, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, X) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        diag := linalg.ParamString(params.Diag)
-        dtrmv(uplo, trans, diag, ind.N,
-            Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
-    case *matrix.ComplexMatrix:
-        return onError("Not implemented yet for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, ftrmv, X, nil, A, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, X) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		diag := linalg.ParamString(params.Diag)
+		dtrmv(uplo, trans, diag, ind.N,
+			Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
+	case *matrix.ComplexMatrix:
+		return onError("Not implemented yet for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -571,38 +571,38 @@ func Trmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 */
 func Tbmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    if !matrix.EqualTypes(A, X) {
-        err = onError("Parameters not of same type")
-        return
-    }
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, ftbmv, X, nil, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        diag := linalg.ParamString(params.Diag)
-        dtbmv(uplo, trans, diag, ind.N, ind.K,
-            Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
-    case *matrix.ComplexMatrix:
-        return onError("Not implemented yet for ComplexMatrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	if !matrix.EqualTypes(A, X) {
+		err = onError("Parameters not of same type")
+		return
+	}
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, ftbmv, X, nil, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		diag := linalg.ParamString(params.Diag)
+		dtbmv(uplo, trans, diag, ind.N, ind.K,
+			Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
+	case *matrix.ComplexMatrix:
+		return onError("Not implemented yet for ComplexMatrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -635,38 +635,38 @@ func Tbmv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 */
 func Trsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    if !matrix.EqualTypes(A, X) {
-        err = onError("Parameters not of same type")
-        return
-    }
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, ftrsv, X, nil, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        diag := linalg.ParamString(params.Diag)
-        dtrsv(uplo, trans, diag, ind.N,
-            Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
-    case *matrix.ComplexMatrix:
-        return onError("Not implemented yet for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	if !matrix.EqualTypes(A, X) {
+		err = onError("Parameters not of same type")
+		return
+	}
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, ftrsv, X, nil, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		diag := linalg.ParamString(params.Diag)
+		dtrsv(uplo, trans, diag, ind.N,
+			Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
+	case *matrix.ComplexMatrix:
+		return onError("Not implemented yet for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -700,38 +700,38 @@ PURPOSE
 */
 func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    if !matrix.EqualTypes(A, X) {
-        err = onError("Parameters not of same type")
-        return
-    }
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, ftbsv, X, nil, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        diag := linalg.ParamString(params.Diag)
-        dtbsv(uplo, trans, diag, ind.N, ind.K,
-            Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
-    case *matrix.ComplexMatrix:
-        return onError("Not implemented yet for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	if !matrix.EqualTypes(A, X) {
+		err = onError("Parameters not of same type")
+		return
+	}
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, ftbsv, X, nil, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		diag := linalg.ParamString(params.Diag)
+		dtbsv(uplo, trans, diag, ind.N, ind.K,
+			Aa[ind.OffsetA:], ind.LDa, Xa[ind.OffsetX:], ind.IncX)
+	case *matrix.ComplexMatrix:
+		return onError("Not implemented yet for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -763,50 +763,50 @@ func Tbsv(A, X matrix.Matrix, opts ...linalg.Option) (err error) {
 */
 func Ger(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    if !matrix.EqualTypes(A, X, Y) {
-        err = onError("Parameters not of same type")
-        return
-    }
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fger, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 || ind.M == 0 {
-        return
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        dger(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
+	var params *linalg.Parameters
+	if !matrix.EqualTypes(A, X, Y) {
+		err = onError("Parameters not of same type")
+		return
+	}
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fger, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 || ind.M == 0 {
+		return
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		dger(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
 
-    case *matrix.ComplexMatrix:
-        Xa := X.(*matrix.ComplexMatrix).ComplexArray()
-        Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        zgerc(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
+	case *matrix.ComplexMatrix:
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		zgerc(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
 
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -838,49 +838,49 @@ func Ger(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err
 */
 func Geru(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fger, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if ind.M == 0 || ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := Y.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        dger(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fger, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := Y.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		dger(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
 
-    case *matrix.ComplexMatrix:
-        Xa := X.(*matrix.ComplexMatrix).ComplexArray()
-        Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        zgeru(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
+	case *matrix.ComplexMatrix:
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		zgeru(ind.M, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Ya[ind.OffsetY:], ind.IncY, Aa[ind.OffsetA:], ind.LDa)
 
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -910,39 +910,39 @@ func Geru(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 */
 func Syr(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsyr, X, nil, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        uplo := linalg.ParamString(params.Uplo)
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        dsyr(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Aa[ind.OffsetA:], ind.LDa)
-    case *matrix.ComplexMatrix:
-        return onError("Syr not possible for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsyr, X, nil, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		uplo := linalg.ParamString(params.Uplo)
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		dsyr(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Aa[ind.OffsetA:], ind.LDa)
+	case *matrix.ComplexMatrix:
+		return onError("Syr not possible for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -973,47 +973,47 @@ func Syr(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
 */
 func Her(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsyr, X, nil, A, params)
-    if err != nil {
-        return
-    }
-    if ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, X) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        uplo := linalg.ParamString(params.Uplo)
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        dsyr(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Aa[ind.OffsetA:], ind.LDa)
-    case *matrix.ComplexMatrix:
-        Xa := X.(*matrix.ComplexMatrix).ComplexArray()
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        uplo := linalg.ParamString(params.Uplo)
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        zher(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Aa[ind.OffsetA:], ind.LDa)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsyr, X, nil, A, params)
+	if err != nil {
+		return
+	}
+	if ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, X) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		uplo := linalg.ParamString(params.Uplo)
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		dsyr(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Aa[ind.OffsetA:], ind.LDa)
+	case *matrix.ComplexMatrix:
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		uplo := linalg.ParamString(params.Uplo)
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		zher(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Aa[ind.OffsetA:], ind.LDa)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -1041,38 +1041,38 @@ func Her(X, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err er
 */
 func Syr2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsyr2, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        dsyr2(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Ya[ind.OffsetY:], ind.IncY,
-            Aa[ind.OffsetA:], ind.LDa)
-    case *matrix.ComplexMatrix:
-        return onError("Not implemented yet for complx.Matrix")
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsyr2, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		dsyr2(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Ya[ind.OffsetY:], ind.IncY,
+			Aa[ind.OffsetA:], ind.LDa)
+	case *matrix.ComplexMatrix:
+		return onError("Not implemented yet for complx.Matrix")
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -1102,50 +1102,50 @@ func Syr2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (er
 */
 func Her2(X, Y, A matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    var params *linalg.Parameters
-    params, err = linalg.GetParameters(opts...)
-    if err != nil {
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level2_func(ind, fsyr2, X, Y, A, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, X, Y) {
-        return onError("Parameters not of same type")
-    }
-    switch X.(type) {
-    case *matrix.FloatMatrix:
-        Xa := X.(*matrix.FloatMatrix).FloatArray()
-        Ya := X.(*matrix.FloatMatrix).FloatArray()
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        dsyr2(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Ya[ind.OffsetY:], ind.IncY,
-            Aa[ind.OffsetA:], ind.LDa)
-    case *matrix.ComplexMatrix:
-        Xa := X.(*matrix.ComplexMatrix).ComplexArray()
-        Ya := X.(*matrix.ComplexMatrix).ComplexArray()
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        zher2(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-            Ya[ind.OffsetY:], ind.IncY,
-            Aa[ind.OffsetA:], ind.LDa)
-        //zher(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
-        //	Aa[ind.OffsetA:], ind.LDa)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	var params *linalg.Parameters
+	params, err = linalg.GetParameters(opts...)
+	if err != nil {
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level2_func(ind, fsyr2, X, Y, A, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, X, Y) {
+		return onError("Parameters not of same type")
+	}
+	switch X.(type) {
+	case *matrix.FloatMatrix:
+		Xa := X.(*matrix.FloatMatrix).FloatArray()
+		Ya := X.(*matrix.FloatMatrix).FloatArray()
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		dsyr2(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Ya[ind.OffsetY:], ind.IncY,
+			Aa[ind.OffsetA:], ind.LDa)
+	case *matrix.ComplexMatrix:
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := X.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		zher2(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+			Ya[ind.OffsetY:], ind.IncY,
+			Aa[ind.OffsetA:], ind.LDa)
+		//zher(uplo, ind.N, aval, Xa[ind.OffsetX:], ind.IncX,
+		//	Aa[ind.OffsetA:], ind.LDa)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 // Local Variables:

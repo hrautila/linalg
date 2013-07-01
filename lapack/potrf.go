@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -38,59 +38,59 @@ import (
 
 */
 func Potrf(A matrix.Matrix, opts ...linalg.Option) error {
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        return PotrfFloat(A.(*matrix.FloatMatrix), opts...)
-    case *matrix.ComplexMatrix:
-        return onError("Potrf: complex not implemented yet")
-    }
-    return onError("Potrf unknown types")
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		return PotrfFloat(A.(*matrix.FloatMatrix), opts...)
+	case *matrix.ComplexMatrix:
+		return onError("Potrf: complex not implemented yet")
+	}
+	return onError("Potrf unknown types")
 }
 
 func PotrfFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
-    pars, err := linalg.GetParameters(opts...)
-    if err != nil {
-        return err
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = checkPotrf(ind, A)
-    if ind.N == 0 {
-        return nil
-    }
-    Aa := A.FloatArray()
-    uplo := linalg.ParamString(pars.Uplo)
-    info := dpotrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
-    if info != 0 {
-        return onError(fmt.Sprintf("Potrf: lapack error %d", info))
-    }
-    return nil
+	pars, err := linalg.GetParameters(opts...)
+	if err != nil {
+		return err
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = checkPotrf(ind, A)
+	if ind.N == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	uplo := linalg.ParamString(pars.Uplo)
+	info := dpotrf(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
+	if info != 0 {
+		return onError(fmt.Sprintf("Potrf: lapack error %d", info))
+	}
+	return nil
 }
 
 func checkPotrf(ind *linalg.IndexOpts, A matrix.Matrix) error {
-    arows := ind.LDa
-    if ind.N < 0 {
-        ind.N = A.Rows()
-        if ind.N != A.Cols() {
-            return onError("Potrf: not square")
-        }
-    }
-    if ind.N == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, ind.N) {
-        return onError("Potrf: lda")
-    }
-    if ind.OffsetA < 0 {
-        return onError("Potrf: offsetA")
-    }
-    if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return onError("Potrf: sizeA")
-    }
-    return nil
+	arows := ind.LDa
+	if ind.N < 0 {
+		ind.N = A.Rows()
+		if ind.N != A.Cols() {
+			return onError("Potrf: not square")
+		}
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, ind.N) {
+		return onError("Potrf: lda")
+	}
+	if ind.OffsetA < 0 {
+		return onError("Potrf: offsetA")
+	}
+	if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
+		return onError("Potrf: sizeA")
+	}
+	return nil
 }
 
 // Local Variables:

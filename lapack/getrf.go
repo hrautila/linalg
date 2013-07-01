@@ -7,9 +7,9 @@
 package lapack
 
 import (
-    //"errors"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -36,45 +36,45 @@ import (
 
 */
 func Getrf(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
-    ind := linalg.GetIndexOpts(opts...)
-    arows := ind.LDa
-    if ind.M < 0 {
-        ind.M = A.Rows()
-    }
-    if ind.N < 0 {
-        ind.N = A.Cols()
-    }
-    if ind.N == 0 || ind.M == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, ind.M) {
-        return onError("lda")
-    }
-    if ind.OffsetA < 0 {
-        return onError("offsetA")
-    }
-    sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
-        return onError("sizeA")
-    }
-    if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
-        return onError("size ipiv")
-    }
-    info := -1
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        info = dgetrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
-    case *matrix.ComplexMatrix:
-    }
-    if info != 0 {
-        return onError("Getrf call error")
-    }
-    return nil
+	ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
+	if ind.M < 0 {
+		ind.M = A.Rows()
+	}
+	if ind.N < 0 {
+		ind.N = A.Cols()
+	}
+	if ind.N == 0 || ind.M == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, ind.M) {
+		return onError("lda")
+	}
+	if ind.OffsetA < 0 {
+		return onError("offsetA")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.M {
+		return onError("sizeA")
+	}
+	if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
+		return onError("size ipiv")
+	}
+	info := -1
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		info = dgetrf(ind.M, ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
+	case *matrix.ComplexMatrix:
+	}
+	if info != 0 {
+		return onError("Getrf call error")
+	}
+	return nil
 }
 
 // Local Variables:

@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -33,55 +33,55 @@ import (
   ldB       positive integer.  ldB >= max(1,n).  If zero, the default value is used.
 */
 func Gels(A, B matrix.Matrix, opts ...linalg.Option) error {
-    pars, _ := linalg.GetParameters(opts...)
-    ind := linalg.GetIndexOpts(opts...)
-    arows := ind.LDa
-    brows := ind.LDb
-    if ind.M < 0 {
-        ind.M = A.Rows()
-    }
-    if ind.N < 0 {
-        ind.N = A.Cols()
-    }
-    if ind.Nrhs < 0 {
-        ind.Nrhs = B.Cols()
-    }
-    if ind.M == 0 || ind.N == 0 || ind.Nrhs == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, ind.M) {
-        return onError("Gesv: ldA")
-    }
-    if ind.LDb == 0 {
-        ind.LDb = max(1, B.LeadingIndex())
-        brows = max(1, B.Rows())
-    }
-    if ind.LDb < max(ind.M, ind.N) {
-        return onError("Gesv: ldB")
-    }
-    if !matrix.EqualTypes(A, B) {
-        return onError("Gesv: arguments not of same type")
-    }
+	pars, _ := linalg.GetParameters(opts...)
+	ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
+	brows := ind.LDb
+	if ind.M < 0 {
+		ind.M = A.Rows()
+	}
+	if ind.N < 0 {
+		ind.N = A.Cols()
+	}
+	if ind.Nrhs < 0 {
+		ind.Nrhs = B.Cols()
+	}
+	if ind.M == 0 || ind.N == 0 || ind.Nrhs == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, ind.M) {
+		return onError("Gesv: ldA")
+	}
+	if ind.LDb == 0 {
+		ind.LDb = max(1, B.LeadingIndex())
+		brows = max(1, B.Rows())
+	}
+	if ind.LDb < max(ind.M, ind.N) {
+		return onError("Gesv: ldB")
+	}
+	if !matrix.EqualTypes(A, B) {
+		return onError("Gesv: arguments not of same type")
+	}
 	_, _ = arows, brows // todo!! something
-    info := -1
-    trans := linalg.ParamString(pars.Trans)
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ba := B.(*matrix.FloatMatrix).FloatArray()
-        info = dgels(trans, ind.M, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
-            Ba[ind.OffsetB:], ind.LDb)
-    case *matrix.ComplexMatrix:
-        return onError("Gels: complex not yet implemented")
-    }
-    if info != 0 {
-        return onError(fmt.Sprintf("Gels: lapack error: %d", info))
-    }
-    return nil
+	info := -1
+	trans := linalg.ParamString(pars.Trans)
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		info = dgels(trans, ind.M, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb)
+	case *matrix.ComplexMatrix:
+		return onError("Gels: complex not yet implemented")
+	}
+	if info != 0 {
+		return onError(fmt.Sprintf("Gels: lapack error: %d", info))
+	}
+	return nil
 }
 
 // Local Variables:

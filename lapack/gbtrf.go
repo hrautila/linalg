@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -37,73 +37,73 @@ import (
   offsetA   nonnegative integer
 */
 func Gbtrf(A matrix.Matrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Am := A.(*matrix.FloatMatrix)
-        return Gbtrf(Am, ipiv, M, KL, opts...)
-    case *matrix.ComplexMatrix:
-        return onError("Gbtrf: complex not yet implemented.")
-    }
-    return onError("Gbtrf: unknown types")
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := A.(*matrix.FloatMatrix)
+		return Gbtrf(Am, ipiv, M, KL, opts...)
+	case *matrix.ComplexMatrix:
+		return onError("Gbtrf: complex not yet implemented.")
+	}
+	return onError("Gbtrf: unknown types")
 }
 
 func GbtrfFloat(A *matrix.FloatMatrix, ipiv []int32, M, KL int, opts ...linalg.Option) error {
-    ind := linalg.GetIndexOpts(opts...)
-    ind.M = M
-    ind.Kl = KL
-    err := checkGbtrf(ind, A, ipiv)
-    if err != nil {
-        return err
-    }
-    if ind.M == 0 || ind.N == 0 {
-        return nil
-    }
-    Aa := A.FloatArray()
-    info := dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
-    if info != 0 {
-        return onError(fmt.Sprintf("Gbtrf lapack error: %d", info))
-    }
-    return nil
+	ind := linalg.GetIndexOpts(opts...)
+	ind.M = M
+	ind.Kl = KL
+	err := checkGbtrf(ind, A, ipiv)
+	if err != nil {
+		return err
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	info := dgbtrf(ind.M, ind.N, ind.Kl, ind.Ku, Aa[ind.OffsetA:], ind.LDa, ipiv)
+	if info != 0 {
+		return onError(fmt.Sprintf("Gbtrf lapack error: %d", info))
+	}
+	return nil
 }
 
 func checkGbtrf(ind *linalg.IndexOpts, A matrix.Matrix, ipiv []int32) error {
-    arows := ind.LDa
-    if ind.M < 0 {
-        return onError("Gbtrf: illegal m")
-    }
-    if ind.Kl < 0 {
-        return onError("GBtrf: illegal kl")
-    }
-    if ind.N < 0 {
-        ind.N = A.Rows()
-    }
-    if ind.M == 0 || ind.N == 0 {
-        return nil
-    }
-    if ind.Ku < 0 {
-        ind.Ku = A.Rows() - 2*ind.Kl - 1
-    }
-    if ind.Ku < 0 {
-        return onError("Gbtrf: invalid ku")
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < 2*ind.Kl+ind.Ku+1 {
-        return onError("Gbtrf: lda")
-    }
-    if ind.OffsetA < 0 {
-        return onError("Gbtrf: offsetA")
-    }
-    sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
-        return onError("Gbtrf: sizeA")
-    }
-    if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
-        return onError("Gbtrf: size ipiv")
-    }
-    return nil
+	arows := ind.LDa
+	if ind.M < 0 {
+		return onError("Gbtrf: illegal m")
+	}
+	if ind.Kl < 0 {
+		return onError("GBtrf: illegal kl")
+	}
+	if ind.N < 0 {
+		ind.N = A.Rows()
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return nil
+	}
+	if ind.Ku < 0 {
+		ind.Ku = A.Rows() - 2*ind.Kl - 1
+	}
+	if ind.Ku < 0 {
+		return onError("Gbtrf: invalid ku")
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < 2*ind.Kl+ind.Ku+1 {
+		return onError("Gbtrf: lda")
+	}
+	if ind.OffsetA < 0 {
+		return onError("Gbtrf: offsetA")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA+(ind.N-1)*arows+2*ind.Kl+ind.Ku+1 {
+		return onError("Gbtrf: sizeA")
+	}
+	if ipiv != nil && len(ipiv) < min(ind.N, ind.M) {
+		return onError("Gbtrf: size ipiv")
+	}
+	return nil
 }
 
 // Local Variables:
