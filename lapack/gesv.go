@@ -94,9 +94,19 @@ func Gesv(A, B matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
 	switch A.(type) {
 	case *matrix.FloatMatrix:
 		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Aa = Aa[ind.OffsetA:]
+		// Ensure there are sufficient elements in A.
+		Aa = Aa[:ind.LDa*ind.LDb]
+		if ipiv == nil {
+			ipiv = make([]int32, ind.N)
+			// Do not overwrite A.
+			tmp := Aa
+			Aa = make([]float64, len(tmp))
+			copy(Aa, tmp)
+		}
 		Ba := B.(*matrix.FloatMatrix).FloatArray()
-		info = dgesv(ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa, ipiv,
-			Ba[ind.OffsetB:], ind.LDb)
+		Ba = Ba[ind.OffsetB:]
+		info = dgesv(ind.N, ind.Nrhs, Aa, ind.LDa, ipiv, Ba, ind.LDb)
 	case *matrix.ComplexMatrix:
 		return onError("Gesv: complex not yet implemented")
 	}
