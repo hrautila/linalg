@@ -6,7 +6,8 @@
 
 package lapack
 
-// #cgo LDFLAGS: -L/usr/lib/libblas -L/usr/lib/lapack -llapack -lblas
+// #cgo linux LDFLAGS: -L/usr/lib/libblas -L/usr/lib/lapack -llapack -lblas
+// #cgo darwin LDFLAGS: -framework Accelerate
 // #include <stdlib.h>
 // #include "lapack.h"
 import "C"

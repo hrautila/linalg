@@ -6,7 +6,8 @@
 
 package blas
 
-// #cgo LDFLAGS: -L/usr/lib/libblas -lblas -L/usr/lib/atlas -latlas
+// #cgo linux LDFLAGS: -L/usr/lib/libblas -lblas -L/usr/lib/atlas -latlas
+// #cgo darwin LDFLAGS: -framework Accelerate
 // #include <stdlib.h>
 // #include "blas.h"
 import "C"
@@ -38,7 +39,7 @@ func dzasum(N int, X []complex128, incX int) float64 {
 // Calculates conjucate X.T*Y
 func zdotc(N int, X []complex128, incX int, Y []complex128, incY int) complex128 {
 	var result complex128
-	C.zdotcsub_((*C.int)(unsafe.Pointer(&N)),
+	C.zdotc_((*C.int)(unsafe.Pointer(&N)),
 		unsafe.Pointer(&X[0]),
 		(*C.int)(unsafe.Pointer(&incX)),
 		unsafe.Pointer(&Y[0]),
@@ -50,7 +51,7 @@ func zdotc(N int, X []complex128, incX int, Y []complex128, incY int) complex128
 // Calculates X.T*Y
 func zdotu(N int, X []complex128, incX int, Y []complex128, incY int) complex128 {
 	var result complex128
-	C.zdotusub_((*C.int)(unsafe.Pointer(&N)),
+	C.zdotu_((*C.int)(unsafe.Pointer(&N)),
 		unsafe.Pointer(&X[0]),
 		(*C.int)(unsafe.Pointer(&incX)),
 		unsafe.Pointer(&Y[0]),

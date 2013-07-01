@@ -6,7 +6,8 @@
 
 package blas
 
-// #cgo LDFLAGS: -L/usr/lib/libblas -lblas
+// #cgo linux LDFLAGS: -L/usr/lib/libblas -lblas
+// #cgo darwin LDFLAGS: -framework Accelerate
 // #include <stdlib.h>
 // #include "blas.h"
 import "C"
