@@ -80,7 +80,24 @@ func Gemv(A, X, Y matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 				Ya[ind.OffsetY:], ind.IncY)
 		}
 	case *matrix.ComplexMatrix:
-		return onError("Not implemented yet for complx.Matrix")
+		Xa := X.(*matrix.ComplexMatrix).ComplexArray()
+		Ya := Y.(*matrix.ComplexMatrix).ComplexArray()
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		bval := beta.Complex()
+		if cmplx.IsNaN(aval) || cmplx.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		if params.Trans == linalg.PNoTrans && ind.N == 0 {
+			zscal(ind.M, bval, Ya[ind.OffsetY:], ind.IncY)
+		} else if params.Trans == linalg.PTrans && ind.M == 0 {
+			zscal(ind.N, bval, Ya[ind.OffsetY:], ind.IncY)
+		} else {
+			trans := linalg.ParamString(params.Trans)
+			zgemv(trans, ind.M, ind.N, aval, Aa[ind.OffsetA:],
+				ind.LDa, Xa[ind.OffsetX:], ind.IncX, bval,
+				Ya[ind.OffsetY:], ind.IncY)
+		}
 	default:
 		return onError("Unknown type, not implemented")
 	}
