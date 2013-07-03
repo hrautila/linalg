@@ -187,7 +187,49 @@ func zgttrs(trans string, N, Nrhs int, DL, D, DU, DU2 []complex128, ipiv []int32
 // void ztrtrs_(char *uplo, char *trans, char *diag, int *n, int *nrhs, complex  *a, int *lda, complex *b, int *ldb, int *info);
 // void ztrtri_(char *uplo, char *diag, int *n, complex  *a, int *lda, int *info);
 // void ztbtrs_(char *uplo, char *trans, char *diag, int *n, int *kd, int *nrhs, complex *ab, int *ldab, complex *b, int *ldb, int *info);
-// void zgels_(char *trans, int *m, int *n, int *nrhs, complex *a, int *lda, complex *b, int *ldb, complex *work, int *lwork, int *info);
+
+// void zgels_(char *trans, int *m, int *n, int *nrhs, complex *a, int *lda,
+//		complex *b, int *ldb, complex *work, int *lwork, int *info);
+func zgels(trans string, M, N, NRHS int, A []complex128, lda int, B []complex128, ldb int) int {
+	var info int = 0
+	var lwork int = -1
+	var work complex128
+
+	ctrans := C.CString(trans)
+	defer C.free(unsafe.Pointer(ctrans))
+
+	// calculate work buffer size
+	C.zgels_(
+		ctrans,
+		(*C.int)(unsafe.Pointer(&M)),
+		(*C.int)(unsafe.Pointer(&N)),
+		(*C.int)(unsafe.Pointer(&NRHS)),
+		nil,
+		(*C.int)(unsafe.Pointer(&lda)),
+		nil,
+		(*C.int)(unsafe.Pointer(&ldb)),
+		unsafe.Pointer(&work),
+		(*C.int)(unsafe.Pointer(&lwork)),
+		(*C.int)(unsafe.Pointer(&info)))
+
+	lwork = int(real(work))
+	wbuf := make([]complex128, lwork)
+
+	C.zgels_(
+		ctrans,
+		(*C.int)(unsafe.Pointer(&M)),
+		(*C.int)(unsafe.Pointer(&N)),
+		(*C.int)(unsafe.Pointer(&NRHS)),
+		unsafe.Pointer(&A[0]),
+		(*C.int)(unsafe.Pointer(&lda)),
+		unsafe.Pointer(&B[0]),
+		(*C.int)(unsafe.Pointer(&ldb)),
+		unsafe.Pointer(&wbuf[0]),
+		(*C.int)(unsafe.Pointer(&lwork)),
+		(*C.int)(unsafe.Pointer(&info)))
+	return info
+}
+
 // void zgeqrf_(int *m, int *n, complex *a, int *lda, complex *tau, complex *work, int *lwork, int *info);
 // void zunmqr_(char *side, char *trans, int *m, int *n, int *k, complex *a, int *lda, complex *tau, complex *c, int *ldc, complex *work, int *lwork, int *info);
 // void zungqr_(int *m, int *n, int *k, complex *A, int *lda, complex *tau, complex *work, int *lwork, int *info);

@@ -76,7 +76,10 @@ func Gels(A, B matrix.Matrix, opts ...linalg.Option) error {
 		info = dgels(trans, ind.M, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
 			Ba[ind.OffsetB:], ind.LDb)
 	case *matrix.ComplexMatrix:
-		return onError("Gels: complex not yet implemented")
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		info = zgels(trans, ind.M, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb)
 	}
 	if info != 0 {
 		return onError(fmt.Sprintf("Gels: lapack error: %d", info))
