@@ -7,11 +7,11 @@
 package blas
 
 import (
-    //"errors"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
-    "math"
-    "math/cmplx"
+	//"errors"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
+	"math"
+	"math/cmplx"
 )
 
 /*
@@ -62,59 +62,59 @@ import (
 */
 func Gemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, fgemm, A, B, C, params)
-    if err != nil {
-        return
-    }
-    if ind.M == 0 || ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, B, C) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ba := B.(*matrix.FloatMatrix).FloatArray()
-        Ca := C.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        transB := linalg.ParamString(params.TransB)
-        transA := linalg.ParamString(params.TransA)
-        dgemm(transA, transB, ind.M, ind.N, ind.K, aval,
-            Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb, bval,
-            Ca[ind.OffsetC:], ind.LDc)
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, fgemm, A, B, C, params)
+	if err != nil {
+		return
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, B, C) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		transB := linalg.ParamString(params.TransB)
+		transA := linalg.ParamString(params.TransA)
+		dgemm(transA, transB, ind.M, ind.N, ind.K, aval,
+			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb, bval,
+			Ca[ind.OffsetC:], ind.LDc)
 
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ba := B.(*matrix.ComplexMatrix).ComplexArray()
-        Ca := C.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        bval := beta.Complex()
-        if cmplx.IsNaN(bval) {
-            return onError("beta not a number")
-        }
-        transB := linalg.ParamString(params.TransB)
-        transA := linalg.ParamString(params.TransA)
-        zgemm(transA, transB, ind.M, ind.N, ind.K, aval,
-            Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb, bval,
-            Ca[ind.OffsetC:], ind.LDc)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return onError("beta not a number")
+		}
+		transB := linalg.ParamString(params.TransB)
+		transA := linalg.ParamString(params.TransA)
+		zgemm(transA, transB, ind.M, ind.N, ind.K, aval,
+			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb, bval,
+			Ca[ind.OffsetC:], ind.LDc)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -156,62 +156,62 @@ func Gemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Symm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, fsymm, A, B, C, params)
-    if err != nil {
-        return
-    }
-    if ind.M == 0 || ind.N == 0 {
-        return
-    }
-    if !matrix.EqualTypes(A, B, C) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ba := B.(*matrix.FloatMatrix).FloatArray()
-        Ca := C.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        side := linalg.ParamString(params.Side)
-        dsymm(side, uplo, ind.M, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
-            Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ba := B.(*matrix.ComplexMatrix).ComplexArray()
-        Ca := C.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        bval := beta.Complex()
-        if cmplx.IsNaN(bval) {
-            return onError("beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        side := linalg.ParamString(params.Side)
-        zhemm(side, uplo, ind.M, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
-            Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
-    default:
-        return onError("Unknown type, not implemented")
-    }
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, fsymm, A, B, C, params)
+	if err != nil {
+		return
+	}
+	if ind.M == 0 || ind.N == 0 {
+		return
+	}
+	if !matrix.EqualTypes(A, B, C) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		side := linalg.ParamString(params.Side)
+		dsymm(side, uplo, ind.M, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return onError("beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		side := linalg.ParamString(params.Side)
+		zhemm(side, uplo, ind.M, ind.N, aval, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
+	default:
+		return onError("Unknown type, not implemented")
+	}
 
-    return
+	return
 }
 
 func Hemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
-    err = Symm(A, B, C, alpha, beta, opts...)
-    return
+	err = Symm(A, B, C, alpha, beta, opts...)
+	return
 }
 
 /*
@@ -252,52 +252,52 @@ func Hemm(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Optio
 */
 func Syrk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, fsyrk, A, nil, C, params)
-    if e != nil || err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, C) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ca := C.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        dsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
-            Ca[ind.OffsetC:], ind.LDc)
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ca := C.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        bval := beta.Complex()
-        if cmplx.IsNaN(bval) {
-            return onError("beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        zsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
-            Ca[ind.OffsetC:], ind.LDc)
-    default:
-        return onError("Unknown type, not implemented")
-    }
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, fsyrk, A, nil, C, params)
+	if e != nil || err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, C) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		dsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
+			Ca[ind.OffsetC:], ind.LDc)
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return onError("beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		zsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
+			Ca[ind.OffsetC:], ind.LDc)
+	default:
+		return onError("Unknown type, not implemented")
+	}
 
-    return
+	return
 }
 
 /*
@@ -338,52 +338,52 @@ func Syrk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) 
 */
 func Herk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, fsyrk, A, nil, C, params)
-    if e != nil || err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, C) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ca := C.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        dsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
-            Ca[ind.OffsetC:], ind.LDc)
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ca := C.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a real or complex number")
-        }
-        bval := beta.Float()
-        if math.IsNaN(bval) {
-            return onError("beta not a real number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        zherk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
-            Ca[ind.OffsetC:], ind.LDc)
-    default:
-        return onError("Unknown type, not implemented")
-    }
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, fsyrk, A, nil, C, params)
+	if e != nil || err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, C) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		dsyrk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
+			Ca[ind.OffsetC:], ind.LDc)
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a real or complex number")
+		}
+		bval := beta.Float()
+		if math.IsNaN(bval) {
+			return onError("beta not a real number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		zherk(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa, bval,
+			Ca[ind.OffsetC:], ind.LDc)
+	default:
+		return onError("Unknown type, not implemented")
+	}
 
-    return
+	return
 }
 
 /*
@@ -436,54 +436,54 @@ func Herk(A, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) 
 */
 func Syr2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, fsyr2k, A, B, C, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, B, C) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ba := B.(*matrix.FloatMatrix).FloatArray()
-        Ca := C.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        dsyr2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
-            Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, fsyr2k, A, B, C, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, B, C) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		dsyr2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
 
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ba := B.(*matrix.ComplexMatrix).ComplexArray()
-        Ca := C.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a real or complex number")
-        }
-        bval := beta.Complex()
-        if cmplx.IsNaN(bval) {
-            return onError("beta not a real or complex number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        zsyr2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
-            Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a real or complex number")
+		}
+		bval := beta.Complex()
+		if cmplx.IsNaN(bval) {
+			return onError("beta not a real or complex number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		zsyr2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -534,54 +534,54 @@ func Syr2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Opti
 */
 func Her2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, fsyr2k, A, B, C, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, B, C) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ba := B.(*matrix.FloatMatrix).FloatArray()
-        Ca := C.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        bval := beta.Float()
-        if math.IsNaN(aval) || math.IsNaN(bval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        dsyr2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
-            Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, fsyr2k, A, B, C, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, B, C) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		Ca := C.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		bval := beta.Float()
+		if math.IsNaN(aval) || math.IsNaN(bval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		dsyr2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
 
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ba := B.(*matrix.ComplexMatrix).ComplexArray()
-        Ca := C.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha not a number")
-        }
-        bval := beta.Float()
-        if math.IsNaN(bval) {
-            return onError("beta not a real number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        trans := linalg.ParamString(params.Trans)
-        zher2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
-            Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		Ca := C.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha not a number")
+		}
+		bval := beta.Float()
+		if math.IsNaN(bval) {
+			return onError("beta not a real number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		trans := linalg.ParamString(params.Trans)
+		zher2k(uplo, trans, ind.N, ind.K, aval, Aa[ind.OffsetA:], ind.LDa,
+			Ba[ind.OffsetB:], ind.LDb, bval, Ca[ind.OffsetC:], ind.LDc)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -627,50 +627,50 @@ func Her2k(A, B, C matrix.Matrix, alpha, beta matrix.Scalar, opts ...linalg.Opti
 */
 func Trmm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, ftrmm, A, B, nil, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, B) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ba := B.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha  not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        transA := linalg.ParamString(params.TransA)
-        side := linalg.ParamString(params.Side)
-        diag := linalg.ParamString(params.Diag)
-        dtrmm(side, uplo, transA, diag, ind.M, ind.N, aval,
-            Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ba := B.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha  not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        transA := linalg.ParamString(params.TransA)
-        side := linalg.ParamString(params.Side)
-        diag := linalg.ParamString(params.Diag)
-        ztrmm(side, uplo, transA, diag, ind.M, ind.N, aval,
-            Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, ftrmm, A, B, nil, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, B) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha  not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		transA := linalg.ParamString(params.TransA)
+		side := linalg.ParamString(params.Side)
+		diag := linalg.ParamString(params.Diag)
+		dtrmm(side, uplo, transA, diag, ind.M, ind.N, aval,
+			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha  not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		transA := linalg.ParamString(params.TransA)
+		side := linalg.ParamString(params.Side)
+		diag := linalg.ParamString(params.Diag)
+		ztrmm(side, uplo, transA, diag, ind.M, ind.N, aval,
+			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 /*
@@ -716,50 +716,50 @@ func Trmm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err e
 */
 func Trsm(A, B matrix.Matrix, alpha matrix.Scalar, opts ...linalg.Option) (err error) {
 
-    params, e := linalg.GetParameters(opts...)
-    if e != nil {
-        err = e
-        return
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = check_level3_func(ind, ftrsm, A, B, nil, params)
-    if err != nil {
-        return
-    }
-    if !matrix.EqualTypes(A, B) {
-        return onError("Parameters not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        Ba := B.(*matrix.FloatMatrix).FloatArray()
-        aval := alpha.Float()
-        if math.IsNaN(aval) {
-            return onError("alpha or beta not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        transA := linalg.ParamString(params.TransA)
-        side := linalg.ParamString(params.Side)
-        diag := linalg.ParamString(params.Diag)
-        dtrsm(side, uplo, transA, diag, ind.M, ind.N, aval,
-            Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
-    case *matrix.ComplexMatrix:
-        Aa := A.(*matrix.ComplexMatrix).ComplexArray()
-        Ba := B.(*matrix.ComplexMatrix).ComplexArray()
-        aval := alpha.Complex()
-        if cmplx.IsNaN(aval) {
-            return onError("alpha  not a number")
-        }
-        uplo := linalg.ParamString(params.Uplo)
-        transA := linalg.ParamString(params.TransA)
-        side := linalg.ParamString(params.Side)
-        diag := linalg.ParamString(params.Diag)
-        ztrsm(side, uplo, transA, diag, ind.M, ind.N, aval,
-            Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
-    default:
-        return onError("Unknown type, not implemented")
-    }
-    return
+	params, e := linalg.GetParameters(opts...)
+	if e != nil {
+		err = e
+		return
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = check_level3_func(ind, ftrsm, A, B, nil, params)
+	if err != nil {
+		return
+	}
+	if !matrix.EqualTypes(A, B) {
+		return onError("Parameters not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		Ba := B.(*matrix.FloatMatrix).FloatArray()
+		aval := alpha.Float()
+		if math.IsNaN(aval) {
+			return onError("alpha or beta not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		transA := linalg.ParamString(params.TransA)
+		side := linalg.ParamString(params.Side)
+		diag := linalg.ParamString(params.Diag)
+		dtrsm(side, uplo, transA, diag, ind.M, ind.N, aval,
+			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
+	case *matrix.ComplexMatrix:
+		Aa := A.(*matrix.ComplexMatrix).ComplexArray()
+		Ba := B.(*matrix.ComplexMatrix).ComplexArray()
+		aval := alpha.Complex()
+		if cmplx.IsNaN(aval) {
+			return onError("alpha  not a number")
+		}
+		uplo := linalg.ParamString(params.Uplo)
+		transA := linalg.ParamString(params.TransA)
+		side := linalg.ParamString(params.Side)
+		diag := linalg.ParamString(params.Diag)
+		ztrsm(side, uplo, transA, diag, ind.M, ind.N, aval,
+			Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
+	default:
+		return onError("Unknown type, not implemented")
+	}
+	return
 }
 
 // Local Variables:

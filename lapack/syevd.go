@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -40,77 +40,77 @@ import (
   offsetB   nonnegative integer;
 */
 func Syevd(A, W matrix.Matrix, opts ...linalg.Option) error {
-    if !matrix.EqualTypes(A, W) {
-        return onError("Syevd: arguments not of same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Am := A.(*matrix.FloatMatrix)
-        Wm := W.(*matrix.FloatMatrix)
-        return SyevdFloat(Am, Wm, opts...)
-    case *matrix.ComplexMatrix:
-        return onError("Syevd: not a complex function")
-    }
-    return onError("Syevd: unknown types")
+	if !matrix.EqualTypes(A, W) {
+		return onError("Syevd: arguments not of same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := A.(*matrix.FloatMatrix)
+		Wm := W.(*matrix.FloatMatrix)
+		return SyevdFloat(Am, Wm, opts...)
+	case *matrix.ComplexMatrix:
+		return onError("Syevd: not a complex function")
+	}
+	return onError("Syevd: unknown types")
 }
 
 func SyevdFloat(A, W *matrix.FloatMatrix, opts ...linalg.Option) error {
-    pars, err := linalg.GetParameters(opts...)
-    if err != nil {
-        return err
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = checkSyevd(ind, A, W)
-    if err != nil {
-        return err
-    }
-    if ind.N == 0 {
-        return nil
-    }
-    jobz := linalg.ParamString(pars.Jobz)
-    uplo := linalg.ParamString(pars.Uplo)
-    Aa := A.FloatArray()
-    Wa := W.FloatArray()
-    info := dsyevd(jobz, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa, Wa[ind.OffsetW:])
-    if info != 0 {
-        return onError(fmt.Sprintf("Syevd: lapack error %d", info))
-    }
-    return nil
+	pars, err := linalg.GetParameters(opts...)
+	if err != nil {
+		return err
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = checkSyevd(ind, A, W)
+	if err != nil {
+		return err
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	jobz := linalg.ParamString(pars.Jobz)
+	uplo := linalg.ParamString(pars.Uplo)
+	Aa := A.FloatArray()
+	Wa := W.FloatArray()
+	info := dsyevd(jobz, uplo, ind.N, Aa[ind.OffsetA:], ind.LDa, Wa[ind.OffsetW:])
+	if info != 0 {
+		return onError(fmt.Sprintf("Syevd: lapack error %d", info))
+	}
+	return nil
 }
 
 func checkSyevd(ind *linalg.IndexOpts, A, W matrix.Matrix) error {
-    arows := ind.LDa
-    if ind.N < 0 {
-        ind.N = A.Rows()
-        if ind.N != A.Cols() {
-            return onError("Syevd: A not square")
-        }
-    }
-    if ind.N == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, ind.N) {
-        return onError("Syevd: lda")
-    }
-    if ind.OffsetA < 0 {
-        return onError("Syevd: offsetA")
-    }
-    sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return onError("Syevd: sizeA")
-    }
-    if ind.OffsetW < 0 {
-        return onError("Syevd: offsetW")
-    }
-    sizeW := W.NumElements()
-    if sizeW < ind.OffsetW+ind.N {
-        return onError("Syevd: sizeW")
-    }
-    return nil
+	arows := ind.LDa
+	if ind.N < 0 {
+		ind.N = A.Rows()
+		if ind.N != A.Cols() {
+			return onError("Syevd: A not square")
+		}
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, ind.N) {
+		return onError("Syevd: lda")
+	}
+	if ind.OffsetA < 0 {
+		return onError("Syevd: offsetA")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
+		return onError("Syevd: sizeA")
+	}
+	if ind.OffsetW < 0 {
+		return onError("Syevd: offsetW")
+	}
+	sizeW := W.NumElements()
+	if sizeW < ind.OffsetW+ind.N {
+		return onError("Syevd: sizeW")
+	}
+	return nil
 }
 
 // Local Variables:

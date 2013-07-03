@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -39,90 +39,90 @@ import (
   offsetB   nonnegative integer
 */
 func Posv(A, B matrix.Matrix, opts ...linalg.Option) error {
-    if !matrix.EqualTypes(A, B) {
-        return onError("Posv: arguments not same type")
-    }
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Am := A.(*matrix.FloatMatrix)
-        Bm := B.(*matrix.FloatMatrix)
-        return PosvFloat(Am, Bm, opts...)
-    case *matrix.ComplexMatrix:
-        Am := A.(*matrix.ComplexMatrix)
-        Bm := B.(*matrix.ComplexMatrix)
-        return PosvComplex(Am, Bm, opts...)
-    }
-    return onError("Posv: unknown types")
+	if !matrix.EqualTypes(A, B) {
+		return onError("Posv: arguments not same type")
+	}
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Am := A.(*matrix.FloatMatrix)
+		Bm := B.(*matrix.FloatMatrix)
+		return PosvFloat(Am, Bm, opts...)
+	case *matrix.ComplexMatrix:
+		Am := A.(*matrix.ComplexMatrix)
+		Bm := B.(*matrix.ComplexMatrix)
+		return PosvComplex(Am, Bm, opts...)
+	}
+	return onError("Posv: unknown types")
 }
 
 func PosvFloat(A, B *matrix.FloatMatrix, opts ...linalg.Option) error {
-    pars, err := linalg.GetParameters(opts...)
-    if err != nil {
-        return err
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = checkPosv(ind, A, B)
-    if err != nil {
-        return err
-    }
-    if ind.N == 0 || ind.Nrhs == 0 {
-        return nil
-    }
-    Aa := A.FloatArray()
-    Ba := B.FloatArray()
-    uplo := linalg.ParamString(pars.Uplo)
-    info := dposv(uplo, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
-    if info != 0 {
-        return onError(fmt.Sprintf("Posv: lapack error %d", info))
-    }
-    return nil
+	pars, err := linalg.GetParameters(opts...)
+	if err != nil {
+		return err
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = checkPosv(ind, A, B)
+	if err != nil {
+		return err
+	}
+	if ind.N == 0 || ind.Nrhs == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	Ba := B.FloatArray()
+	uplo := linalg.ParamString(pars.Uplo)
+	info := dposv(uplo, ind.N, ind.Nrhs, Aa[ind.OffsetA:], ind.LDa, Ba[ind.OffsetB:], ind.LDb)
+	if info != 0 {
+		return onError(fmt.Sprintf("Posv: lapack error %d", info))
+	}
+	return nil
 }
 
 func PosvComplex(A, B *matrix.ComplexMatrix, opts ...linalg.Option) error {
-    return onError(fmt.Sprintf("Posv: complex not yet implemented"))
+	return onError(fmt.Sprintf("Posv: complex not yet implemented"))
 }
 
 func checkPosv(ind *linalg.IndexOpts, A, B matrix.Matrix) error {
-    arows := ind.LDa
-    brows := ind.LDb
-    if ind.N < 0 {
-        ind.N = A.Rows()
-    }
-    if ind.Nrhs < 0 {
-        ind.Nrhs = B.Cols()
-    }
-    if ind.N == 0 || ind.Nrhs == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, ind.N) {
-        return onError("Posv: lda")
-    }
-    if ind.LDb == 0 {
-        ind.LDb = max(1, B.LeadingIndex())
-        brows = max(1, B.Rows())
-    }
-    if ind.LDb < max(1, ind.N) {
-        return onError("Posv: ldb")
-    }
-    if ind.OffsetA < 0 {
-        return onError("Posv: offsetA")
-    }
-    sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return onError("Posv: sizeA")
-    }
-    if ind.OffsetB < 0 {
-        return onError("Posv: offsetB")
-    }
-    sizeB := B.NumElements()
-    if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
-        return onError("Posv: sizeB")
-    }
-    return nil
+	arows := ind.LDa
+	brows := ind.LDb
+	if ind.N < 0 {
+		ind.N = A.Rows()
+	}
+	if ind.Nrhs < 0 {
+		ind.Nrhs = B.Cols()
+	}
+	if ind.N == 0 || ind.Nrhs == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, ind.N) {
+		return onError("Posv: lda")
+	}
+	if ind.LDb == 0 {
+		ind.LDb = max(1, B.LeadingIndex())
+		brows = max(1, B.Rows())
+	}
+	if ind.LDb < max(1, ind.N) {
+		return onError("Posv: ldb")
+	}
+	if ind.OffsetA < 0 {
+		return onError("Posv: offsetA")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
+		return onError("Posv: sizeA")
+	}
+	if ind.OffsetB < 0 {
+		return onError("Posv: offsetB")
+	}
+	sizeB := B.NumElements()
+	if sizeB < ind.OffsetB+(ind.Nrhs-1)*brows+ind.N {
+		return onError("Posv: sizeB")
+	}
+	return nil
 }
 
 // Local Variables:

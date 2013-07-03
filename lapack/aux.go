@@ -7,8 +7,8 @@
 package lapack
 
 import (
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 	//"errors"
 	"fmt"
 )
@@ -54,11 +54,11 @@ func LarftFloat(V, tau, T *matrix.FloatMatrix, opts ...linalg.Option) {
 }
 
 func LarfFloat(V, tau, C *matrix.FloatMatrix, opts ...linalg.Option) {
-    pars, err := linalg.GetParameters(opts...)
+	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return
 	}
-    ind := linalg.GetIndexOpts(opts...)
+	ind := linalg.GetIndexOpts(opts...)
 	if ind.M < 0 {
 		ind.M = C.Rows()
 	}
@@ -79,7 +79,7 @@ func LarfFloat(V, tau, C *matrix.FloatMatrix, opts ...linalg.Option) {
 }
 
 func LarfbFloat(V, T, C *matrix.FloatMatrix, opts ...linalg.Option) {
-    pars, err := linalg.GetParameters(opts...)
+	pars, err := linalg.GetParameters(opts...)
 	if err != nil {
 		return
 	}
@@ -88,7 +88,7 @@ func LarfbFloat(V, T, C *matrix.FloatMatrix, opts ...linalg.Option) {
 
 	ldt := T.LeadingIndex()
 	ldv := V.LeadingIndex()
-    ind := linalg.GetIndexOpts(opts...)
+	ind := linalg.GetIndexOpts(opts...)
 	if ind.M < 0 {
 		ind.M = C.Rows()
 	}
@@ -119,11 +119,10 @@ func LarfbFloat(V, T, C *matrix.FloatMatrix, opts ...linalg.Option) {
 func LarfgFloat(alpha, X, tau *matrix.FloatMatrix, opts ...linalg.Option) {
 }
 
-
 /*
  */
 func OrgqrFloat(A, tau *matrix.FloatMatrix, opts ...linalg.Option) error {
-    ind := linalg.GetIndexOpts(opts...)
+	ind := linalg.GetIndexOpts(opts...)
 	if ind.M < 0 {
 		ind.M = A.Rows()
 	}
@@ -140,7 +139,7 @@ func OrgqrFloat(A, tau *matrix.FloatMatrix, opts ...linalg.Option) error {
 	tr := tau.FloatArray()
 	info := dorgqr(ind.M, ind.N, ind.K, Ar, ind.LDa, tr)
 	if info != 0 {
-        return onError(fmt.Sprintf("Orgqr lapack error: %d", info))
+		return onError(fmt.Sprintf("Orgqr lapack error: %d", info))
 	}
 	return nil
 }

@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -33,40 +33,40 @@ import (
   offsetA   nonnegative integer;
 */
 func Getri(A matrix.Matrix, ipiv []int32, opts ...linalg.Option) error {
-    ind := linalg.GetIndexOpts(opts...)
-    arows := ind.LDa
-    if ind.N < 0 {
-        ind.N = A.Cols()
-    }
-    if ind.N == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.OffsetA < 0 {
-        return onError("Getri: offset")
-    }
-    sizeA := A.NumElements()
-    if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return onError("Getri: sizeA")
-    }
-    if ipiv != nil && len(ipiv) < ind.N {
-        return onError("Getri: size ipiv")
-    }
-    info := -1
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        Aa := A.(*matrix.FloatMatrix).FloatArray()
-        info = dgetri(ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
-    case *matrix.ComplexMatrix:
-        return onError("Getri: complex not yet implemented")
-    }
-    if info != 0 {
-        return onError(fmt.Sprintf("Getri lapack error: %d", info))
-    }
-    return nil
+	ind := linalg.GetIndexOpts(opts...)
+	arows := ind.LDa
+	if ind.N < 0 {
+		ind.N = A.Cols()
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.OffsetA < 0 {
+		return onError("Getri: offset")
+	}
+	sizeA := A.NumElements()
+	if sizeA < ind.OffsetA+(ind.N-1)*arows+ind.N {
+		return onError("Getri: sizeA")
+	}
+	if ipiv != nil && len(ipiv) < ind.N {
+		return onError("Getri: size ipiv")
+	}
+	info := -1
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		Aa := A.(*matrix.FloatMatrix).FloatArray()
+		info = dgetri(ind.N, Aa[ind.OffsetA:], ind.LDa, ipiv)
+	case *matrix.ComplexMatrix:
+		return onError("Getri: complex not yet implemented")
+	}
+	if info != 0 {
+		return onError(fmt.Sprintf("Getri lapack error: %d", info))
+	}
+	return nil
 }
 
 // Local Variables:

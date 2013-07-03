@@ -7,10 +7,10 @@
 package lapack
 
 import (
-    //"errors"
-    "fmt"
-    "github.com/hrautila/linalg"
-    "github.com/hrautila/matrix"
+	//"errors"
+	"fmt"
+	"github.com/hrautila/linalg"
+	"github.com/hrautila/matrix"
 )
 
 /*
@@ -35,59 +35,59 @@ import (
   offsetA   nonnegative integer;
 */
 func Potri(A matrix.Matrix, opts ...linalg.Option) error {
-    switch A.(type) {
-    case *matrix.FloatMatrix:
-        return PotriFloat(A.(*matrix.FloatMatrix), opts...)
-    case *matrix.ComplexMatrix:
-        return onError("Potri: complex not implemented yet")
-    }
-    return onError("Potri: unknown types")
+	switch A.(type) {
+	case *matrix.FloatMatrix:
+		return PotriFloat(A.(*matrix.FloatMatrix), opts...)
+	case *matrix.ComplexMatrix:
+		return onError("Potri: complex not implemented yet")
+	}
+	return onError("Potri: unknown types")
 }
 
 func PotriFloat(A *matrix.FloatMatrix, opts ...linalg.Option) error {
-    pars, err := linalg.GetParameters(opts...)
-    if err != nil {
-        return err
-    }
-    ind := linalg.GetIndexOpts(opts...)
-    err = checkPotri(ind, A)
-    if err != nil {
-        return err
-    }
-    if ind.N == 0 {
-        return nil
-    }
-    Aa := A.FloatArray()
-    uplo := linalg.ParamString(pars.Uplo)
-    info := dpotri(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
-    if info != 0 {
-        return onError(fmt.Sprintf("Potri lapack error %d", info))
-    }
-    return nil
+	pars, err := linalg.GetParameters(opts...)
+	if err != nil {
+		return err
+	}
+	ind := linalg.GetIndexOpts(opts...)
+	err = checkPotri(ind, A)
+	if err != nil {
+		return err
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	Aa := A.FloatArray()
+	uplo := linalg.ParamString(pars.Uplo)
+	info := dpotri(uplo, ind.N, Aa[ind.OffsetA:], ind.LDa)
+	if info != 0 {
+		return onError(fmt.Sprintf("Potri lapack error %d", info))
+	}
+	return nil
 }
 
 func checkPotri(ind *linalg.IndexOpts, A matrix.Matrix) error {
-    arows := ind.LDa
-    if ind.N < 0 {
-        ind.N = A.Rows()
-    }
-    if ind.N == 0 {
-        return nil
-    }
-    if ind.LDa == 0 {
-        ind.LDa = max(1, A.LeadingIndex())
-        arows = max(1, A.Rows())
-    }
-    if ind.LDa < max(1, ind.N) {
-        return onError("Potri: lda")
-    }
-    if ind.OffsetA < 0 {
-        return onError("Potri: offsetA")
-    }
-    if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
-        return onError("Potri: sizeA")
-    }
-    return nil
+	arows := ind.LDa
+	if ind.N < 0 {
+		ind.N = A.Rows()
+	}
+	if ind.N == 0 {
+		return nil
+	}
+	if ind.LDa == 0 {
+		ind.LDa = max(1, A.LeadingIndex())
+		arows = max(1, A.Rows())
+	}
+	if ind.LDa < max(1, ind.N) {
+		return onError("Potri: lda")
+	}
+	if ind.OffsetA < 0 {
+		return onError("Potri: offsetA")
+	}
+	if A.NumElements() < ind.OffsetA+(ind.N-1)*arows+ind.N {
+		return onError("Potri: sizeA")
+	}
+	return nil
 }
 
 // Local Variables:

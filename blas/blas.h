@@ -21,8 +21,8 @@ extern void daxpy_(int *n, double *alpha, double *x, int *incx,
 extern void zaxpy_(int *n, void *alpha, void *x, int *incx,
     void *y, int *incy);
 extern double ddot_(int *n, double *x, int *incx, double *y, int *incy);
-extern void zdotcsub_(int *n, void *x, int *incx, void *y, int *incy, void *result);
-extern void zdotusub_(int *n, void *x, int *incx, void *y, int *incy, void *result);
+extern void zdotc_(int *n, void *x, int *incx, void *y, int *incy, void *result);
+extern void zdotu_(int *n, void *x, int *incx, void *y, int *incy, void *result);
 extern double dnrm2_(int *n, double *x, int *incx);
 extern double dznrm2_(int *n, void *x, int *incx);
 extern double dasum_(int *n, double *x, int *incx);
